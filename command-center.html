@@ -1165,14 +1165,19 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
         previewBtn.type = 'button';
         previewBtn.className = 'stl-btn';
         previewBtn.textContent = 'Preview';
+        var isPlayingThis = false;
         previewBtn.addEventListener('click', function(){
-          if(previewBtn.textContent === 'Stop'){
+          if(isPlayingThis){
             window.AetherMusic.stopPreview();
+            isPlayingThis = false;
+            previewBtn.textContent = 'Preview';
             return;
           }
           resetAllPreviewButtons();
+          isPlayingThis = true;
           previewBtn.textContent = '\u25a0 Stop';
           window.AetherMusic.previewTrack(r.key, function(){
+            isPlayingThis = false;
             previewBtn.textContent = 'Preview';
           });
         });
