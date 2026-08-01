@@ -13,14 +13,17 @@
       upload exists yet -- see assets/audio/READ_ME_AUDIO.txt.
 
    Three moments:
-   1. Splash intro  -- starts on the ENTER click (index.html), keeps
-      playing across the loading screen and into the login page (this
-      is a plain multi-page app, not a single-page app, so "continuing"
-      across page loads is simulated by tracking a shared start time in
-      sessionStorage and resuming each new page at the correct elapsed
-      position), then fades out and stops.
+   1. Splash intro  -- starts on the ENTER click (index.html), loops
+      for as long as the operator stays on the splash/loading/login
+      pages (this is a plain multi-page app, not a single-page app, so
+      "continuing" across page loads is simulated by tracking a shared
+      start time in sessionStorage and resuming each new page at the
+      correct elapsed position). Only fades out and stops once the
+      Command Deck's own intro actually takes over.
    2. Command Deck intro -- a fresh, separate cue every time the
-      Command Deck itself loads. Plays briefly, fades, stops.
+      Command Deck itself loads. Plays briefly, fades, stops. Also
+      responsible for fading out the splash loop from #1 right before
+      it starts, so the two don't overlap awkwardly.
    3. Celebration loop -- starts right after the mission-complete
       chime, loops until the operator exits that screen.
 
@@ -57,8 +60,7 @@
   var TRACK_KEYS = Object.keys(TRACKS);
 
   /* Tune these to taste once the real files are in place. */
-  var SPLASH_FADE_START_SEC = 8;   // splash/login intro starts fading out at this mark
-  var SPLASH_FADE_DURATION_SEC = 2;
+  var SPLASH_FADE_DURATION_SEC = 2; // how long the splash/login loop takes to fade once it's told to stop
   var DASH_FADE_START_SEC = 6;     // Command Deck intro starts fading out at this mark
   var DASH_FADE_DURATION_SEC = 2;
   var BASE_VOLUME = 0.55;
@@ -215,17 +217,24 @@
     try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
   }
 
-  /* ---- Splash intro: starts on ENTER, continues across the next
-     couple of page loads by tracking real elapsed time. ---- */
+  /* ---- Splash intro: starts on ENTER, loops for as long as the
+     operator is on the splash/login pages -- no fixed fade timer
+     anymore, since a track fading out after a few seconds regardless
+     of whether the person is still reading/signing in felt premature.
+     It keeps playing (looping) across the loading screen and login
+     page, and only fades out once playDashboardIntro() actually fires
+     on Command Deck arrival -- see stopSplashLoop() below. Position is
+     still tracked via elapsed real time across page loads so it feels
+     continuous rather than restarting from 0 on every page. ---- */
   function startSplashIntro(){
     if(!isEnabled()) return;
     try{ sessionStorage.setItem(SESSION_KEY, String(Date.now())); }catch(e){}
     resolveTrackURL('intro').then(function(url){
       var el = new Audio(url);
+      el.loop = true;
       el.volume = BASE_VOLUME;
       el.play().catch(function(){ /* autoplay blocked or file missing -- stay silent */ });
       activeEl = el;
-      scheduleSplashFade(0);
     });
   }
 
@@ -236,33 +245,32 @@
     if(!startTs || isNaN(startTs)) return;
 
     var elapsedSec = (Date.now() - startTs) / 1000;
-    var totalSec = SPLASH_FADE_START_SEC + SPLASH_FADE_DURATION_SEC;
-    if(elapsedSec >= totalSec){
-      try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
-      return; // intro already would have finished by now -- don't restart it
-    }
-
     resolveTrackURL('intro').then(function(url){
       var el = new Audio(url);
+      el.loop = true;
       el.volume = BASE_VOLUME;
-      try{ el.currentTime = elapsedSec; }catch(e){}
+      try{ el.currentTime = elapsedSec; }catch(e){} /* if this lands past the
+        track's actual length (it's a loop, so that's expected once the
+        person has lingered a while), the browser just clamps/wraps it --
+        harmless, still sounds like a loop in progress either way. */
       el.play().catch(function(){});
       activeEl = el;
-      scheduleSplashFade(elapsedSec);
     });
   }
 
-  function scheduleSplashFade(alreadyElapsedSec){
-    clearFadeTimer();
-    var untilFadeMs = Math.max(0, (SPLASH_FADE_START_SEC - alreadyElapsedSec) * 1000);
-    fadeTimer = setTimeout(function(){
-      fadeOutAndStop(activeEl, SPLASH_FADE_DURATION_SEC * 1000);
-    }, untilFadeMs);
+  /* Fades out and stops whatever splash/login loop is currently
+     playing, and stops tracking it -- called right when the Command
+     Deck's own intro is about to take over. */
+  function stopSplashLoop(){
+    try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
+    if(activeEl) fadeOutAndStop(activeEl, SPLASH_FADE_DURATION_SEC * 1000);
   }
 
-  /* ---- Command Deck intro: a fresh, independent cue. ---- */
+  /* ---- Command Deck intro: a fresh, independent cue. Fades the
+     splash loop out first, so the two don't overlap awkwardly. ---- */
   function playDashboardIntro(){
     if(!isEnabled()) return;
+    stopSplashLoop();
     resolveTrackURL('dashboardIntro').then(function(url){
       var el = new Audio(url);
       el.volume = BASE_VOLUME;
