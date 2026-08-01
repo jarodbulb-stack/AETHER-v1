@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Knowledge Library</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<style>
+/* Knowledge Library */
+.kl-search-bar{
+  display:flex;gap:10px;align-items:center;
+  background:var(--bg-panel-alt);border:1px solid var(--border-strong);
+  border-radius:10px;padding:10px 16px;margin-bottom:20px;
+}
+.kl-search-bar svg{color:var(--text-faint);flex-shrink:0;}
+.kl-search-input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--text-primary);font-family:var(--font-body);font-size:14px;
+}
+.kl-search-input::placeholder{color:var(--text-faint);}
+
+.kl-stats{
+  display:flex;gap:20px;margin-bottom:24px;flex-wrap:wrap;
+}
+.kl-stat{
+  display:flex;flex-direction:column;gap:3px;
+  padding:14px 20px;background:var(--bg-panel);
+  border:1px solid var(--border-subtle);border-radius:10px;min-width:120px;
+}
+.kl-stat-val{font-family:var(--font-display);font-size:24px;font-weight:700;}
+.kl-stat-label{font-family:var(--font-mono);font-size:9px;letter-spacing:0.14em;color:var(--text-faint);text-transform:uppercase;}
+
+.kl-grid{display:flex;flex-direction:column;gap:12px;}
+.kl-card{
+  background:var(--bg-panel);border:1px solid var(--border-subtle);
+  border-radius:12px;padding:18px 20px;cursor:pointer;
+  transition:.15s;
+}
+.kl-card:hover{border-color:rgba(74,168,255,0.3);background:var(--bg-panel-alt);}
+.kl-card.expanded{border-color:rgba(74,168,255,0.35);}
+.kl-card-head{display:flex;align-items:flex-start;gap:14px;}
+.kl-card-icon{
+  width:36px;height:36px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;
+}
+.kl-card-icon.resolved{background:rgba(61,220,132,0.12);}
+.kl-card-icon.open{background:rgba(255,92,108,0.1);}
+.kl-card-title{font-size:14px;font-weight:600;color:var(--text-primary);margin-bottom:3px;}
+.kl-card-meta{display:flex;gap:10px;flex-wrap:wrap;font-family:var(--font-mono);font-size:10px;color:var(--text-faint);}
+.kl-card-meta span{display:flex;align-items:center;gap:4px;}
+.kl-card-badge{
+  margin-left:auto;flex-shrink:0;
+  font-family:var(--font-mono);font-size:10px;letter-spacing:0.08em;
+  padding:3px 10px;border-radius:99px;text-transform:uppercase;
+}
+.kl-card-badge.resolved{background:rgba(61,220,132,0.12);color:var(--success);border:1px solid rgba(61,220,132,0.3);}
+.kl-card-badge.open{background:rgba(255,92,108,0.08);color:var(--danger);border:1px solid rgba(255,92,108,0.25);}
+
+.kl-card-body{margin-top:14px;display:none;flex-direction:column;gap:12px;}
+.kl-card.expanded .kl-card-body{display:flex;}
+.kl-section{display:flex;flex-direction:column;gap:5px;}
+.kl-section-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-faint);}
+.kl-section-val{font-size:13px;color:var(--text-secondary);line-height:1.55;padding:8px 12px;background:var(--bg-panel-alt);border-radius:8px;}
+.kl-section-val.solution{color:var(--success);border-left:3px solid var(--success);}
+.kl-section-val.empty{color:var(--text-faint);font-style:italic;}
+
+.kl-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.kl-tag{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:0.06em;
+  padding:3px 10px;border-radius:99px;
+  background:rgba(74,168,255,0.1);color:var(--accent);
+  border:1px solid rgba(74,168,255,0.2);
+}
+
+.kl-empty{
+  text-align:center;padding:60px 20px;
+  font-family:var(--font-mono);color:var(--text-faint);
+}
+.kl-empty-icon{font-size:48px;margin-bottom:16px;}
+</style>
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg viewBox="0 0 100 100" fill="none">
+          <defs>
+            <filter id="gs"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="gss"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <circle cx="50" cy="50" r="42" stroke="#1a4a6a" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.7"/>
+          <circle cx="50" cy="50" r="34" stroke="#1a3a5a" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.5"/>
+          <circle cx="50" cy="8" r="2.5" fill="#00c8ff" filter="url(#gss)" opacity="0.9"/>
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="5" fill="none" opacity="0.15" filter="url(#gs)"/>
+          <path d="M50 30 L76 70 H24 Z" stroke="#00ff88" stroke-width="1.2" fill="none" opacity="0.5"/>
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="2.5" fill="none" filter="url(#gs)"/>
+          <circle cx="50" cy="60" r="3.5" fill="#00c8ff" filter="url(#gs)"/>
+          <circle cx="50" cy="60" r="1.5" fill="white" opacity="0.9"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">
+        <div class="sidebar-logo-wordmark">ETHER</div>
+        <div class="sidebar-logo-tagline">Mission Command System</div>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item" href="dashboard.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span><span class="nav-item-label">Command Deck</span></a>
+      <a class="nav-item" href="life-advancement.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 4 20h16Z"/><path d="M9 14l2 -2.5 2 2 2 -3"/></svg></span><span class="nav-item-label">Life Advancement</span></a>
+      <a class="nav-item" href="missions.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1"/></svg></span><span class="nav-item-label">Missions</span></a>
+      <a class="nav-item" href="blueprints.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span class="nav-item-label">Blueprints</span></a>
+      <a class="nav-item" href="problems-blockers.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20Z"/></svg></span><span class="nav-item-label">Problems / Blockers</span><span class="badge" id="navBlockerBadge">0</span></a>
+      <a class="nav-item" href="evidence-vault.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span><span class="nav-item-label">Evidence Vault</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></span><span class="nav-item-label">Timeline</span></a>
+      <a class="nav-item active" href="knowledge-library.html"><span class="nav-item-icon">📚</span><span class="nav-item-label">Knowledge Library</span></a>
+      <a class="nav-item" href="summit-archive.html"><span class="nav-item-icon">🏔️</span><span class="nav-item-label">Summit Archive</span></a>
+      <a class="nav-item" href="debrief.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span><span class="nav-item-label">Debrief</span></a>
+      <a class="nav-item" href="command-center.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8"/></svg></span><span class="nav-item-label">Command Center</span></a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="profile-header">
+        <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+        <div class="profile-info">
+          <div class="profile-name">ROD ENTERA</div>
+          <div class="profile-rank" id="opSub">Operator</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:4px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--teal);" id="sidebarDaysClimbing">14</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Days Climbing</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--gold);" id="sidebarSummits">0</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Summits</span>
+        </div>
+      </div>
+      <div class="profile-quote">"The mission is progress. The evidence is proof. The mountain is the journey."</div>
+      <div class="profile-focus-row">
+        <span class="focus-dot"></span>
+        <div class="focus-text"><span class="focus-label">Focus Mode</span><span class="focus-value">High Performance</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>KNOWLEDGE LIBRARY</h1>
+        <div class="topbar-subtitle">Every solved problem. Every lesson. Your personal encyclopedia — built automatically.</div>
+      </div>
+      <div class="topbar-meta">
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--success);">● OPERATOR: AETHER PRIME</span>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Search -->
+      <div class="kl-search-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="kl-search-input" id="klSearch" placeholder='Search problems, solutions, campaigns... e.g. "Firebase" or "login error"' oninput="filterCards()"/>
+      </div>
+
+      <!-- Stats -->
+      <div class="kl-stats">
+        <div class="kl-stat"><div class="kl-stat-val" id="klTotalCount" style="color:var(--accent);">0</div><div class="kl-stat-label">Total Problems</div></div>
+        <div class="kl-stat"><div class="kl-stat-val" id="klResolvedCount" style="color:var(--success);">0</div><div class="kl-stat-label">Solved</div></div>
+        <div class="kl-stat"><div class="kl-stat-val" id="klOpenCount" style="color:var(--danger);">0</div><div class="kl-stat-label">Open</div></div>
+        <div class="kl-stat"><div class="kl-stat-val" id="klCampaignCount" style="color:var(--gold);">0</div><div class="kl-stat-label">Campaigns Affected</div></div>
+      </div>
+
+      <!-- Knowledge cards -->
+      <div class="kl-grid" id="klGrid"></div>
+
+    </div>
+</div>
+
+<style>
+@keyframes aether-pulse{0%,100%{filter:drop-shadow(0 0 8px rgba(0,200,255,0.9)) drop-shadow(0 0 18px rgba(0,200,255,0.4));}50%{filter:drop-shadow(0 0 18px rgba(0,200,255,1)) drop-shadow(0 0 35px rgba(0,200,255,0.7));}}
+.sidebar-logo-mark{animation:aether-pulse 2.8s ease-in-out infinite;}
+</style>
+
+<script>
+(function(){
+  var blockers = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  var allCards = blockers;
+
+  // Stats
+  var resolved = blockers.filter(function(b){ return b.status === 'resolved'; });
+  var open = blockers.filter(function(b){ return b.status !== 'resolved'; });
+  var campaigns = [...new Set(blockers.map(function(b){ return b.mission; }).filter(Boolean))];
+  
+  document.getElementById('klTotalCount').textContent = blockers.length;
+  document.getElementById('klResolvedCount').textContent = resolved.length;
+  document.getElementById('klOpenCount').textContent = open.length;
+  document.getElementById('klCampaignCount').textContent = campaigns.length;
+
+  function makeCard(b, idx){
+    var isResolved = b.status === 'resolved';
+    var card = document.createElement('div');
+    card.className = 'kl-card';
+    card.dataset.search = [b.name, b.mission, b.recovery, b.solution, b.checkpoint].join(' ').toLowerCase();
+    
+    card.innerHTML = 
+      '<div class="kl-card-head">' +
+        '<div class="kl-card-icon '+(isResolved?'resolved':'open')+'">'+(isResolved?'✓':'⚠️')+'</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="kl-card-title">'+b.name+'</div>' +
+          '<div class="kl-card-meta">' +
+            (b.mission ? '<span>📍 '+b.mission+'</span>' : '') +
+            (b.checkpoint ? '<span>🔖 Step: '+b.checkpoint+'</span>' : '') +
+            '<span>⚡ '+b.severity+' severity</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="kl-card-badge '+(isResolved?'resolved':'open')+'">'+(isResolved?'Solved':'Open')+'</div>' +
+      '</div>' +
+      '<div class="kl-card-body">' +
+        '<div class="kl-section">' +
+          '<div class="kl-section-label">Problem</div>' +
+          '<div class="kl-section-val">'+b.name+'</div>' +
+        '</div>' +
+        (b.recovery ? '<div class="kl-section"><div class="kl-section-label">Recovery Plan</div><div class="kl-section-val">'+b.recovery+'</div></div>' : '') +
+        (b.solution ? '<div class="kl-section"><div class="kl-section-label">✓ Solution Found</div><div class="kl-section-val solution">'+b.solution+'</div></div>' :
+          '<div class="kl-section"><div class="kl-section-label">Solution</div><div class="kl-section-val empty">Not yet recorded. Resolve this blocker and add the solution.</div></div>') +
+        '<div class="kl-tags">' +
+          (b.mission ? '<span class="kl-tag">'+b.mission+'</span>' : '') +
+          (b.checkpoint ? '<span class="kl-tag">Step: '+b.checkpoint+'</span>' : '') +
+          '<span class="kl-tag">'+b.severity+'</span>' +
+        '</div>' +
+      '</div>';
+
+    card.addEventListener('click', function(){
+      var wasExpanded = card.classList.contains('expanded');
+      document.querySelectorAll('.kl-card').forEach(function(c){ c.classList.remove('expanded'); });
+      if(!wasExpanded) card.classList.add('expanded');
+    });
+
+    return card;
+  }
+
+  function render(items){
+    var grid = document.getElementById('klGrid');
+    grid.innerHTML = '';
+    if(!items.length){
+      grid.innerHTML = '<div class="kl-empty"><div class="kl-empty-icon">📚</div><div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">No Knowledge Cards Yet</div><div style="font-size:12px;line-height:1.6;">Every blocker you declare and solve becomes a Knowledge Card automatically.<br>Start by declaring your first blocker on the Problems page.</div></div>';
+      return;
+    }
+    // Sort: resolved first (they have solutions), then open
+    items.sort(function(a,b){ return (b.status==='resolved'?1:0)-(a.status==='resolved'?1:0); });
+    items.forEach(function(b,i){ grid.appendChild(makeCard(b,i)); });
+  }
+
+  window.filterCards = function(){
+    var q = document.getElementById('klSearch').value.toLowerCase().trim();
+    if(!q){ render(allCards); return; }
+    render(allCards.filter(function(b){
+      return [b.name,b.mission,b.recovery,b.solution,b.checkpoint,b.severity].join(' ').toLowerCase().includes(q);
+    }));
+  };
+
+  render(allCards);
+})();
+</script>
+<script>
+/* Sync the sidebar blocker badge to the real open-blocker count */
+(function syncBlockerBadge(){
+  var badge = document.getElementById('navBlockerBadge');
+  if(!badge) return;
+  var bk = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  badge.textContent = bk.filter(function(b){ return b.status === 'open'; }).length;
+})();
+</script>
+<script src="aether-quotes.js"></script>
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script src="aether-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Portfolio</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<style>
+/* ============================================================
+   PORTFOLIO — editable resume/portfolio builder.
+   Plain professional language throughout (no app-internal jargon
+   in the printed content), every field is directly editable, and
+   everything persists locally so it becomes a real, hand-owned
+   document rather than a fixed readout of internal data.
+   ============================================================ */
+html,body{ margin:0; background:var(--bg-void); }
+body{ font-family:var(--font-body); color:var(--text-primary); }
+
+.pf-toolbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:14px 24px; background:rgba(8,12,20,0.96); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border-subtle); flex-wrap:wrap;
+}
+.pf-toolbar-left{ display:flex; align-items:center; gap:14px; }
+.pf-back{
+  display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:0.05em;
+  color:var(--text-secondary); border:1px solid var(--border-strong);
+  padding:8px 14px; border-radius:8px; transition:background .15s,border-color .15s;
+}
+.pf-back:hover{ background:var(--bg-elevated); border-color:var(--border-accent); }
+.pf-toolbar-title{ font-family:var(--font-display); font-size:14px; letter-spacing:0.1em; color:var(--text-primary); }
+.pf-toolbar-sub{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); letter-spacing:0.04em; margin-top:2px; }
+.pf-toolbar-right{ display:flex; align-items:center; gap:10px; }
+.pf-sync-btn{
+  display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:0.03em;
+  color:var(--text-secondary); background:transparent; border:1px solid var(--border-strong);
+  padding:9px 14px; border-radius:8px; transition:background .15s,border-color .15s;
+}
+.pf-sync-btn:hover{ background:var(--bg-elevated); border-color:var(--border-accent); }
+.pf-print-btn{
+  display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+  font-family:var(--font-mono); font-size:12px; letter-spacing:0.05em; font-weight:600;
+  color:#06101c; background:linear-gradient(135deg,var(--gold),#ffb84d);
+  border:none; padding:11px 20px; border-radius:9px;
+  box-shadow:0 6px 20px rgba(255,209,102,0.25); transition:transform .12s ease, box-shadow .12s ease;
+}
+.pf-print-btn:hover{ transform:translateY(-1px); box-shadow:0 8px 26px rgba(255,209,102,0.35); }
+.pf-print-btn svg{ width:15px; height:15px; }
+.pf-edit-hint{
+  font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); letter-spacing:0.03em;
+  padding:8px 20px 0; text-align:center;
+}
+
+.pf-stage{ padding:14px 20px 80px; display:flex; justify-content:center; }
+.pf-page{
+  width:850px; max-width:100%; background:#ffffff; color:#1a2233;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5); border-radius:4px;
+  padding:52px 56px; font-family:'Exo 2', Arial, sans-serif;
+}
+
+/* ---- editable fields: no visual chrome until hovered/focused, so it
+   reads as plain resume text but clearly invites editing on screen ---- */
+[contenteditable="true"]{ outline:none; border-radius:3px; transition:background .12s ease; cursor:text; }
+[contenteditable="true"]:hover{ background:rgba(74,168,255,0.07); }
+[contenteditable="true"]:focus{ background:rgba(74,168,255,0.12); box-shadow:0 0 0 2px rgba(74,168,255,0.25); }
+[contenteditable="true"]:empty:before{ content:attr(data-placeholder); color:#a9b3c8; font-style:italic; }
+
+.pf-name{ font-family:var(--font-display),'Exo 2',sans-serif; font-size:30px; font-weight:700; letter-spacing:0.03em; color:#0e1930; display:inline-block; min-width:220px; }
+.pf-role{ font-size:13px; color:#5a6b8c; margin-top:4px; letter-spacing:0.03em; display:block; min-width:220px; }
+.pf-header-rule{ height:3px; background:linear-gradient(90deg,#0e1930,#4aa8ff 60%,#ffd166); margin:16px 0 22px; border-radius:2px; }
+
+.pf-grid{ display:grid; grid-template-columns:1fr 250px; gap:38px; }
+.pf-section-title-row{ display:flex; align-items:center; justify-content:space-between; margin:26px 0 10px; }
+.pf-section-title-row:first-child{ margin-top:0; }
+.pf-section-title{
+  font-family:var(--font-mono),monospace; font-size:11px; letter-spacing:0.14em; text-transform:uppercase;
+  color:#0e1930; font-weight:700; padding-bottom:6px; border-bottom:2px solid #e4e9f2; flex:1;
+}
+.pf-summary{ font-size:13px; line-height:1.6; color:#333f57; min-height:20px; }
+
+.pf-add-btn{
+  font-family:var(--font-mono),monospace; font-size:9.5px; letter-spacing:0.03em; font-weight:700;
+  color:#2f6fcf; background:#eef5ff; border:1px solid #4aa8ff; border-radius:6px;
+  padding:4px 9px; cursor:pointer; white-space:nowrap; margin-left:10px;
+}
+.pf-add-btn:hover{ background:#dcebff; }
+
+.pf-entry{ margin-bottom:20px; page-break-inside:avoid; position:relative; padding-right:22px; }
+.pf-entry-head{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+.pf-entry-title{ font-size:14.5px; font-weight:700; color:#0e1930; flex:1; min-width:100px; }
+.pf-entry-date{ font-family:var(--font-mono),monospace; font-size:10.5px; color:#8a97b3; white-space:nowrap; min-width:50px; text-align:right; }
+.pf-entry-sub{ font-size:11.5px; color:#4aa8ff; font-weight:600; margin-top:2px; letter-spacing:0.02em; min-height:16px; }
+.pf-entry-desc{ font-size:12.5px; color:#4a5673; margin-top:6px; line-height:1.55; min-height:18px; }
+.pf-entry-bullets{ margin:8px 0 0; padding-left:18px; }
+.pf-entry-bullets li{ font-size:12px; color:#333f57; margin-bottom:4px; line-height:1.5; position:relative; }
+.pf-bullet-text{ display:inline; }
+.pf-empty-note{ font-size:12.5px; color:#8a97b3; font-style:italic; line-height:1.6; }
+
+.pf-mini-del{
+  font-family:var(--font-mono),monospace; font-size:10px; line-height:1; color:#c94b4b;
+  background:#fdeaea; border:1px solid #f2c2c2; border-radius:50%; width:16px; height:16px;
+  cursor:pointer; margin-left:6px; padding:0; vertical-align:1px;
+}
+.pf-mini-del:hover{ background:#fbd6d6; }
+.pf-entry-del{ position:absolute; top:0; right:0; }
+.pf-bullet-add{
+  font-family:var(--font-mono),monospace; font-size:10px; color:#4aa8ff; background:none; border:none;
+  cursor:pointer; margin-top:4px; padding:0; text-decoration:underline;
+}
+
+.pf-stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.pf-stat{ background:#f4f6fb; border-radius:8px; padding:10px 8px; text-align:center; }
+.pf-stat-num{ font-family:var(--font-display),sans-serif; font-size:20px; font-weight:700; color:#0e1930; }
+.pf-stat-label{ font-family:var(--font-mono),monospace; font-size:8px; letter-spacing:0.06em; color:#7c8aa8; text-transform:uppercase; margin-top:2px; }
+
+.pf-achievement{ margin-bottom:12px; position:relative; padding-right:20px; }
+.pf-achievement-title{ font-size:12px; font-weight:700; color:#0e1930; }
+.pf-achievement-sub{ font-size:11px; color:#5a6b8c; margin-top:2px; line-height:1.45; min-height:14px; }
+.pf-achievement .pf-mini-del{ position:absolute; top:0; right:0; }
+
+.pf-tags{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+.pf-tag{
+  font-family:var(--font-mono),monospace; font-size:9.5px; letter-spacing:0.03em; font-weight:700;
+  border:1.4px solid #4aa8ff; color:#2f6fcf; border-radius:99px; padding:4px 8px 4px 10px; background:#eef5ff;
+  display:inline-flex; align-items:center; gap:5px;
+}
+.pf-tag-del{ cursor:pointer; color:#8fa8d0; font-weight:700; }
+.pf-tag-del:hover{ color:#c94b4b; }
+.pf-tag-input{
+  font-family:var(--font-mono),monospace; font-size:9.5px; border:1.4px dashed #b9c6de; color:#4a5673;
+  border-radius:99px; padding:4px 10px; background:none; outline:none; width:110px;
+}
+.pf-tag-input:focus{ border-color:#4aa8ff; }
+
+.pf-footer{ margin-top:34px; padding-top:14px; border-top:1px solid #e4e9f2; display:flex; justify-content:space-between; align-items:center; }
+.pf-footer-text{ font-family:var(--font-mono),monospace; font-size:9px; color:#a3adc2; letter-spacing:0.04em; }
+
+@media print{
+  .pf-toolbar, .pf-edit-hint{ display:none !important; }
+  body{ background:#fff; }
+  .pf-stage{ display:block; padding:0; }
+  .pf-page{ box-shadow:none; border-radius:0; width:auto; padding:0; margin:0; }
+  @page{ size:letter; margin:16mm 15mm; }
+  .pf-entry{ page-break-inside:avoid; padding-right:0; }
+  .pf-screen-only{ display:none !important; }
+  [contenteditable="true"]:hover, [contenteditable="true"]:focus{ background:none; box-shadow:none; }
+  [contenteditable="true"]:empty:before{ content:none !important; }
+}
+@media (max-width:900px){
+  .pf-grid{ grid-template-columns:1fr; }
+  .pf-page{ padding:32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="pf-toolbar">
+  <div class="pf-toolbar-left">
+    <a href="summit-archive.html" class="pf-back">&larr; Back</a>
+    <div>
+      <div class="pf-toolbar-title">PORTFOLIO</div>
+      <div class="pf-toolbar-sub">A printable portfolio of completed work, backed by supporting evidence</div>
+    </div>
+  </div>
+  <div class="pf-toolbar-right">
+    <button type="button" class="pf-sync-btn" id="pfSyncBtn" title="Add any newly completed projects that aren't in this portfolio yet">+ Import New Completed Projects</button>
+    <button type="button" class="pf-print-btn" id="pfPrintBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print / Save as PDF
+    </button>
+  </div>
+</div>
+<div class="pf-edit-hint">Click any text on the page to edit it. Changes save automatically on this device.</div>
+
+<div class="pf-stage">
+  <div class="pf-page" id="pfPage">
+
+    <div class="pf-name" id="pfName" contenteditable="true" data-placeholder="Your Name"></div>
+    <div class="pf-role" id="pfRole" contenteditable="true" data-placeholder="Your Professional Title"></div>
+    <div class="pf-header-rule"></div>
+
+    <div class="pf-grid">
+      <div>
+        <div class="pf-section-title-row"><div class="pf-section-title">Summary</div></div>
+        <div class="pf-summary" id="pfSummary" contenteditable="true" data-placeholder="Write a short professional summary, or use Import to generate one from completed work."></div>
+
+        <div class="pf-section-title-row">
+          <div class="pf-section-title">Projects &amp; Accomplishments</div>
+          <button type="button" class="pf-add-btn pf-screen-only" id="pfAddEntry">+ Add</button>
+        </div>
+        <div id="pfExperience"></div>
+      </div>
+
+      <div>
+        <div class="pf-section-title-row" style="margin-top:0;"><div class="pf-section-title">At a Glance</div></div>
+        <div class="pf-stat-grid">
+          <div class="pf-stat"><div class="pf-stat-num" id="pfMissionCount">0</div><div class="pf-stat-label">Projects Completed</div></div>
+          <div class="pf-stat"><div class="pf-stat-num" id="pfDomainCount">0</div><div class="pf-stat-label">Skill Areas</div></div>
+          <div class="pf-stat"><div class="pf-stat-num" id="pfEvidenceCount">0</div><div class="pf-stat-label">Supporting Records</div></div>
+          <div class="pf-stat"><div class="pf-stat-num" id="pfAchCount">0</div><div class="pf-stat-label">Achievements</div></div>
+        </div>
+
+        <div class="pf-section-title-row">
+          <div class="pf-section-title">Key Achievements</div>
+          <button type="button" class="pf-add-btn pf-screen-only" id="pfAddAch">+ Add</button>
+        </div>
+        <div id="pfAchievements"></div>
+
+        <div class="pf-section-title-row"><div class="pf-section-title">Skills &amp; Expertise</div></div>
+        <div class="pf-tags" id="pfDomainTags"></div>
+      </div>
+    </div>
+
+    <div class="pf-footer">
+      <div class="pf-footer-text" id="pfGeneratedDate">Generated &mdash;</div>
+      <div class="pf-footer-text">Prepared with AETHER</div>
+    </div>
+
+  </div>
+</div>
+
+<script src="aether-voice.js"></script>
+<script>
+(function(){
+  var STORAGE_KEY = 'portfolioBuilderData'; /* local-only, not "aether_..." on purpose:
+    this is a hand-edited document the operator owns, not synced campaign data. */
+
+  var data = null;
+
+  function genId(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  function loadSaved(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+  function save(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){}
+  }
+
+  /* ---- Build an initial portfolio from AETHER's real completed-work data.
+     Only ever runs once, the very first time this page has no saved
+     portfolio yet -- after that, the portfolio is fully hand-owned and
+     editing/deleting things here never gets silently overwritten. ---- */
+  function buildFromAetherData(existingEntries){
+    var missions = (typeof AetherStore !== 'undefined' && AetherStore.getAllMissions) ? AetherStore.getAllMissions() : [];
+    var domains  = (typeof AetherStore !== 'undefined' && AetherStore.getDomains) ? AetherStore.getDomains() : [];
+    var evidence = (typeof AetherStore !== 'undefined' && AetherStore.getEvidence) ? AetherStore.getEvidence() : [];
+
+    var completed = missions.filter(function(m){ return (m.pct || 0) >= 100; });
+    var existingKeys = {};
+    (existingEntries || []).forEach(function(e){ if(e.sourceKey) existingKeys[e.sourceKey] = true; });
+
+    var evByMission = {};
+    evidence.forEach(function(e){
+      if(!e.missionKey) return;
+      (evByMission[e.missionKey] = evByMission[e.missionKey] || []).push(e);
+    });
+
+    var newEntries = completed
+      .filter(function(m){ return !existingKeys[m.key]; })
+      .map(function(m){
+        var evs = evByMission[m.key] || [];
+        return {
+          id: genId(),
+          title: m.name || '',
+          category: (m.domains || []).join(' \u00b7 '),
+          date: m.createdAt || '',
+          description: m.objective || '',
+          bullets: evs.slice(0, 5).map(function(e){ return e.name + (e.notes ? ' \u2014 ' + e.notes : ''); }),
+          sourceKey: m.key
+        };
+      });
+
+    var skills = null;
+    if(!existingEntries){
+      skills = domains.filter(function(d){ return d.pct; })
+        .sort(function(a,b){ return (b.pct||0)-(a.pct||0); })
+        .map(function(d){ return d.name; });
+    }
+
+    return { newEntries: newEntries, skills: skills, evidenceTotal: evidence.length, domainList: domains };
+  }
+
+  function buildInitialData(){
+    var built = buildFromAetherData(null);
+    var d = {
+      name: '',
+      role: '',
+      summary: built.newEntries.length
+        ? ('A record of ' + built.newEntries.length + ' completed project' + (built.newEntries.length !== 1 ? 's' : '') +
+           ', backed by ' + built.evidenceTotal + ' supporting record' + (built.evidenceTotal !== 1 ? 's' : '') +
+           '. Each entry below reflects work actually completed and tracked end-to-end.')
+        : '',
+      entries: built.newEntries,
+      achievements: [],
+      skills: built.skills || []
+    };
+    return d;
+  }
+
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  /* ---- Rendering ---- */
+  function render(){
+    document.getElementById('pfName').textContent = data.name || '';
+    document.getElementById('pfRole').textContent = data.role || '';
+    document.getElementById('pfSummary').textContent = data.summary || '';
+
+    /* Experience / projects */
+    var expEl = document.getElementById('pfExperience');
+    expEl.innerHTML = '';
+    if(!data.entries.length){
+      expEl.innerHTML = '<div class="pf-empty-note">No entries yet. Use "+ Add" to write one in, or "Import New Completed Projects" to pull in finished work from AETHER.</div>';
+    } else {
+      data.entries.forEach(function(entry){
+        expEl.appendChild(renderEntry(entry));
+      });
+    }
+
+    /* Achievements */
+    var achEl = document.getElementById('pfAchievements');
+    achEl.innerHTML = '';
+    if(!data.achievements.length){
+      achEl.innerHTML = '<div class="pf-empty-note">No achievements added yet.</div>';
+    } else {
+      data.achievements.forEach(function(a){ achEl.appendChild(renderAchievement(a)); });
+    }
+
+    /* Skill tags */
+    var tagsEl = document.getElementById('pfDomainTags');
+    tagsEl.innerHTML = '';
+    data.skills.forEach(function(skill, idx){
+      var tag = document.createElement('span');
+      tag.className = 'pf-tag';
+      var label = document.createElement('span');
+      label.textContent = skill;
+      tag.appendChild(label);
+      var del = document.createElement('span');
+      del.className = 'pf-tag-del pf-screen-only';
+      del.textContent = '\u00d7';
+      del.addEventListener('click', function(){
+        data.skills.splice(idx, 1);
+        save(); render();
+      });
+      tag.appendChild(del);
+      tagsEl.appendChild(tag);
+    });
+    var tagInput = document.createElement('input');
+    tagInput.type = 'text';
+    tagInput.className = 'pf-tag-input pf-screen-only';
+    tagInput.placeholder = '+ Add skill';
+    tagInput.addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter' && tagInput.value.trim()){
+        data.skills.push(tagInput.value.trim());
+        save(); render();
+      }
+    });
+    tagsEl.appendChild(tagInput);
+
+    /* Stats -- reflect the current, editable content, not raw source data */
+    document.getElementById('pfMissionCount').textContent = data.entries.length;
+    document.getElementById('pfDomainCount').textContent = data.skills.length;
+    var evidenceTotal = data.entries.reduce(function(sum, e){ return sum + (e.bullets ? e.bullets.length : 0); }, 0);
+    document.getElementById('pfEvidenceCount').textContent = evidenceTotal;
+    document.getElementById('pfAchCount').textContent = data.achievements.length;
+
+    document.getElementById('pfGeneratedDate').textContent =
+      'Generated ' + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+    wireHeaderFields();
+  }
+
+  function renderEntry(entry){
+    var wrap = document.createElement('div');
+    wrap.className = 'pf-entry';
+
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'pf-mini-del pf-entry-del pf-screen-only';
+    delBtn.textContent = '\u00d7';
+    delBtn.title = 'Remove this entry';
+    delBtn.addEventListener('click', function(){
+      data.entries = data.entries.filter(function(e){ return e.id !== entry.id; });
+      save(); render();
+    });
+    wrap.appendChild(delBtn);
+
+    var head = document.createElement('div');
+    head.className = 'pf-entry-head';
+    var title = editableEl('pf-entry-title', entry.title, 'Project or accomplishment title', function(v){ entry.title = v; save(); });
+    var date = editableEl('pf-entry-date', entry.date, 'Date', function(v){ entry.date = v; save(); });
+    head.appendChild(title); head.appendChild(date);
+    wrap.appendChild(head);
+
+    var sub = editableEl('pf-entry-sub', entry.category, 'Category or area', function(v){ entry.category = v; save(); });
+    wrap.appendChild(sub);
+
+    var desc = editableEl('pf-entry-desc', entry.description, 'Short description of the work', function(v){ entry.description = v; save(); });
+    wrap.appendChild(desc);
+
+    var ul = document.createElement('ul');
+    ul.className = 'pf-entry-bullets';
+    (entry.bullets || []).forEach(function(bulletText, bIdx){
+      var li = document.createElement('li');
+      var span = document.createElement('span');
+      span.className = 'pf-bullet-text';
+      span.contentEditable = 'true';
+      span.textContent = bulletText;
+      span.addEventListener('blur', function(){ entry.bullets[bIdx] = span.textContent.trim(); save(); });
+      li.appendChild(span);
+      var bDel = document.createElement('button');
+      bDel.type = 'button';
+      bDel.className = 'pf-mini-del pf-screen-only';
+      bDel.textContent = '\u00d7';
+      bDel.addEventListener('click', function(){
+        entry.bullets.splice(bIdx, 1);
+        save(); render();
+      });
+      li.appendChild(bDel);
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+
+    var addBullet = document.createElement('button');
+    addBullet.type = 'button';
+    addBullet.className = 'pf-bullet-add pf-screen-only';
+    addBullet.textContent = '+ add line';
+    addBullet.addEventListener('click', function(){
+      entry.bullets = entry.bullets || [];
+      entry.bullets.push('');
+      save(); render();
+    });
+    wrap.appendChild(addBullet);
+
+    return wrap;
+  }
+
+  function renderAchievement(a){
+    var wrap = document.createElement('div');
+    wrap.className = 'pf-achievement';
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'pf-mini-del pf-screen-only';
+    delBtn.textContent = '\u00d7';
+    delBtn.addEventListener('click', function(){
+      data.achievements = data.achievements.filter(function(x){ return x.id !== a.id; });
+      save(); render();
+    });
+    wrap.appendChild(delBtn);
+    wrap.appendChild(editableEl('pf-achievement-title', a.title, 'Achievement title', function(v){ a.title = v; save(); }));
+    wrap.appendChild(editableEl('pf-achievement-sub', a.sub, 'Short detail', function(v){ a.sub = v; save(); }));
+    return wrap;
+  }
+
+  function editableEl(className, value, placeholder, onSave){
+    var el = document.createElement('div');
+    el.className = className;
+    el.contentEditable = 'true';
+    el.setAttribute('data-placeholder', placeholder);
+    el.textContent = value || '';
+    el.addEventListener('blur', function(){ onSave(el.textContent.trim()); });
+    return el;
+  }
+
+  function wireHeaderFields(){
+    var nameEl = document.getElementById('pfName');
+    var roleEl = document.getElementById('pfRole');
+    var summaryEl = document.getElementById('pfSummary');
+    nameEl.onblur = function(){ data.name = nameEl.textContent.trim(); save(); };
+    roleEl.onblur = function(){ data.role = roleEl.textContent.trim(); save(); };
+    summaryEl.onblur = function(){ data.summary = summaryEl.textContent.trim(); save(); };
+  }
+
+  function run(){
+    var saved = loadSaved();
+    if(saved){
+      data = saved;
+    } else {
+      data = buildInitialData();
+      save();
+    }
+    render();
+
+    if(window.AetherVoice && data.entries.length){
+      window.AetherVoice.confirmAction('portfolioReady');
+    }
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+
+  document.getElementById('pfPrintBtn').addEventListener('click', function(){ window.print(); });
+
+  document.getElementById('pfAddEntry').addEventListener('click', function(){
+    data.entries.unshift({ id: genId(), title:'', category:'', date:'', description:'', bullets:[], sourceKey:null });
+    save(); render();
+  });
+  document.getElementById('pfAddAch').addEventListener('click', function(){
+    data.achievements.unshift({ id: genId(), title:'', sub:'' });
+    save(); render();
+  });
+  document.getElementById('pfSyncBtn').addEventListener('click', function(){
+    var built = buildFromAetherData(data.entries);
+    if(!built.newEntries.length){
+      if(window.AetherVoice) window.AetherVoice.speak('Nothing new to bring in \u2014 everything completed is already here.');
+      return;
+    }
+    data.entries = data.entries.concat(built.newEntries);
+    save(); render();
+  });
+})();
+</script>
+
+</body>
+</html>

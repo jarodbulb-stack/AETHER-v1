@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Life Advancement</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<style>
+
+/* ============================================================
+   LIFE ADVANCEMENT — page-specific styles
+   ============================================================ */
+
+.page-head{ display:flex; flex-direction:column; gap:2px; margin-bottom:4px; }
+.page-head .crumb{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+.page-head .crumb a{ color:var(--text-dim); }
+.page-head .crumb a:hover{ color:var(--accent-glow); }
+.page-head h1{ font-size:24px; letter-spacing:0.1em; margin-top:4px; }
+.page-head .sub{ font-family:var(--font-body); font-size:12px; color:var(--text-dim); margin-top:2px; }
+
+/* ============================================================
+   SECTION 1 — THE GREAT MOUNTAIN
+   ============================================================ */
+
+.mountain-panel{
+  background:var(--bg-panel);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+}
+.mountain-panel-head{
+  display:flex; align-items:center; gap:10px;
+  padding:16px 20px; border-bottom:1px solid var(--border-subtle);
+}
+.mountain-panel-head svg{ width:17px; height:17px; color:var(--accent); }
+.mountain-panel-head span{ font-family:var(--font-display); font-size:13px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-primary); font-weight:500; }
+
+/* ---- Layout: stat rail | mountain stage | position rail ---- */
+.mountain-body{
+  display:grid;
+  grid-template-columns:220px 1fr 230px;
+  gap:0;
+}
+@media (max-width:1200px){ .mountain-body{ grid-template-columns:1fr; } }
+
+.rail{ padding:20px; display:flex; flex-direction:column; gap:18px; }
+.rail-left{ border-right:1px solid var(--border-subtle); }
+.rail-right{ border-left:1px solid var(--border-subtle); }
+@media (max-width:1200px){ .rail-left, .rail-right{ border:none; border-top:1px solid var(--border-subtle); } }
+
+.rail-metric{ display:flex; flex-direction:column; gap:6px; }
+.rail-metric-head{ display:flex; align-items:center; gap:8px; }
+.rail-metric-head svg{ width:14px; height:14px; flex-shrink:0; }
+.rail-metric-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.rail-metric-value{ font-family:var(--font-display); font-size:22px; font-weight:600; line-height:1; }
+.rail-metric-sparkline{ width:100%; height:18px; }
+
+.rail-divider{ height:1px; background:var(--border-subtle); margin:2px 0; }
+
+.rail-pos-block{ display:flex; flex-direction:column; gap:4px; }
+.rail-pos-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); }
+.rail-pos-value{ font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--text-primary); }
+.rail-pos-sub{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); }
+.rail-weather-row{ display:flex; align-items:center; gap:8px; margin-top:2px; }
+.rail-weather-row svg{ width:16px; height:16px; flex-shrink:0; color:var(--accent-glow); }
+.rail-weather-row span{ font-family:var(--font-body); font-size:12.5px; color:var(--text-secondary); }
+.rail-trend{ display:flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11px; letter-spacing:0.05em; }
+.rail-trend.up{ color:var(--success); }
+.rail-trend.down{ color:var(--danger); }
+.rail-trend svg{ width:12px; height:12px; }
+
+/* ---- Mountain stage: image + overlay layers ---- */
+.mountain-stage{
+  position:relative;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 8%, rgba(255,209,102,0.16) 0%, transparent 55%),
+    linear-gradient(180deg, #0c1422 0%, #0a0f1c 28%, #070b14 60%, #04060c 100%);
+}
+.mountain-viewport{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/11;
+  max-height:var(--mountain-max-height, 480px);
+  overflow:hidden;
+}
+@media (max-width:1200px){ .mountain-viewport{ aspect-ratio:16/14; } }
+.mountain-viewport-twin{ aspect-ratio:885/1347; max-height:var(--mountain-max-height, 560px); width:100%; }
+@media (max-width:900px){
+  .mountain-viewport-twin{ width:auto; height:300px; }
+}
+
+/* ---- Mountain size slider control ---- */
+.mountain-size-control{
+  display:flex; align-items:center; gap:10px;
+  margin-left:auto;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em;
+  color:var(--text-dim); text-transform:uppercase;
+}
+.mountain-size-control .mountain-size-label{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em;
+  color:var(--text-dim); text-transform:uppercase; font-weight:400;
+}
+.mountain-size-control input[type="range"]{
+  -webkit-appearance:none; appearance:none;
+  width:110px; height:3px; border-radius:2px;
+  background:var(--border-strong); outline:none; cursor:pointer;
+}
+.mountain-size-control input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none;
+  width:13px; height:13px; border-radius:50%;
+  background:var(--accent-glow); box-shadow:0 0 8px var(--accent-glow);
+  cursor:pointer; border:none;
+}
+.mountain-size-control input[type="range"]::-moz-range-thumb{
+  width:13px; height:13px; border-radius:50%;
+  background:var(--accent-glow); box-shadow:0 0 8px var(--accent-glow);
+  cursor:pointer; border:none;
+}
+
+/* Holds the cinematic Great Mountain SVG (injected by JS). The SVG paints its
+   own dawn sky, so this layer just needs to fill the stage. */
+.mountain-art{
+  position:absolute; inset:0;
+  background:#06090f no-repeat; background-size:cover;
+  overflow:hidden;
+}
+.mountain-art svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+.mountain-art .silhouette{ display:none; }
+#mountainArtLeft{ background-image:url('assets/great-mountain-left.jpg'); background-position:center 30%; }
+#mountainArtRight{ background-image:url('assets/great-mountain-right.jpg'); background-position:center 34%; }
+
+/* ---- Twin Peaks layout ---- */
+.twin-peaks-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:18px;
+}
+@media (max-width:900px){ .twin-peaks-grid{ grid-template-columns:1fr; } }
+.peak-col{ display:flex; flex-direction:column; gap:8px; }
+@media (max-width:900px){ .peak-col{ align-items:center; } }
+.peak-head{
+  display:flex; align-items:baseline; gap:8px;
+  font-family:var(--font-display); letter-spacing:0.08em; text-transform:uppercase;
+}
+.peak-head .peak-title{ font-size:12px; color:var(--text-primary); font-weight:600; }
+.peak-head .peak-subtitle{ font-family:var(--font-mono); font-size:9px; color:var(--text-dim); letter-spacing:0.06em; text-transform:none; }
+.peak-label-rail{ position:relative; min-height:38px; width:100%; }
+@media (max-width:900px){
+  /* Must match .mountain-viewport-twin's mobile computed width exactly
+     (300px max-height * 885/1347 ratio ≈ 197px) so the percentage-based
+     label positions still line up under their actual trails, not the
+     wider column. */
+  .peak-label-rail{ width:197px; }
+}
+.gm-tooltip{ transition:opacity 0.1s ease; }
+.gm-route-hit{ cursor:pointer; }
+.gm-route-hit:focus{ outline:none; }
+.gm-route-hit:focus-visible{ outline:1.5px dashed rgba(255,255,255,0.6); outline-offset:2px; }
+.peak-label-chip{ transition:transform 0.12s ease, opacity 0.12s ease; }
+.peak-label-chip:hover{ transform:translateX(-50%) scale(1.12); opacity:0.85; }
+.peak-label-chip:focus-visible{ outline:1.5px dashed rgba(255,255,255,0.6); outline-offset:3px; border-radius:3px; }
+
+/* ---- Click-to-isolate: fullscreen single-mountain view ---- */
+.mountain-art{ cursor:zoom-in; }
+.mountain-isolate-overlay{
+  position:fixed; inset:0; z-index:7000;
+  background:rgba(4,6,10,0.97);
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  padding:28px 24px 84px; overflow-y:auto;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.22s ease;
+}
+.mountain-isolate-overlay.is-open{ opacity:1; pointer-events:auto; }
+.mountain-isolate-head{
+  width:100%; max-width:920px; display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:16px; flex-shrink:0;
+}
+.mountain-isolate-title{ font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--text-primary); letter-spacing:0.04em; }
+.mountain-isolate-subtitle{ font-family:var(--font-mono,monospace); font-size:11px; color:var(--text-dim); letter-spacing:0.08em; margin-top:2px; }
+.mountain-isolate-close{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--font-mono,monospace); font-size:12px; letter-spacing:0.05em;
+  color:#cfe0ff; background:rgba(30,46,78,0.6); border:1px solid rgba(120,150,200,0.3);
+  border-radius:8px; padding:9px 16px; cursor:pointer; transition:background .15s;
+}
+.mountain-isolate-close:hover{ background:rgba(60,90,150,0.6); }
+.mountain-isolate-stage{
+  position:relative; width:100%; max-width:640px; flex-shrink:0;
+  aspect-ratio:885/1347;
+}
+.mountain-isolate-rail{ position:relative; width:100%; max-width:640px; height:44px; flex-shrink:0; }
+
+/* Stars */
+.mountain-stars{
+  position:absolute; inset:0; opacity:0.55; pointer-events:none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 15%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 28% 8%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1.5px 1.5px at 45% 20%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 63% 6%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 78% 18%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 91% 10%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1.5px 1.5px at 8% 30%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 55% 28%, rgba(255,255,255,0.5), transparent);
+}
+
+/* Atmospheric gradient overlay so overlay UI stays legible everywhere */
+.mountain-scrim{
+  position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(180deg, rgba(4,6,12,0.15) 0%, rgba(4,6,12,0.05) 35%, rgba(4,6,12,0.35) 75%, rgba(4,6,12,0.65) 100%);
+}
+
+/* SVG overlay layer (routes, camps, position, weather, domain markers) */
+.mountain-overlay{ position:absolute; inset:0; width:100%; height:100%; }
+
+.route-path{ fill:none; stroke:rgba(234,242,255,0.55); stroke-width:0.35; stroke-dasharray:1.1 1.1; }
+.route-path.domain{ stroke-width:0.22; stroke-dasharray:0.6 0.9; opacity:0.85; }
+
+.camp-marker{ cursor:pointer; }
+.camp-marker circle.ring{ fill:none; stroke-width:0.3; }
+.camp-marker circle.core{ }
+.camp-marker .pulse{ fill:none; stroke-width:0.25; opacity:0; }
+.camp-marker.current .pulse{ animation:campPulse 2.4s ease-out infinite; }
+@keyframes campPulse{
+  0%{ r:2.2; opacity:0.7; }
+  100%{ r:5.5; opacity:0; }
+}
+
+.camp-tag{
+  position:absolute; transform:translate(-50%,-50%);
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.04em;
+  background:rgba(8,12,22,0.82); border:1px solid var(--border-strong);
+  border-radius:var(--radius-sm); padding:4px 8px;
+  white-space:nowrap; pointer-events:none;
+  backdrop-filter:blur(4px);
+}
+.camp-tag .ct-name{ color:var(--text-primary); font-weight:700; display:block; }
+.camp-tag .ct-pct{ color:var(--text-dim); font-size:8.5px; }
+.camp-tag.current{ border-color:var(--accent); box-shadow:0 0 14px rgba(74,168,255,0.4); }
+.camp-tag.current .ct-name{ color:var(--accent-glow); }
+
+.summit-tag{
+  position:absolute; transform:translate(-50%,-130%);
+  display:flex; align-items:center; gap:5px;
+  font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.06em; text-transform:uppercase;
+  background:rgba(255,209,102,0.12); border:1px solid rgba(255,209,102,0.4);
+  color:var(--gold); border-radius:var(--radius-sm); padding:4px 9px;
+  white-space:nowrap; pointer-events:none;
+}
+.summit-tag svg{ width:11px; height:11px; }
+
+.current-pos-badge{
+  position:absolute; transform:translate(-50%,-50%);
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  pointer-events:none;
+}
+.cpb-label{
+  font-family:var(--font-mono); font-size:8.5px; letter-spacing:0.08em; text-transform:uppercase;
+  color:var(--accent-glow); background:rgba(8,12,22,0.85); border:1px solid var(--accent);
+  border-radius:var(--radius-sm); padding:2px 7px; white-space:nowrap; margin-bottom:38px;
+  box-shadow:0 0 10px rgba(74,168,255,0.35);
+}
+
+.weather-badge{
+  position:absolute; top:14px; right:16px; z-index:2;
+  display:flex; align-items:center; gap:6px;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase;
+  background:rgba(8,12,22,0.6); border:1px solid var(--border-strong);
+  border-radius:var(--radius-pill); padding:6px 12px;
+  color:var(--text-secondary); backdrop-filter:blur(6px);
+}
+.weather-badge svg{ width:13px; height:13px; color:var(--accent-glow); }
+
+.stage-caption{
+  position:absolute; bottom:12px; left:16px; z-index:2;
+  font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em; text-transform:uppercase;
+  color:rgba(234,242,255,0.4);
+}
+
+/* ============================================================
+   SECTION 2 — DOMAIN CONSTELLATION
+   ============================================================ */
+
+.constellation-strip{
+  display:flex; justify-content:space-between; gap:6px;
+  padding:18px 20px; border-top:1px solid var(--border-subtle);
+  flex-wrap:wrap;
+}
+.const-item{
+  display:flex; flex-direction:column; align-items:center; gap:7px;
+  flex:1; min-width:78px; cursor:pointer;
+}
+.const-dot{
+  width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  border:1.5px solid;
+  background:rgba(255,255,255,0.02);
+  transition:var(--transition);
+}
+.const-dot svg{ width:17px; height:17px; }
+.const-item:hover .const-dot{ transform:translateY(-2px); }
+.const-label{ font-family:var(--font-body); font-size:11px; color:var(--text-secondary); text-align:center; }
+
+.const-legend{
+  display:flex; align-items:center; justify-content:center; gap:18px; flex-wrap:wrap;
+  padding:12px 20px 18px; border-top:1px solid var(--border-subtle);
+}
+.legend-item{ display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-dim); }
+.legend-dot{ width:8px; height:8px; border-radius:50%; }
+
+/* ============================================================
+   SECTION 3 — DOMAIN COMMAND BOARD
+   ============================================================ */
+
+.section-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; }
+.section-head-left{ display:flex; align-items:center; gap:9px; }
+.section-head-left svg{ width:17px; height:17px; color:var(--accent); }
+.section-head-left .ttl{ font-family:var(--font-display); font-size:13px; letter-spacing:0.08em; text-transform:uppercase; font-weight:500; }
+.section-head-left .sub{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); margin-left:10px; }
+.section-head a{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; white-space:nowrap; display:flex; align-items:center; gap:4px; }
+.section-head a svg{ width:11px; height:11px; }
+
+.domain-grid{
+  display:grid; grid-template-columns:repeat(5,1fr); gap:14px;
+}
+@media (max-width:1300px){ .domain-grid{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:760px){ .domain-grid{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:480px){ .domain-grid{ grid-template-columns:1fr; } }
+
+.dcard{
+  background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-md);
+  padding:15px; display:flex; flex-direction:column; gap:10px;
+  cursor:pointer; transition:var(--transition); text-decoration:none;
+  border-left:3px solid var(--dc-color, var(--accent));
+}
+.dcard:hover{ border-color:var(--border-strong); transform:translateY(-2px); box-shadow:var(--shadow-panel); }
+.dcard-head{ display:flex; align-items:center; justify-content:space-between; }
+.dcard-num{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); }
+.dcard-icon{ width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.04); }
+.dcard-icon svg{ width:14px; height:14px; }
+.dcard-name{ font-family:var(--font-display); font-size:12px; letter-spacing:0.04em; color:var(--text-primary); font-weight:500; }
+.dcard-pct{ font-family:var(--font-display); font-size:24px; font-weight:600; line-height:1; }
+.dcard-camp{ font-family:var(--font-mono); font-size:10px; color:var(--text-dim); }
+.dcard-spark{ width:100%; height:24px; }
+.dcard-trend{ display:flex; align-items:center; gap:4px; font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.05em; text-transform:uppercase; }
+.dcard-trend svg{ width:11px; height:11px; }
+.dcard-trend.up{ color:var(--success); }
+.dcard-trend.flat{ color:var(--text-dim); }
+.dcard-trend.down{ color:var(--danger); }
+
+/* ============================================================
+   SECTION 4 + 5 — FORECAST / ELEVATION FEED
+   ============================================================ */
+
+.bottom-2col{ display:grid; grid-template-columns:1.2fr 1fr; gap:20px; align-items:stretch; }
+@media (max-width:1100px){ .bottom-2col{ grid-template-columns:1fr; } }
+
+.forecast-card{ display:flex; flex-direction:column; }
+.forecast-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.forecast-stage{ position:relative; width:100%; height:170px; margin-top:10px; }
+.forecast-axis-label{ font-family:var(--font-mono); font-size:9px; color:var(--text-faint); }
+.forecast-x-labels{ display:flex; justify-content:space-between; margin-top:4px; }
+.forecast-x-labels span{ font-family:var(--font-mono); font-size:9px; color:var(--text-dim); }
+.forecast-current-pill{
+  position:absolute; transform:translate(-50%,-130%);
+  background:var(--accent); color:#04101f;
+  font-family:var(--font-display); font-size:12px; font-weight:700;
+  padding:3px 9px; border-radius:var(--radius-sm);
+}
+
+.forecast-meta-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border-subtle); }
+.fm-cell{ display:flex; flex-direction:column; gap:4px; }
+.fm-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.fm-value{ font-family:var(--font-display); font-size:16px; font-weight:600; }
+.fm-value.accent{ color:var(--accent-glow); }
+.fm-value.success{ color:var(--success); }
+
+.gains-list{ display:flex; flex-direction:column; gap:0; margin-top:8px; }
+.gain-item{
+  display:flex; align-items:center; gap:12px; padding:11px 0;
+  border-bottom:1px solid var(--border-subtle);
+}
+.gain-item:last-child{ border-bottom:none; }
+.gain-check{
+  width:26px; height:26px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(61,220,132,0.1); color:var(--success);
+}
+.gain-check svg{ width:13px; height:13px; }
+.gain-body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.gain-name{ font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); }
+.gain-sub{ font-family:var(--font-mono); font-size:10px; color:var(--text-dim); }
+.gain-sub .dot-sep{ margin:0 4px; }
+.gain-right{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0; }
+.gain-date{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); }
+.gain-delta{ font-family:var(--font-display); font-size:13px; font-weight:700; color:var(--success); }
+
+.evidence-footer-link{ margin-top:14px; width:100%; justify-content:space-between; }
+
+/* Footer manifesto line */
+.manifesto-line{
+  text-align:center; padding:18px 0 4px;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase;
+  color:var(--text-faint);
+}
+
+</style>
+<style>
+@keyframes aether-pulse {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(0,200,255,0.9)) drop-shadow(0 0 18px rgba(0,200,255,0.4)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(0,200,255,1)) drop-shadow(0 0 35px rgba(0,200,255,0.7)) drop-shadow(0 0 6px #fff); }
+}
+.sidebar-logo-mark { animation: aether-pulse 2.8s ease-in-out infinite; }
+</style>
+</head><body>
+
+<div class="app-shell">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow-strong" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow-soft" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Outer dashed orbit circle -->
+          <circle cx="50" cy="50" r="42" stroke="#1a4a6a" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.7"/>
+          <!-- Inner dashed circle -->
+          <circle cx="50" cy="50" r="34" stroke="#1a3a5a" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.5"/>
+          <!-- Orbit dots -->
+          <circle cx="50" cy="8" r="2.5" fill="#00c8ff" filter="url(#glow-soft)" opacity="0.9"/>
+          <circle cx="88" cy="62" r="1.8" fill="#4aa8ff" filter="url(#glow-soft)" opacity="0.7"/>
+          <circle cx="14" cy="38" r="1.5" fill="#4aa8ff" opacity="0.5"/>
+          <!-- Triangle glow layer -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="5" stroke-linejoin="round" fill="none" opacity="0.15" filter="url(#glow-strong)"/>
+          <!-- Inner green triangle -->
+          <path d="M50 30 L76 70 H24 Z" stroke="#00ff88" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.5"/>
+          <!-- Main neon triangle -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="2.5" stroke-linejoin="round" fill="none" filter="url(#glow-strong)"/>
+          <!-- Center dot -->
+          <circle cx="50" cy="60" r="3.5" fill="#00c8ff" filter="url(#glow-strong)"/>
+          <circle cx="50" cy="60" r="1.5" fill="white" opacity="0.9"/>
+          <!-- Corner accent dots -->
+          <circle cx="50" cy="22" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="82" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="18" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-wordmark">ETHER</span>
+        <span class="sidebar-logo-tagline">Mission Command System</span>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg></span>
+        <span class="nav-item-label">Command Deck</span>
+      </a>
+      <a href="life-advancement.html" class="nav-item active">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 5l4 6 3-4 5 10"/></svg></span>
+        <span class="nav-item-label">Life Advancement</span>
+      </a>
+      <a href="missions.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span>
+        <span class="nav-item-label">Missions</span>
+      </a>
+      <a href="blueprints.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="nav-item-label">Blueprints</span>
+      </a>
+      <a href="problems-blockers.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg></span>
+        <span class="nav-item-label">Problems / Blockers</span>
+        <span class="badge" id="navBlockerBadge">3</span>
+      </a>
+      <a href="evidence-vault.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg></span>
+        <span class="nav-item-label">Evidence Vault</span>
+      </a>
+      <a href="timeline.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="nav-item-label">Timeline</span>
+      </a>
+      <a href="debrief.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V7a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 5v5h5"/></svg></span>
+        <span class="nav-item-label">Debrief</span>
+      </a>
+      <a class="nav-item" href="knowledge-library.html"><span class="nav-item-icon">📚</span><span class="nav-item-label">Knowledge Library</span></a>
+      <a class="nav-item" href="summit-archive.html"><span class="nav-item-icon">🏔️</span><span class="nav-item-label">Summit Archive</span></a>
+      <a class="nav-item" href="command-center.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
+        <span class="nav-item-label">Command Center</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-profile">
+      <div class="profile-header">
+        <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+        <div class="profile-info">
+          <span class="profile-name">ROD ENTERA</span>
+          <span class="profile-rank">Operator</span>
+        </div>
+      </div>
+            <div style="display:flex;gap:16px;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:4px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--teal);" id="sidebarDaysClimbing">14</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Days Climbing</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--gold);" id="sidebarSummits">0</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Summits</span>
+        </div>
+      </div>
+      <div class="profile-quote">"The mission is progress. The evidence is proof. The mountain is the journey."</div>
+      <div class="profile-focus-row">
+        <span class="focus-dot"></span>
+        <div class="focus-text">
+          <span class="focus-label">Focus Mode</span>
+          <span class="focus-value">High Performance</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN COLUMN ═══ -->
+  <div class="main-col">
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>LIFE ADVANCEMENT</h1>
+        <span class="topbar-subtitle">Track your progress. Advance your life.</span>
+      </div>
+      <div class="topbar-meta">
+        <span class="pill on-track" style="display:flex; align-items:center; gap:6px;">
+          <span style="width:6px; height:6px; border-radius:50%; background:var(--success); box-shadow:0 0 6px var(--success);"></span>
+          Operator: Aether Prime
+        </span>
+        <span class="mono" style="font-size:11px; color:var(--text-dim);" id="topbarClock">SUNDAY, JUNE 18, 2026 · 14:18 ZULU</span>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ═══ SECTION 1 — TWIN PEAKS ═══ -->
+      <div class="mountain-panel">
+        <div class="mountain-panel-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+          <span>Twin Peaks</span>
+          <div class="mountain-size-control">
+            <span class="mountain-size-label">Size</span>
+            <input type="range" id="mountainSizeSlider" min="280" max="720" step="10" value="480"/>
+          </div>
+        </div>
+
+        <div class="mountain-body">
+
+          <!-- Left rail: Life Operating Status -->
+          <div class="rail rail-left" id="railLeft"><!-- JS --></div>
+
+          <!-- Center: mountain stage with overlay layers -->
+          <div class="mountain-stage" id="mountainStage">
+            <div class="twin-peaks-grid" id="twinPeaksGrid">
+
+              <div class="peak-col">
+                <div class="peak-head">
+                  <span class="peak-title" id="peakTitleLeft">Internal Life</span>
+                  <span class="peak-subtitle" id="peakSubtitleLeft">Personal Mastery</span>
+                </div>
+                <div class="mountain-viewport mountain-viewport-twin" id="mountainViewportLeft">
+                  <div class="mountain-art" id="mountainArtLeft"></div>
+                  <div class="mountain-stars"></div>
+                  <div class="mountain-scrim"></div>
+                  <div id="campTagLayerLeft"><!-- JS: leader-line ticks + summit label --></div>
+                  <span class="stage-caption">Live route · Internal domains</span>
+                </div>
+                <div class="peak-label-rail" id="peakLabelRailLeft"><!-- JS: domain name chips --></div>
+              </div>
+
+              <div class="peak-col">
+                <div class="peak-head">
+                  <span class="peak-title" id="peakTitleRight">External Life</span>
+                  <span class="peak-subtitle" id="peakSubtitleRight">Built Impact</span>
+                </div>
+                <div class="mountain-viewport mountain-viewport-twin" id="mountainViewportRight">
+                  <div class="mountain-art" id="mountainArtRight"></div>
+                  <div class="mountain-stars"></div>
+                  <div class="mountain-scrim"></div>
+                  <div id="campTagLayerRight"><!-- JS: leader-line ticks + summit label --></div>
+                  <span class="stage-caption">Live route · External domains</span>
+                </div>
+                <div class="peak-label-rail" id="peakLabelRailRight"><!-- JS: domain name chips --></div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Right rail: Position panel -->
+          <div class="rail rail-right" id="railRight"><!-- JS --></div>
+
+        </div>
+
+        <!-- ═══ SECTION 2 — DOMAIN CONSTELLATION ═══ -->
+        <div class="constellation-strip" id="constellationStrip"><!-- JS --></div>
+        <div class="const-legend" id="constLegend"><!-- JS --></div>
+      </div>
+
+      <!-- ═══ SECTION 3 — DOMAIN COMMAND BOARD ═══ -->
+      <div>
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span class="ttl">Domain Command Board</span>
+            <span class="sub">Live status of all life domains</span>
+          </div>
+          <a href="#">View All Domains <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+        <div class="domain-grid" id="domainGrid" style="margin-top:14px;"><!-- JS --></div>
+      </div>
+
+      <!-- ═══ SECTION 4 + 5 — FORECAST / ELEVATION FEED ═══ -->
+      <div class="bottom-2col">
+
+        <div class="panel forecast-card">
+          <div class="forecast-head">
+            <div class="section-head-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+              <span class="ttl">Summit Forecast</span>
+            </div>
+            <button class="btn btn-ghost" style="font-size:10px; padding:7px 12px;" onclick="alert('Detailed forecasting needs real day-over-day history to project trends honestly \u2014 there isn\'t a shortcut around that. Keep logging real evidence and this becomes meaningful over the next couple of weeks.')">Detailed Forecast</button>
+          </div>
+          <span class="sub" style="font-family:var(--font-body); font-size:11px; color:var(--text-dim);">Projected life elevation over time</span>
+
+          <div class="forecast-stage" id="forecastStage"><!-- JS: SVG line graph --></div>
+          <div class="forecast-x-labels">
+            <span>Now</span><span>1 Year</span><span>2 Years</span><span>3 Years</span><span>4 Years</span><span>5 Years</span>
+          </div>
+
+          <div class="forecast-meta-row">
+            <div class="fm-cell">
+              <span class="fm-label">Estimated Summit</span>
+              <span class="fm-value accent" id="estSummitValue">4.3 Years</span>
+            </div>
+            <div class="fm-cell">
+              <span class="fm-label">Confidence Range</span>
+              <span class="fm-value">± 3.7 Months</span>
+            </div>
+            <div class="fm-cell">
+              <span class="fm-label">Velocity</span>
+              <span class="fm-value success">+4.2% / Month</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="panel">
+          <div class="section-head">
+            <div class="section-head-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><path d="M5 5l14 14M19 5 5 19" opacity="0"/></svg>
+              <span class="ttl">Recent Elevation Gains</span>
+              <span class="sub">Evidence-based advancement</span>
+            </div>
+            <a href="evidence-vault.html">View All <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+          </div>
+          <div class="gains-list" id="gainsList"><!-- JS --></div>
+        </div>
+
+      </div>
+
+      <div class="manifesto-line">Your life is the mountain. Every decision is the step. Every step is advancement.</div>
+
+    </main>
+  </div>
+</div>
+
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<script src="intelligenceEngine.js"></script>
+<script src="route-data.js"></script>
+<script src="great-mountain.js"></script>
+<script>
+/* ============================================================
+   DATA — Life Elevation Engine
+   ============================================================ */
+
+/* Domain weights per the Life Elevation Engine spec.
+   Pulls from the shared store so LIVE mode shows a clean slate
+   (all domains 0%) and SAMPLE mode shows demo data. Falls back to
+   the hardcoded set only if the store failed to load. */
+const _hardcodedDomainDefs = [
+  {key:'health', name:'Health', icon:'heart', color:'var(--danger)', weight:15, pct:42, camp:'Camp II', trend:'up', spark:[20,24,28,31,35,38,42]},
+  {key:'finance', name:'Finance', icon:'finance', color:'var(--success)', weight:15, pct:68, camp:'Camp III', trend:'strong', spark:[40,46,52,55,60,64,68]},
+  {key:'relationships', name:'Relationships', icon:'heart2', color:'var(--purple)', weight:10, pct:35, camp:'Camp II', trend:'flat', spark:[33,34,33,35,34,36,35]},
+  {key:'learning', name:'Learning', icon:'book', color:'var(--accent)', weight:10, pct:21, camp:'Camp I', trend:'up', spark:[8,10,12,15,17,19,21]},
+  {key:'business', name:'Business', icon:'briefcase', color:'var(--warning)', weight:15, pct:12, camp:'Base Camp', trend:'down', spark:[24,22,19,17,15,13,12]},
+  {key:'skills', name:'Skills & Mastery', icon:'star', color:'var(--gold)', weight:10, pct:28, camp:'Camp I', trend:'up', spark:[14,17,19,22,24,26,28]},
+  {key:'character', name:'Character & Discipline', icon:'shield', color:'var(--teal)', weight:10, pct:31, camp:'Camp II', trend:'up', spark:[20,22,24,26,28,29,31]},
+  {key:'spiritual', name:'Spiritual Life', icon:'sun', color:'var(--gold)', weight:5, pct:44, camp:'Camp II', trend:'flat', spark:[42,43,44,43,45,44,44]},
+  {key:'purpose', name:'Purpose & Mission', icon:'target', color:'var(--purple)', weight:5, pct:38, camp:'Camp II', trend:'up', spark:[26,29,31,33,35,37,38]},
+  {key:'environment', name:'Environment & Lifestyle', icon:'leaf', color:'var(--success)', weight:5, pct:18, camp:'Base Camp', trend:'down', spark:[28,26,24,22,20,19,18]}
+];
+const _isLiveMode = (typeof AetherStore !== 'undefined') && AetherStore.isLive && AetherStore.isLive();
+const domainDefs = (typeof AetherStore !== 'undefined' && AetherStore.getDomains)
+  ? AetherStore.getDomains()
+  : _hardcodedDomainDefs;
+
+/* ---------- Real weather, derived from actual domain trends ----------
+   Mirrors intelligenceEngine.js's deriveWeather() rule set exactly (that
+   function itself isn't exported, only its already-applied output via
+   computeDashboardDomains(), which is per-domain for a different page's
+   layout -- this needs a per-MOUNTAIN aggregate instead, so the rule is
+   duplicated here rather than reshaping that other function's contract).
+   Computed once, here, so the sidebar text and the Twin Peaks visual
+   atmosphere can never disagree with each other. */
+var _WEATHER_SEVERITY = { storm:3, fog:2, light_clouds:1, clear:0 };
+var _WEATHER_LABEL = { storm:'Storm Front', fog:'Heavy Fog', light_clouds:'Light Clouds', clear:'Clear Skies' };
+function _deriveWeatherState(trend, pct){
+  if(trend === 'down') return 'storm';
+  if(trend === 'flat' && pct < 40) return 'fog';
+  if(trend === 'flat') return 'light_clouds';
+  if(trend === 'strong') return 'clear';
+  return 'light_clouds';
+}
+function _classifyMountainSide(name){
+  var n = (name || '').toLowerCase();
+  var left = ['health','character','skill','spirit','purpose'];
+  var right = ['financ','business','learn','relationship','environment'];
+  for(var i=0;i<left.length;i++){ if(n.indexOf(left[i]) !== -1) return 'left'; }
+  for(var j=0;j<right.length;j++){ if(n.indexOf(right[j]) !== -1) return 'right'; }
+  return null;
+}
+var _mountainWeather = (function(){
+  var worst = { left: -1, right: -1 };
+  var state = { left: 'clear', right: 'clear' };
+  var overallWorst = -1, overallState = 'clear';
+  domainDefs.forEach(function(d){
+    var side = _classifyMountainSide(d.name);
+    var w = _deriveWeatherState(d.trend, d.pct);
+    var sev = _WEATHER_SEVERITY[w];
+    if(side && sev > worst[side]){ worst[side] = sev; state[side] = w; }
+    if(sev > overallWorst){ overallWorst = sev; overallState = w; }
+  });
+  return { left: state.left, right: state.right, overall: overallState };
+})();
+
+/* ---------- Computed: Life Elevation Engine (weighted average) ---------- */
+const totalWeight = domainDefs.reduce((s,d)=> s+d.weight, 0);
+const lifeElevation = Math.round(domainDefs.reduce((s,d)=> s + (d.pct * d.weight), 0) / totalWeight);
+const domainsAdvancing = domainDefs.filter(d=> d.trend==='up' || d.trend==='strong').length;
+const domainsDeclining = domainDefs.filter(d=> d.trend==='down').length;
+const commanderConfidence = _isLiveMode
+  ? (typeof AetherIntelligence !== 'undefined' ? AetherIntelligence.computeCommanderConfidence().pct : 0)
+  : 62;
+const _liveMissionsForRail = _isLiveMode ? (AetherStore.getAllMissions ? AetherStore.getAllMissions() : AetherStore.getMissions()) : [];
+const activeExpeditions = _isLiveMode ? _liveMissionsForRail.length : 7;
+const blockedExpeditions = _isLiveMode ? _liveMissionsForRail.filter(function(m){ return m.blocked; }).length : 2;
+
+/* ---------- Icon library ---------- */
+const icons = {
+  heart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.3 4.5 6 4.5c2.1 0 3.6 1.2 4.5 2.8C11.4 5.7 12.9 4.5 15 4.5c3.7 0 5.5 3.5 4 7.2-2.5 4.7-10 9.3-10 9.3Z"/></svg>`,
+  heart2: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.3 4.5 6 4.5c2.1 0 3.6 1.2 4.5 2.8C11.4 5.7 12.9 4.5 15 4.5c3.7 0 5.5 3.5 4 7.2-2.5 4.7-10 9.3-10 9.3Z"/></svg>`,
+  finance: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.1-2 2.5-2s2.5.7 2.5 2-1.1 1.7-2.5 2-2.5.6-2.5 2 1.1 2 2.5 2 2.5-.6 2.5-2"/></svg>`,
+  book: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5V5.2C4 4 5 3.3 6.1 3.5 8 3.9 10 4.7 12 6c2-1.3 4-2.1 5.9-2.5C19 3.3 20 4 20 5.2v14.3"/><path d="M4 19.5c0-1 .8-1.5 1.8-1.5H10c.8 0 1.5.3 2 .8.5-.5 1.2-.8 2-.8h4.2c1 0 1.8.5 1.8 1.5"/></svg>`,
+  briefcase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>`,
+  star: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.6 5.8 6.2.6-4.7 4.2 1.4 6.1L12 16.8 6.5 19.7l1.4-6.1L3.2 9.4l6.2-.6Z"/></svg>`,
+  shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6Z"/></svg>`,
+  sun: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M21.5 12H19M5 12H2.5M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8M18.4 18.4l-1.8-1.8M7.4 7.4 5.6 5.6"/></svg>`,
+  target: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>`,
+  leaf: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 19c8-1 13-6 14-14-8 0-13 5-14 14Z"/><path d="M5 19c2-3 4.5-5.5 8-8"/></svg>`
+};
+
+const trendIcon = {
+  up: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>`,
+  strong: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>`,
+  flat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18"/></svg>`,
+  down: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></svg>`
+};
+const trendLabel = {up:'Rising', strong:'Strong', flat:'Stable', down:'Declining'};
+const trendClass = {up:'up', strong:'up', flat:'flat', down:'down'};
+
+function sparklineSvg(data, color, w=80, h=24){
+  const min = Math.min(...data), max = Math.max(...data);
+  const range = (max-min) || 1;
+  const pts = data.map((v,i)=> {
+    const x = (i/(data.length-1)) * w;
+    const y = h - ((v-min)/range) * (h-4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg class="dcard-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+/* ============================================================
+   RENDER — Left rail (Life Operating Status)
+   ============================================================ */
+document.getElementById('railLeft').innerHTML = `
+  <span class="panel-label">Life Operating Status</span>
+
+  <div class="rail-metric">
+    <div class="rail-metric-head"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg><span class="rail-metric-label">Life Elevation</span></div>
+    <span class="rail-metric-value">${lifeElevation}%</span>
+    ${sparklineSvg([18,21,23,24,26,27,lifeElevation], '#4aa8ff', 160, 18).replace('dcard-spark','rail-metric-sparkline')}
+  </div>
+
+  <div class="rail-divider"></div>
+
+  <div class="rail-metric">
+    <div class="rail-metric-head"><svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-glow)" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6Z"/></svg><span class="rail-metric-label">Commander Confidence</span></div>
+    <span class="rail-metric-value" style="color:var(--accent-glow);">${commanderConfidence}%</span>
+  </div>
+
+  <div class="rail-divider"></div>
+
+  <div class="rail-metric">
+    <div class="rail-metric-head"><svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span class="rail-metric-label">Domains Advancing</span></div>
+    <span class="rail-metric-value" style="color:var(--success);">${domainsAdvancing} / 10</span>
+  </div>
+
+  <div class="rail-metric">
+    <div class="rail-metric-head"><svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="1.8"><path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/></svg><span class="rail-metric-label">Domains Declining</span></div>
+    <span class="rail-metric-value" style="color:var(--danger);">${domainsDeclining} / 10</span>
+  </div>
+
+  <div class="rail-divider"></div>
+
+  <div class="rail-metric">
+    <div class="rail-metric-head"><svg viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg><span class="rail-metric-label">Active Expeditions</span></div>
+    <span class="rail-metric-value">${activeExpeditions}</span>
+  </div>
+
+  <div class="rail-metric">
+    <div class="rail-metric-head"><svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="1.8"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg><span class="rail-metric-label">Blocked Expeditions</span></div>
+    <span class="rail-metric-value" style="color:var(--warning);">${blockedExpeditions}</span>
+  </div>
+`;
+
+/* ============================================================
+   RENDER — Right rail (Current Position panel)
+   ============================================================ */
+const currentPosition = _isLiveMode
+  ? {camp:'Base Camp', pct: lifeElevation, weather:_WEATHER_LABEL[_mountainWeather.overall], weatherIcon:'fog', nextMilestone:'Camp I', nextMilestonePct:15, trend:'Insufficient History'}
+  : {camp:'Camp II', pct: lifeElevation, weather:_WEATHER_LABEL[_mountainWeather.overall], weatherIcon:'fog', nextMilestone:'Camp III', nextMilestonePct:75, trend:'Advancing'};
+
+document.getElementById('railRight').innerHTML = `
+  <div class="rail-pos-block">
+    <span class="rail-pos-label">Current Position</span>
+    <span class="rail-pos-value">${currentPosition.camp}</span>
+    <span class="rail-pos-sub">Elevation ${currentPosition.pct}%</span>
+  </div>
+
+  <div class="rail-divider"></div>
+
+  <div class="rail-pos-block">
+    <span class="rail-pos-label">Weather</span>
+    <div class="rail-weather-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10h14M3 14h18M5 18h14"/></svg>
+      <span>${currentPosition.weather}</span>
+    </div>
+  </div>
+
+  <div class="rail-divider"></div>
+
+  <div class="rail-pos-block">
+    <span class="rail-pos-label">Summit Forecast</span>
+    <span class="rail-pos-value" style="font-size:20px; color:var(--gold);" id="railSummitValue">4.3 Years</span>
+    <span class="rail-pos-sub" id="railSummitSub">± 3.7 Months</span>
+  </div>
+
+  <div class="rail-divider"></div>
+
+  <div class="rail-pos-block">
+    <span class="rail-pos-label">Next Major Milestone</span>
+    <span class="rail-pos-value" style="font-size:16px;">${currentPosition.nextMilestone}</span>
+    <span class="rail-pos-sub">${currentPosition.nextMilestonePct}% Elevation</span>
+  </div>
+
+  <div class="rail-divider"></div>
+
+  <div class="rail-pos-block">
+    <span class="rail-pos-label">Overall Trend</span>
+    <span class="rail-trend up">${trendIcon.up} Advancing</span>
+  </div>
+`;
+
+/* ============================================================
+   RENDER — Weather badge (top-right of mountain stage)
+   ============================================================ */
+var weatherBadgeEl = document.getElementById('weatherBadge');
+if(weatherBadgeEl){
+  weatherBadgeEl.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10h14M3 14h18M5 18h14"/></svg>
+    ${currentPosition.weather}
+  `;
+}
+
+/* (dead legacy camps array / currentCampKey / svgNS / overlaySvg /
+   buildRoutePath -- all referenced only by the removed block above.
+   Removed for the same reason.) */
+
+/* ===== TWIN PEAKS OF LIFE ADVANCEMENT ===== */
+/* Render both mountains via the GreatMountain engine, driven by real domain
+   percentages. GreatMountain.render() classifies the 10 domains into the
+   Internal Life (left) and External Life (right) mountains automatically. */
+(function(){
+  /* Build the domains array the engine expects: [{id,name,color,pct}] */
+  var gmDomains = domainDefs.map(function(d){
+    return { id: d.name, name: d.name, color: _resolveColor(d.color), pct: d.pct };
+  });
+
+  /* Resolve CSS var() colors to concrete hex so the SVG strokes render. */
+  function _resolveColor(c){
+    if(!c) return '#4aa8ff';
+    if(c.indexOf('var(') === 0){
+      var name = c.slice(4, -1).trim();
+      var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      return v || '#4aa8ff';
+    }
+    return c;
+  }
+
+  if(!(window.GreatMountain && window.GreatMountain.render)) return;
+  var out = window.GreatMountain.render(gmDomains, { leftWeather: _mountainWeather.left, rightWeather: _mountainWeather.right });
+
+  /* Domain-label rail: great-mountain.js gives every chip an evenly-spaced
+     X position. This does a measure-then-place pass after the chips are
+     actually in the DOM: sort by real horizontal position, then lay them
+     out in a strict up/down zigzag (clean alternating rhythm) -- only
+     stepping a label out to a third or fourth tier when two labels sharing
+     the same row would otherwise actually collide (e.g. "Skills" and
+     "Spiritual Life" sitting close together). */
+  function layoutRailLabels(railEl){
+    if(!railEl) return;
+    var chips = Array.prototype.slice.call(railEl.querySelectorAll('.peak-label-chip'));
+    if(!chips.length) return;
+    var railWidth = railEl.getBoundingClientRect().width;
+    if(!railWidth) return;
+    var GAP = 8;        // minimum horizontal gap kept between two labels sharing a row, px
+    var ROW_HEIGHT = 17; // vertical step between stacked rows, px
+
+    var items = chips.map(function(chip){
+      var leftPct = parseFloat(chip.style.left) || 0;
+      var centerPx = (leftPct/100) * railWidth;
+      var w = chip.getBoundingClientRect().width || 40;
+      return { chip: chip, centerPx: centerPx, halfW: w/2 };
+    });
+    items.sort(function(a,b){ return a.centerPx - b.centerPx; });
+
+    /* Default every label to a strict up/down zigzag in left-to-right
+       order (row 0, 1, 0, 1, ...) for a clean alternating rhythm. Only
+       when that specific slot would still collide with the label two
+       positions back sharing the same row does it step out to the next
+       free row at the same phase (row 2, 4, ... for evens; 3, 5, ... for
+       odds) -- so the zigzag holds everywhere it can, and only widens
+       where names are genuinely too long or close together to fit it. */
+    var rowRightEdge = [];
+    var maxRow = 0;
+    items.forEach(function(item, idx){
+      var left = item.centerPx - item.halfW;
+      var right = item.centerPx + item.halfW;
+      var row = idx % 2;
+      while(rowRightEdge[row] !== undefined && left < rowRightEdge[row] + GAP){ row += 2; }
+      rowRightEdge[row] = right;
+      if(row > maxRow) maxRow = row;
+      item.chip.style.top = (row * ROW_HEIGHT) + 'px';
+    });
+
+    railEl.style.minHeight = ((maxRow + 1) * ROW_HEIGHT + 21) + 'px';
+  }
+
+  function wireMountain(side, out, viewportId, artId, tagLayerId, titleId, subtitleId, railId){
+    var art = document.getElementById(artId);
+    if(art){ art.innerHTML = out.svg; }
+    var tagLayer = document.getElementById(tagLayerId);
+    if(tagLayer){ tagLayer.insertAdjacentHTML('beforeend', out.labelsHtml); }
+    var rail = document.getElementById(railId);
+    if(rail){ rail.insertAdjacentHTML('beforeend', out.railHtml); layoutRailLabels(rail); }
+    var titleEl = document.getElementById(titleId);
+    if(titleEl && out.meta && out.meta.title){ titleEl.textContent = out.meta.title; }
+    var subtitleEl = document.getElementById(subtitleId);
+    if(subtitleEl && out.meta && out.meta.subtitle){ subtitleEl.textContent = out.meta.subtitle; }
+    var viewport = document.getElementById(viewportId);
+    if(viewport){
+      window.GreatMountain.attachInteractivity(viewport, out.meta, {
+        onSelect: function(route){
+          if(!route) return;
+          /* Deep-link to that domain's mission board on click, per the
+             "Click -> center route / open details panel" spec. */
+          window.location.href = 'missions.html?domain=' + encodeURIComponent(route.name);
+        }
+      });
+    }
+  }
+
+  wireMountain('left',  out.left,  'mountainViewportLeft',  'mountainArtLeft',  'campTagLayerLeft',  'peakTitleLeft',  'peakSubtitleLeft',  'peakLabelRailLeft');
+  wireMountain('right', out.right, 'mountainViewportRight', 'mountainArtRight', 'campTagLayerRight', 'peakTitleRight', 'peakSubtitleRight', 'peakLabelRailRight');
+
+  /* ===== CLICK-TO-ISOLATE: fullscreen single-mountain view =====
+     Clicking anywhere on a mountain's background (not on a route line,
+     which already deep-links to that domain's missions) opens a large
+     single-mountain view -- same real routes/camps/labels, just given
+     the whole screen. Closes via the X, clicking the dim backdrop, or
+     Escape. The site-wide Back/Continue bar (aether-nav.js) stays on
+     top of this overlay (lower z-index), so page navigation is never
+     blocked while the overlay is open. */
+  var overlay = document.createElement('div');
+  overlay.className = 'mountain-isolate-overlay';
+  overlay.innerHTML =
+    '<div class="mountain-isolate-head">'+
+      '<div><div class="mountain-isolate-title" id="isoTitle">Mountain</div>'+
+      '<div class="mountain-isolate-subtitle" id="isoSubtitle"></div></div>'+
+      '<button type="button" class="mountain-isolate-close" id="isoClose"><span>&times;</span><span>Close</span></button>'+
+    '</div>'+
+    '<div class="mountain-isolate-stage" id="isoStage">'+
+      '<div class="mountain-art" id="isoArt" style="border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.6);"></div>'+
+      '<div class="mountain-stars"></div><div class="mountain-scrim" style="border-radius:12px;"></div>'+
+      '<div id="isoTagLayer"></div>'+
+    '</div>'+
+    '<div class="mountain-isolate-rail" id="isoRail"></div>';
+  document.body.appendChild(overlay);
+
+  var isoArt = overlay.querySelector('#isoArt');
+  var isoTagLayer = overlay.querySelector('#isoTagLayer');
+  var isoRail = overlay.querySelector('#isoRail');
+  var isoStage = overlay.querySelector('#isoStage');
+  var isoTitle = overlay.querySelector('#isoTitle');
+  var isoSubtitle = overlay.querySelector('#isoSubtitle');
+  var isoViewport = null; // interactivity gets (re)attached to isoStage each open
+
+  function openIsolate(side, sideOut){
+    // Clone the stage to a fresh node so previous opens' event listeners
+    // and injected tooltip element don't accumulate across repeated opens.
+    var freshStage = isoStage.cloneNode(false);
+    isoStage.parentNode.replaceChild(freshStage, isoStage);
+    isoStage = freshStage;
+    isoArt = document.createElement('div');
+    isoArt.id = 'isoArt';
+    isoArt.className = 'mountain-art';
+    isoArt.style.borderRadius = '12px';
+    isoArt.style.boxShadow = '0 20px 60px rgba(0,0,0,0.6)';
+    var starsEl = document.createElement('div'); starsEl.className = 'mountain-stars';
+    var scrimEl = document.createElement('div'); scrimEl.className = 'mountain-scrim'; scrimEl.style.borderRadius = '12px';
+    isoTagLayer = document.createElement('div'); isoTagLayer.id = 'isoTagLayer';
+    isoStage.appendChild(isoArt); isoStage.appendChild(starsEl); isoStage.appendChild(scrimEl); isoStage.appendChild(isoTagLayer);
+
+    isoArt.style.backgroundImage = "url('assets/great-mountain-" + side + ".jpg')";
+    isoArt.style.backgroundSize = 'cover';
+    isoArt.style.backgroundPosition = 'center';
+    isoArt.innerHTML = sideOut.svg;
+    isoTagLayer.innerHTML = sideOut.labelsHtml;
+    isoRail.innerHTML = sideOut.railHtml;
+    layoutRailLabels(isoRail);
+    isoTitle.textContent = (sideOut.meta && sideOut.meta.title) || 'Mountain';
+    isoSubtitle.textContent = (sideOut.meta && sideOut.meta.subtitle) || '';
+    window.GreatMountain.attachInteractivity(isoStage, sideOut.meta, {
+      onSelect: function(route){
+        if(!route) return;
+        window.location.href = 'missions.html?domain=' + encodeURIComponent(route.name);
+      }
+    });
+    overlay.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeIsolate(){
+    overlay.classList.remove('is-open');
+    document.body.style.overflow = '';
+  }
+  overlay.querySelector('#isoClose').addEventListener('click', closeIsolate);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeIsolate(); });
+
+  [['left', out.left, 'mountainArtLeft'], ['right', out.right, 'mountainArtRight']].forEach(function(entry){
+    var side = entry[0], sideOut = entry[1], artId = entry[2];
+    var artEl = document.getElementById(artId);
+    if(!artEl) return;
+    artEl.addEventListener('click', function(e){
+      // Don't hijack clicks on a route line/camp -- those already
+      // navigate to that domain's missions via attachInteractivity.
+      if(e.target.closest && e.target.closest('.gm-route-hit')) return;
+      openIsolate(side, sideOut);
+    });
+  });
+})();
+
+/* ---- Mountain size slider ---- */
+(function(){
+  var slider = document.getElementById('mountainSizeSlider');
+  if(!slider) return;
+  var STORAGE_KEY = 'aether_mountain_height';
+
+  function apply(px){
+    document.documentElement.style.setProperty('--mountain-max-height', px + 'px');
+  }
+
+  var saved = null;
+  try{ saved = localStorage.getItem(STORAGE_KEY); }catch(e){}
+  var initial = saved ? parseInt(saved, 10) : 480;
+  if(isNaN(initial)) initial = 480;
+  slider.value = initial;
+  apply(initial);
+
+  slider.addEventListener('input', function(){
+    var px = parseInt(slider.value, 10);
+    apply(px);
+    try{ localStorage.setItem(STORAGE_KEY, String(px)); }catch(e){}
+  });
+})();
+
+/* (dead legacy SVG-overlay construction code -- mainRoute/domain paths/
+   camp markers appendChild'd to #mountainOverlaySvg and #campTagLayer,
+   both nonexistent since the Twin Peaks refactor -- removed. It was
+   already gated behind _SKIP_LEGACY_ROUTE=true and never executed.) */
+
+
+/* ============================================================
+   RENDER — Section 2: Domain Constellation
+   ============================================================ */
+document.getElementById('constellationStrip').innerHTML = domainDefs.map(d=>`
+  <div class="const-item" title="${d.name}: ${d.pct}%">
+    <div class="const-dot" style="border-color:${d.color}; color:${d.color};">${icons[d.icon]}</div>
+    <span class="const-label">${d.name}</span>
+  </div>`).join('');
+
+document.getElementById('constLegend').innerHTML = `
+  <span class="legend-item"><span class="legend-dot" style="background:var(--success);"></span>Advancing</span>
+  <span class="legend-item"><span class="legend-dot" style="background:var(--text-secondary);"></span>Stable</span>
+  <span class="legend-item"><span class="legend-dot" style="background:var(--warning);"></span>Warning</span>
+  <span class="legend-item"><span class="legend-dot" style="background:var(--danger);"></span>Declining</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#ff2d3d;"></span>Critical</span>
+`;
+
+/* ============================================================
+   RENDER — Section 3: Domain Command Board
+   ============================================================ */
+document.getElementById('domainGrid').innerHTML = domainDefs.map((d,i)=>`
+  <a class="dcard" href="missions.html?domain=${encodeURIComponent(d.name)}" style="--dc-color:${d.color};">
+    <div class="dcard-head">
+      <span class="dcard-num">${String(i+1).padStart(2,'0')}</span>
+      <div class="dcard-icon" style="color:${d.color};">${icons[d.icon]}</div>
+    </div>
+    <span class="dcard-name">${d.name}</span>
+    <span class="dcard-pct" style="color:${d.color};">${d.pct}%</span>
+    <span class="dcard-camp">${d.camp}</span>
+    ${sparklineSvg(d.spark, d.color.replace('var(','').replace(')',''))}
+    <span class="dcard-trend ${trendClass[d.trend]}">${trendIcon[d.trend]} ${trendLabel[d.trend]}</span>
+    ${(d.missionsCompleted||d.missionsInProgress) ? `<span style="font-family:var(--font-mono);font-size:9px;color:var(--text-faint);">${d.missionsCompleted||0} summited &middot; ${d.missionsInProgress||0} climbing</span>` : ''}
+  </a>`).join('');
+
+/* ============================================================
+   RENDER — Section 4: Summit Forecast graph
+   ============================================================ */
+(function renderForecast(){
+  const w = 600, h = 150;
+  const years = [0,1,2,3,4,5];
+  /* Projection curve from current elevation toward summit (100%) over ~4.3 years,
+     using a decelerating growth curve (diminishing-but-positive velocity). */
+  const points = years.map(y=>{
+    const t = y/5;
+    const val = lifeElevation + (100-lifeElevation) * (1 - Math.pow(1-t, 1.6));
+    return {y, val: Math.min(val, 100)};
+  });
+  const maxVal = 100;
+  const coords = points.map(p=> {
+    const x = (p.y/5) * w;
+    const yy = h - (p.val/maxVal) * (h-14) - 6;
+    return {x, y: yy, val: p.val};
+  });
+  const pathD = coords.map((c,i)=> i===0 ? `M ${c.x} ${c.y}` : `L ${c.x} ${c.y}`).join(' ');
+
+  const gridLines = [0,25,50,75,100].map(g=>{
+    const gy = h - (g/maxVal)*(h-14) - 6;
+    return `<line x1="0" y1="${gy}" x2="${w}" y2="${gy}" stroke="var(--border-subtle)" stroke-width="1"/>
+            <text x="-4" y="${gy+3}" text-anchor="end" font-family="Space Mono, monospace" font-size="9" fill="var(--text-faint)">${g}%</text>`;
+  }).join('');
+
+  const dashedToSummit = `M ${coords[coords.length-1].x} ${coords[coords.length-1].y} L ${w-4} 10`;
+
+  document.getElementById('forecastStage').innerHTML = `
+    <svg viewBox="-26 0 ${w+30} ${h+10}" width="100%" height="100%" preserveAspectRatio="none" style="overflow:visible;">
+      ${gridLines}
+      <path d="${pathD}" fill="none" stroke="var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="${pathD} L ${w} ${h} L 0 ${h} Z" fill="url(#forecastGrad)" opacity="0.5"/>
+      <defs>
+        <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${dashedToSummit}" stroke="var(--gold)" stroke-width="1.4" stroke-dasharray="4 4" fill="none"/>
+      <circle cx="${coords[0].x}" cy="${coords[0].y}" r="4" fill="var(--accent)"/>
+      <circle cx="${w-4}" cy="10" r="4" fill="var(--gold)" stroke="var(--bg-panel)" stroke-width="2"/>
+    </svg>
+    <div class="forecast-current-pill" style="left:${(coords[0].x/(w+4))*100}%; top:${(coords[0].y/(h+10))*100}%;">${lifeElevation}%</div>
+  `;
+})();
+
+/* ============================================================
+   RENDER — Section 5: Recent Elevation Gains
+   ============================================================ */
+const elevationGains = _isLiveMode ? [] : [
+  {name:'Completed Python for ML', sub:'Learning · Camp I → Camp II', date:'Jun 16', delta:'+3%'},
+  {name:'Completed 15K training run', sub:'Health · Camp I → Camp II', date:'Jun 15', delta:'+2%'},
+  {name:'Investment portfolio rebalanced', sub:'Finance · Camp II Progress', date:'Jun 14', delta:'+2%'},
+  {name:'Weekly family time maintained', sub:'Relationships · Consistency Win', date:'Jun 13', delta:'+1%'},
+  {name:'Morning routine 14-day streak', sub:'Character · Discipline Building', date:'Jun 12', delta:'+1%'}
+];
+document.getElementById('gainsList').innerHTML = elevationGains.length === 0
+  ? '<div style="padding:24px; text-align:center; color:var(--text-dim); font-size:13px;">No elevation gains yet. Log evidence to advance your domains.</div>'
+  : elevationGains.map(g=>`
+  <div class="gain-item">
+    <div class="gain-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg></div>
+    <div class="gain-body">
+      <span class="gain-name">${g.name}</span>
+      <span class="gain-sub">${g.sub}</span>
+    </div>
+    <div class="gain-right">
+      <span class="gain-date">${g.date}</span>
+      <span class="gain-delta">${g.delta}</span>
+    </div>
+  </div>`).join('');
+
+/* LIVE mode: summit forecast needs real history, so show Insufficient History */
+if(_isLiveMode){
+  var es = document.getElementById('estSummitValue');
+  var rs = document.getElementById('railSummitValue');
+  var rsub = document.getElementById('railSummitSub');
+  if(es){ es.textContent = 'Insufficient History'; es.style.fontSize = '15px'; }
+  if(rs){ rs.textContent = 'Insufficient History'; rs.style.fontSize = '14px'; }
+  if(rsub){ rsub.textContent = '0 of 14 days recorded'; }
+}
+
+</script>
+<script>
+/* Sync the sidebar blocker badge to the real open-blocker count */
+(function syncBlockerBadge(){
+  var badge = document.getElementById('navBlockerBadge');
+  if(!badge) return;
+  var bk = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  badge.textContent = bk.filter(function(b){ return b.status === 'open'; }).length;
+})();
+</script>
+<script src="aether-quotes.js"></script>
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script src="aether-nav.js"></script>
+</body>
+</html>

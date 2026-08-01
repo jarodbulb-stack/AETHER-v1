@@ -1,0 +1,264 @@
+/* ============================================================
+   AETHER — SHARED THEME / DESIGN TOKENS
+   Mission Command System
+   Import this file on every page, before aether-shell.css
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Exo+2:wght@200;300;400;500;600&display=swap');
+
+:root {
+  /* ---------- Surfaces ---------- */
+  --bg-void:        #060a14;   /* page background */
+  --bg-sidebar:     #0a0e1a;   /* sidebar background */
+  --bg-panel:       #0d1320;   /* card / panel background */
+  --bg-panel-alt:   #111829;   /* slightly raised panel (nested cards, inputs) */
+  --bg-elevated:    #161f33;   /* hover / active surfaces */
+
+  /* ---------- Borders & dividers ---------- */
+  --border-subtle:  rgba(255,255,255,0.06);
+  --border-strong:  rgba(255,255,255,0.12);
+  --border-accent:  rgba(74,168,255,0.35);
+
+  /* ---------- Accent palette ---------- */
+  --accent:         #4aa8ff;   /* primary blue */
+  --accent-glow:    #6dc0ff;   /* lighter blue for glow/hover */
+  --accent-deep:    #2f6fcf;   /* pressed / borders */
+
+  --success:        #3ddc84;   /* on-track, good, completed */
+  --warning:        #ffb84d;   /* at-risk, medium impact */
+  --danger:         #ff5c6c;   /* behind, blockers, high impact */
+  --purple:         #b07dff;   /* secondary accent (blueprints, achievements) */
+  --gold:           #ffd166;   /* achievements / XP / streaks */
+  --teal:           #4adfc4;   /* relationships / misc domain accent */
+
+  /* ---------- Text ---------- */
+  --text-primary:   #eaf2ff;   /* headings, key values */
+  --text-secondary: #aab8d1;   /* body copy */
+  --text-dim:       #5e6e8c;   /* labels, captions, meta */
+  --text-faint:     #3c4a64;   /* disabled / placeholder */
+
+  /* ---------- Typography ---------- */
+  --font-display:   'Orbitron', sans-serif;   /* logo, page titles, big numbers */
+  --font-mono:      'Space Mono', monospace;  /* labels, stats, timestamps */
+  --font-body:      'Exo 2', sans-serif;      /* paragraphs, descriptions */
+
+  /* ---------- Radii ---------- */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --radius-pill: 999px;
+
+  /* ---------- Shadows / glow ---------- */
+  --glow-accent: 0 0 24px rgba(74,168,255,0.25);
+  --glow-success: 0 0 18px rgba(61,220,132,0.25);
+  --glow-danger: 0 0 18px rgba(255,92,108,0.25);
+  --shadow-panel: 0 4px 24px rgba(0,0,0,0.35);
+
+  /* ---------- Layout ---------- */
+  --sidebar-width: 220px;
+  --sidebar-width-collapsed: 72px;
+  --header-height: 64px;
+  --transition: 180ms ease;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* faint grid texture — signature AETHER backdrop */
+  background-image:
+    linear-gradient(rgba(74,168,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74,168,255,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-glow); }
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.mono { font-family: var(--font-mono); }
+
+/* ---------- Scrollbars ---------- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(74,168,255,0.18);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(74,168,255,0.32); }
+
+/* ---------- Focus visibility ---------- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   SHARED UI PRIMITIVES
+   (cards, badges, progress bars, buttons — used across pages)
+   ============================================================ */
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+}
+
+.panel-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.panel-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Buttons */
+.btn {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-md);
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #04101f;
+}
+.btn-primary:hover { background: var(--accent-glow); }
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent-glow); }
+
+.btn-success { background: var(--success); color: #04240f; }
+.btn-danger  { background: var(--danger); color: #2a0508; }
+
+/* Progress bars */
+.progress-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  transition: width 400ms ease;
+}
+.progress-fill.success { background: var(--success); }
+.progress-fill.warning  { background: var(--warning); }
+.progress-fill.danger   { background: var(--danger); }
+
+/* Status pills */
+.pill {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+.pill.on-track { color: var(--success); border-color: rgba(61,220,132,0.35); background: rgba(61,220,132,0.08); }
+.pill.at-risk  { color: var(--warning); border-color: rgba(255,184,77,0.35); background: rgba(255,184,77,0.08); }
+.pill.behind   { color: var(--danger);  border-color: rgba(255,92,108,0.35); background: rgba(255,92,108,0.08); }
+
+/* Badge (notification count) */
+.badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--danger);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Stat value blocks */
+.stat-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 28px;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+/* Utility */
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-xs { gap: 6px; }
+.gap-sm { gap: 10px; }
+.gap-md { gap: 16px; }
+.gap-lg { gap: 24px; }

@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Command Center</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<script type="module">
+  /* Live connection status for the Storage Diagnostics panel below.
+     Reads the real Firebase Auth/Firestore state instead of the old
+     hardcoded "Not Connected / Phase 3 (Not Started)" placeholder
+     that predated the Firebase mission. */
+  import { auth } from './firebase-config.js';
+  import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
+
+  window.__aetherConn = { authKnown:false, user:null, pendingWrites:0 };
+
+  function refreshPendingCount(){
+    try{
+      const q = JSON.parse(sessionStorage.getItem('aether_sync_pending') || '{}');
+      window.__aetherConn.pendingWrites = Object.keys(q).length;
+    }catch(e){ window.__aetherConn.pendingWrites = 0; }
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    window.__aetherConn.authKnown = true;
+    window.__aetherConn.user = user ? { uid:user.uid, email:user.email } : null;
+    refreshPendingCount();
+    if (typeof window.renderDiagnostics === 'function') window.renderDiagnostics();
+  });
+
+  // Pending writes flush async (debounced ~500ms) — poll lightly so the
+  // panel reflects "Syncing…" -> "Synced" without needing a page reload.
+  setInterval(() => {
+    refreshPendingCount();
+    if (typeof window.renderDiagnostics === 'function') window.renderDiagnostics();
+  }, 1500);
+</script>
+<style>
+
+.section-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; }
+.section-head-left{ display:flex; align-items:center; gap:9px; }
+.section-head-left svg{ width:16px; height:16px; color:var(--accent); flex-shrink:0; }
+.section-head-left .ttl{ font-family:var(--font-display); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; }
+.section-head-left .sub{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); margin-left:10px; }
+
+.banner{ display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:var(--radius-md); background:rgba(74,168,255,0.06); border:1px solid var(--border-accent); }
+.banner svg{ width:16px; height:16px; color:var(--accent-glow); flex-shrink:0; }
+.banner span{ font-family:var(--font-body); font-size:12px; color:var(--text-secondary); line-height:1.5; }
+.banner strong{ color:var(--accent-glow); }
+
+/* SECTION 1 — CAMPAIGN LIFECYCLE */
+.lifecycle-card{ display:flex; flex-direction:column; gap:16px; }
+.lifecycle-status-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+@media (max-width:900px){ .lifecycle-status-row{ grid-template-columns:repeat(2,1fr); } }
+.lc-stat{ display:flex; flex-direction:column; gap:5px; }
+.lc-stat-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.lc-stat-value{ font-family:var(--font-display); font-size:16px; font-weight:600; color:var(--text-primary); }
+.lc-mode-pill{ display:inline-flex; align-items:center; gap:6px; padding:3px 11px; border-radius:var(--radius-pill); font-family:var(--font-mono); font-size:11px; font-weight:700; letter-spacing:0.04em; width:fit-content; }
+.lc-mode-pill.sample{ background:rgba(255,184,77,0.1); color:var(--warning); border:1px solid rgba(255,184,77,0.35); }
+.lc-mode-pill.live{ background:rgba(61,220,132,0.1); color:var(--success); border:1px solid rgba(61,220,132,0.35); }
+.lc-btn-row{ display:flex; flex-wrap:wrap; gap:10px; padding-top:14px; border-top:1px solid var(--border-subtle); }
+
+/* SECTION 2 — SYSTEM MODE */
+.mode-toggle-row{ display:flex; gap:14px; margin-top:14px; }
+.mode-option{ flex:1; display:flex; flex-direction:column; gap:8px; padding:16px; border-radius:var(--radius-md); border:1.5px solid var(--border-subtle); cursor:pointer; transition:var(--transition); }
+.mode-option:hover{ border-color:var(--border-strong); }
+.mode-option.active.sample{ border-color:var(--warning); background:rgba(255,184,77,0.05); }
+.mode-option.active.live{ border-color:var(--success); background:rgba(61,220,132,0.05); }
+.mode-option-head{ display:flex; align-items:center; gap:8px; }
+.mode-radio{ width:16px; height:16px; border-radius:50%; border:1.5px solid var(--border-strong); flex-shrink:0; position:relative; }
+.mode-option.active .mode-radio{ border-color:currentColor; }
+.mode-option.active .mode-radio::after{ content:''; position:absolute; inset:3px; border-radius:50%; background:currentColor; }
+.mode-option-name{ font-family:var(--font-display); font-size:13px; font-weight:700; }
+.mode-option.sample .mode-option-name{ color:var(--warning); }
+.mode-option.live .mode-option-name{ color:var(--success); }
+.mode-option-desc{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); line-height:1.5; }
+
+/* SECTION 3 — BACKUP & RESTORE */
+.action-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:14px; }
+@media (max-width:900px){ .action-grid{ grid-template-columns:repeat(2,1fr); } }
+.action-card{ display:flex; flex-direction:column; gap:9px; padding:15px; border-radius:var(--radius-md); border:1px solid var(--border-subtle); background:var(--bg-panel-alt); }
+.action-card-icon{ width:28px; height:28px; border-radius:7px; background:rgba(74,168,255,0.1); color:var(--accent); display:flex; align-items:center; justify-content:center; }
+.action-card-icon svg{ width:14px; height:14px; }
+.action-card-name{ font-family:var(--font-display); font-size:12px; font-weight:600; color:var(--text-primary); }
+.action-card-desc{ font-family:var(--font-body); font-size:10.5px; color:var(--text-dim); line-height:1.4; flex:1; }
+.action-card .btn{ width:100%; justify-content:center; font-size:11px; padding:8px 10px; }
+
+/* SECTION 4 — DATA MANAGEMENT */
+.data-count-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+@media (max-width:1100px){ .data-count-grid{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:600px){ .data-count-grid{ grid-template-columns:repeat(2,1fr); } }
+.dc-cell{ display:flex; flex-direction:column; gap:4px; padding:13px; border-radius:var(--radius-md); background:var(--bg-panel-alt); border:1px solid var(--border-subtle); }
+.dc-cell-value{ font-family:var(--font-display); font-size:22px; font-weight:700; color:var(--text-primary); }
+.dc-cell-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-dim); }
+
+.purge-zone{ margin-top:16px; padding:16px; border-radius:var(--radius-md); border:1.5px solid rgba(255,92,108,0.35); background:rgba(255,92,108,0.04); }
+.purge-zone-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.purge-zone-head svg{ width:15px; height:15px; color:var(--danger); }
+.purge-zone-head span{ font-family:var(--font-display); font-size:12.5px; font-weight:700; color:var(--danger); text-transform:uppercase; letter-spacing:0.04em; }
+.purge-zone-desc{ font-family:var(--font-body); font-size:11.5px; color:var(--text-secondary); line-height:1.5; margin-bottom:12px; }
+.purge-btn-row{ display:flex; gap:10px; flex-wrap:wrap; }
+.btn-danger-outline{ background:transparent; border:1px solid var(--danger); color:var(--danger); }
+.btn-danger-outline:hover{ background:rgba(255,92,108,0.1); }
+.btn-danger-solid{ background:var(--danger); color:#2a0508; border:1px solid var(--danger); }
+.btn-danger-solid:hover{ opacity:0.85; }
+
+/* SECTION 5 — STORAGE DIAGNOSTICS */
+.diag-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+@media (max-width:1000px){ .diag-grid{ grid-template-columns:repeat(2,1fr); } }
+.diag-cell{ display:flex; flex-direction:column; gap:6px; padding:13px; border-radius:var(--radius-md); background:var(--bg-panel-alt); border:1px solid var(--border-subtle); }
+.diag-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); }
+.diag-value{ font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:6px; }
+.diag-dot{ width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+/* SECTION 6 — OPERATOR PROFILE */
+.profile-form{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:14px; }
+@media (max-width:800px){ .profile-form{ grid-template-columns:1fr; } }
+.pf-field{ display:flex; flex-direction:column; gap:6px; }
+.pf-label{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); }
+.pf-input{ background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:9px 12px; font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); }
+.pf-input:focus{ outline:none; border-color:var(--accent); }
+.pf-toggle-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border-subtle); }
+.pf-toggle-row:last-child{ border-bottom:none; }
+
+.stl-row{
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:10px; padding:12px 16px;
+}
+.stl-label{ font-family:var(--font-mono); font-size:11px; letter-spacing:0.04em; color:var(--text-primary); font-weight:600; }
+.stl-status{ font-family:var(--font-mono); font-size:10px; color:var(--text-dim); margin-top:3px; }
+.stl-status.has-custom{ color:var(--success); }
+.stl-btns{ display:flex; align-items:center; gap:8px; }
+.stl-btn{
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.03em; cursor:pointer;
+  background:transparent; border:1px solid var(--border-strong); color:var(--text-secondary);
+  padding:7px 12px; border-radius:7px; transition:background .15s,border-color .15s;
+}
+.stl-btn:hover{ background:var(--bg-elevated); border-color:var(--border-accent); }
+.stl-btn.stl-btn-danger:hover{ border-color:var(--danger); color:var(--danger); }
+.stl-file-input{ display:none; }
+.pf-toggle-label{ font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); }
+.toggle-switch{ width:38px; height:21px; border-radius:var(--radius-pill); background:var(--border-strong); position:relative; cursor:pointer; transition:var(--transition); flex-shrink:0; }
+.toggle-switch.on{ background:var(--accent); }
+.toggle-switch::after{ content:''; position:absolute; top:2px; left:2px; width:17px; height:17px; border-radius:50%; background:white; transition:var(--transition); }
+.toggle-switch.on::after{ left:19px; }
+
+.manifesto-line{ text-align:center; padding:18px 0 4px; font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); }
+
+.modal-overlay{ position:fixed; inset:0; background:rgba(4,6,12,0.75); backdrop-filter:blur(3px); display:none; align-items:center; justify-content:center; z-index:100; }
+.modal-overlay.open{ display:flex; }
+.modal-box{ background:var(--bg-panel); border:1.5px solid var(--danger); border-radius:var(--radius-lg); padding:24px; max-width:440px; width:90%; display:flex; flex-direction:column; gap:14px; }
+.modal-title{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--danger); display:flex; align-items:center; gap:8px; }
+.modal-title svg{ width:18px; height:18px; }
+.modal-body{ font-family:var(--font-body); font-size:12.5px; color:var(--text-secondary); line-height:1.6; }
+.modal-confirm-label{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-dim); }
+.modal-confirm-input{ background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); padding:9px 12px; font-family:var(--font-mono); font-size:13px; color:var(--text-primary); width:100%; }
+.modal-btn-row{ display:flex; gap:10px; justify-content:flex-end; margin-top:4px; }
+
+</style>
+<style>
+@keyframes aether-pulse {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(0,200,255,0.9)) drop-shadow(0 0 18px rgba(0,200,255,0.4)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(0,200,255,1)) drop-shadow(0 0 35px rgba(0,200,255,0.7)) drop-shadow(0 0 6px #fff); }
+}
+.sidebar-logo-mark { animation: aether-pulse 2.8s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow-strong" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow-soft" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Outer dashed orbit circle -->
+          <circle cx="50" cy="50" r="42" stroke="#1a4a6a" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.7"/>
+          <!-- Inner dashed circle -->
+          <circle cx="50" cy="50" r="34" stroke="#1a3a5a" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.5"/>
+          <!-- Orbit dots -->
+          <circle cx="50" cy="8" r="2.5" fill="#00c8ff" filter="url(#glow-soft)" opacity="0.9"/>
+          <circle cx="88" cy="62" r="1.8" fill="#4aa8ff" filter="url(#glow-soft)" opacity="0.7"/>
+          <circle cx="14" cy="38" r="1.5" fill="#4aa8ff" opacity="0.5"/>
+          <!-- Triangle glow layer -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="5" stroke-linejoin="round" fill="none" opacity="0.15" filter="url(#glow-strong)"/>
+          <!-- Inner green triangle -->
+          <path d="M50 30 L76 70 H24 Z" stroke="#00ff88" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.5"/>
+          <!-- Main neon triangle -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="2.5" stroke-linejoin="round" fill="none" filter="url(#glow-strong)"/>
+          <!-- Center dot -->
+          <circle cx="50" cy="60" r="3.5" fill="#00c8ff" filter="url(#glow-strong)"/>
+          <circle cx="50" cy="60" r="1.5" fill="white" opacity="0.9"/>
+          <!-- Corner accent dots -->
+          <circle cx="50" cy="22" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="82" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="18" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-wordmark">ETHER</span>
+        <span class="sidebar-logo-tagline">Mission Command System</span>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg></span>
+        <span class="nav-item-label">Command Deck</span>
+      </a>
+      <a href="life-advancement.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 5l4 6 3-4 5 10"/></svg></span>
+        <span class="nav-item-label">Life Advancement</span>
+      </a>
+      <a href="missions.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span>
+        <span class="nav-item-label">Missions</span>
+      </a>
+      <a href="blueprints.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="nav-item-label">Blueprints</span>
+      </a>
+      <a href="problems-blockers.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg></span>
+        <span class="nav-item-label">Blockers</span>
+        <span class="badge" id="navBlockerBadge">4</span>
+      </a>
+      <a href="evidence-vault.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg></span>
+        <span class="nav-item-label">Evidence Vault</span>
+      </a>
+      <a href="timeline.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="nav-item-label">Timeline</span>
+      </a>
+      <a href="debrief.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V7a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 5v5h5"/></svg></span>
+        <span class="nav-item-label">Debrief</span>
+      </a>
+      <a class="nav-item" href="knowledge-library.html"><span class="nav-item-icon">📚</span><span class="nav-item-label">Knowledge Library</span></a>
+      <a class="nav-item" href="summit-archive.html"><span class="nav-item-icon">🏔️</span><span class="nav-item-label">Summit Archive</span></a>
+      <a class="nav-item" href="command-center.html" class="nav-item active">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
+        <span class="nav-item-label">Command Center</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-profile">
+      <div class="profile-header">
+        <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+        <div class="profile-info">
+          <span class="profile-name">ROD ENTERA</span>
+          <span class="profile-rank">Operator</span>
+        </div>
+      </div>
+            <div style="display:flex;gap:16px;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:4px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--teal);" id="sidebarDaysClimbing">14</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Days Climbing</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--gold);" id="sidebarSummits">0</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Summits</span>
+        </div>
+      </div>
+      <div class="profile-quote">"The mission is progress. The evidence is proof. The mountain is the journey."</div>
+      <div class="profile-focus-row">
+        <span class="focus-dot"></span>
+        <div class="focus-text">
+          <span class="focus-label">Focus Mode</span>
+          <span class="focus-value">High Performance</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>COMMAND CENTER <span class="pill" id="buildVersionTag" style="color:#ffd166;border-color:rgba(255,209,102,0.4);background:rgba(255,209,102,0.1);vertical-align:middle;margin-left:8px;font-size:11px;">△ AETHER v1.0</span></h1>
+        <span class="topbar-subtitle">System administration. This controls everything.</span>
+      </div>
+      <div class="topbar-meta">
+        <span class="pill" id="modeIndicator" style="display:flex; align-items:center; gap:6px;"></span>
+        <span class="mono" style="font-size:11px; color:var(--text-dim);">SUNDAY, JUNE 18, 2026 · 14:18 ZULU</span>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <div class="banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+        <span><strong>This is the system administration layer, not another page.</strong> Every action here affects all 9 other pages. Read each section before acting.</span>
+      </div>
+
+      <!-- ═══ BUILD INFO — v1.0 marker (Step 19) ═══ -->
+      <div class="panel" style="border:1px solid rgba(255,209,102,0.3); background:rgba(255,209,102,0.03);">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:22px; line-height:1;">△</span>
+            <div>
+              <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:#ffd166; letter-spacing:0.02em;">AETHER v1.0</div>
+              <div style="font-family:var(--font-body); font-size:12px; color:var(--text-secondary); margin-top:2px;">First stable build. Running on real data — sample campaign fully replaced by your actual mission.</div>
+            </div>
+          </div>
+          <span class="pill" style="color:var(--success); border-color:rgba(61,220,132,0.35); background:rgba(61,220,132,0.08);">● LIVE</span>
+        </div>
+      </div>
+
+      <!-- ═══ SAMPLE DATA GUIDE (load / clear in one place) ═══ -->
+      <div class="panel" style="border:1px solid var(--border-accent); box-shadow:0 0 24px rgba(74,168,255,0.08);">
+        <div class="section-head" style="margin-bottom:14px;">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2Z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7Z"/></svg>
+            <span class="ttl">Sample Data — Learn the Flow</span>
+          </div>
+          <span class="lc-mode-pill" id="sampleGuideStatus"></span>
+        </div>
+
+        <p style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary); line-height:1.6; margin:0 0 16px;">
+          AETHER ships with a full demo campaign — real-looking missions, blueprints, blockers, evidence, and debriefs — so you can <strong>see how every page works before entering your own life</strong>. Load it to explore and learn the flow. Clear it when you're ready to run AETHER for real. You can switch back and forth anytime; clearing only hides the demo, it never harms your real data.
+        </p>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+          <!-- LOAD -->
+          <div style="border:1px solid rgba(255,184,77,0.25); border-radius:var(--radius-md); padding:16px; display:flex; flex-direction:column; gap:10px; background:rgba(255,184,77,0.04);">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+              <span style="font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--warning);">LOAD SAMPLE DATA</span>
+            </div>
+            <span style="font-family:var(--font-body); font-size:11.5px; color:var(--text-dim); line-height:1.5;">Fills every page with the demo campaign so you can learn how AETHER works. This is the guided tour.</span>
+            <button class="btn btn-primary" style="justify-content:center;" onclick="loadSampleData()">Load / Restore Demo</button>
+          </div>
+
+          <!-- CLEAR -->
+          <div style="border:1px solid rgba(61,220,132,0.25); border-radius:var(--radius-md); padding:16px; display:flex; flex-direction:column; gap:10px; background:rgba(61,220,132,0.04);">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;"><path d="M20 6 9 17l-5-5"/></svg>
+              <span style="font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--success);">GO LIVE (CLEAR DEMO)</span>
+            </div>
+            <span style="font-family:var(--font-body); font-size:11.5px; color:var(--text-dim); line-height:1.5;">Hides all demo data so AETHER shows only your real missions and progress. Your real data is never touched.</span>
+            <button class="btn btn-success" style="justify-content:center;" onclick="clearSampleData()">Clear Demo / Go Live</button>
+          </div>
+        </div>
+
+        <!-- SET UP REAL FIRST MISSION -->
+        <div style="margin-top:14px; border:1px solid rgba(74,168,255,0.25); border-radius:var(--radius-md); padding:16px; display:flex; flex-direction:column; gap:10px; background:rgba(74,168,255,0.04);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+            <span style="font-family:var(--font-display); font-size:12px; font-weight:700; letter-spacing:0.06em; color:var(--accent);">SET UP AETHER v1.0 (YOUR FIRST REAL MISSION)</span>
+          </div>
+          <span style="font-family:var(--font-body); font-size:11.5px; color:var(--text-dim); line-height:1.5;">
+            Switches to Live and creates one real mission — <strong>building AETHER itself</strong> — with a blueprint reflecting exactly what's actually been finished and what's genuinely still left. No invented history: completed steps get marked verified and written to your real Timeline immediately; everything else starts as pending, ready to check off as you go.
+          </span>
+          <button class="btn" style="justify-content:center; background:var(--accent); color:#04121f;" onclick="setupAetherV1Mission()">Set Up AETHER v1.0 &amp; Go Live</button>
+        </div>
+
+      </div>
+
+      <div class="panel lifecycle-card">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+            <span class="ttl">Campaign Lifecycle</span>
+          </div>
+        </div>
+        <div class="lifecycle-status-row" id="lifecycleStatusRow"></div>
+        <div class="lc-btn-row">
+          <button class="btn btn-ghost" onclick="initializeSampleCampaign()">Initialize Sample Campaign</button>
+          <button class="btn btn-ghost" onclick="archiveCampaign()">Archive Campaign</button>
+          <button class="btn btn-ghost" onclick="duplicateCampaign()">Duplicate Campaign</button>
+          <button class="btn btn-danger-outline" onclick="openModal('delete')">Delete Campaign</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="ttl">System Mode</span>
+          </div>
+        </div>
+        <div class="mode-toggle-row" id="modeToggleRow"></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            <span class="ttl">Backup &amp; Restore</span>
+            <span class="sub">JSON format, not optional</span>
+          </div>
+        </div>
+        <div class="action-grid">
+          <div class="action-card">
+            <div class="action-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></div>
+            <span class="action-card-name">Export Campaign</span>
+            <span class="action-card-desc">Download all campaign data as a single JSON file.</span>
+            <button class="btn btn-ghost" onclick="exportCampaign()">Export</button>
+          </div>
+          <div class="action-card">
+            <div class="action-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg></div>
+            <span class="action-card-name">Import Campaign</span>
+            <span class="action-card-desc">Restore campaign data from a previously exported JSON file.</span>
+            <button class="btn btn-ghost" onclick="importCampaign()">Import</button>
+          </div>
+          <div class="action-card">
+            <div class="action-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <span class="action-card-name">Create Backup</span>
+            <span class="action-card-desc">Save a timestamped snapshot of the current campaign state.</span>
+            <button class="btn btn-ghost" onclick="createBackup()">Backup Now</button>
+            <span id="lastBackupStatus" style="font-family:var(--font-mono);font-size:9px;color:var(--text-faint);margin-top:6px;display:block;">No backup yet</span>
+          </div>
+          <div class="action-card">
+            <div class="action-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 2.6 6.4M3 12v6h6"/></svg></div>
+            <span class="action-card-name">Restore Backup</span>
+            <span class="action-card-desc">Roll back to the most recent saved backup snapshot.</span>
+            <button class="btn btn-ghost" onclick="restoreBackup()">Restore</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span class="ttl">Data Management</span>
+          </div>
+        </div>
+        <div class="data-count-grid" id="dataCountGrid"></div>
+
+        <div class="purge-zone">
+          <div class="purge-zone-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+            <span>Danger Zone</span>
+          </div>
+          <p class="purge-zone-desc">
+            Everything currently in AETHER is development seed data: sample missions, blueprints, checkpoints, evidence, blockers, timeline events, and debriefs. The button below removes all of it and switches the system to LIVE mode, so you can populate AETHER with your real campaign. Your operator account, theme, integrations, and Command Center settings are never touched.
+          </p>
+          <div class="purge-btn-row">
+            <button class="btn btn-danger-solid" onclick="openModal('purge')">PURGE ALL SAMPLE DATA</button>
+          </div>
+        </div>
+
+        <!-- ═══ CLEAR REAL DATA — separate zone, different color ═══ -->
+        <div class="purge-zone" style="border-color:rgba(176,125,255,0.35); margin-top:16px;">
+          <div class="purge-zone-head" style="color:var(--purple);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            <span>Clear My Real Data</span>
+          </div>
+          <p class="purge-zone-desc" id="realDataDesc">
+            This removes every <strong>real mission, blueprint, checkpoint, blocker, evidence state, debrief, and daily command</strong> you have created — your actual campaign. Sample/demo data, your operator account, theme, and settings are never touched. Use this to start your real campaign over from scratch. This cannot be undone.
+          </p>
+          <div class="purge-btn-row">
+            <button class="btn" style="background:var(--purple); color:#1a0a2e;" onclick="openClearLiveWizard()">CLEAR ALL MY REAL DATA</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <span class="ttl">Storage Diagnostics</span>
+          </div>
+        </div>
+        <div class="diag-grid" id="diagGrid" style="margin-top:14px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+            <span class="ttl">Operator Profile</span>
+            <span class="sub">Moved here to keep the rest of AETHER clean</span>
+          </div>
+        </div>
+        <div class="profile-form">
+          <div class="pf-field">
+            <span class="pf-label">Operator Name</span>
+            <input class="pf-input" type="text" value="Rod Entera"/>
+          </div>
+          <div class="pf-field">
+            <span class="pf-label">Days Climbing</span>
+            <input class="pf-input" type="text" value="14 Days · Operator" disabled/>
+          </div>
+        </div>
+        <div style="margin-top:18px; padding-top:14px; border-top:1px solid var(--border-subtle);">
+          <div class="pf-toggle-row">
+            <span class="pf-toggle-label">Focus Mode (High Performance)</span>
+            <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="pf-toggle-row">
+            <span class="pf-toggle-label">Notifications</span>
+            <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="pf-toggle-row">
+            <span class="pf-toggle-label">Dark Theme (AETHER default)</span>
+            <div class="toggle-switch on" onclick="this.classList.toggle('on')"></div>
+          </div>
+          <div class="pf-toggle-row">
+            <span class="pf-toggle-label">AETHER Voice</span>
+            <div class="toggle-switch" id="cctrVoiceToggle" onclick="window.__toggleCcVoice()"></div>
+          </div>
+          <div class="pf-toggle-row">
+            <span class="pf-toggle-label">AETHER Music</span>
+            <div class="toggle-switch" id="cctrMusicToggle" onclick="window.__toggleCcMusic()"></div>
+          </div>
+      </div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            <span class="ttl">Soundtrack Library</span>
+            <span class="sub">Upload your own tracks from this device, any time</span>
+          </div>
+        </div>
+        <div id="soundtrackLibrary" style="margin-top:14px; display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
+
+      <div class="manifesto-line">This is the layer that controls every other layer.</div>
+
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <div id="modalConfirmArea"></div>
+    <div class="modal-btn-row">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger-solid" id="modalConfirmBtn">Continue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Phase 2: Command Center no longer manages its own systemMode logic.
+   It is a thin control surface over AetherStore, exactly as Phase 2
+   intended, this page does not need to know what any other page does
+   with the data; it only needs to call AetherStore.purgeSampleData()
+   and let every page's own AetherStore.getX() calls react naturally. */
+let systemMode = AetherStore.getSystemMode();
+
+function renderModeIndicator(){
+  const el = document.getElementById('modeIndicator');
+  if(systemMode === 'LIVE'){
+    el.innerHTML = '<span style="width:6px; height:6px; border-radius:50%; background:var(--success); box-shadow:0 0 6px var(--success);"></span>LIVE CAMPAIGN';
+    el.style.color = 'var(--success)';
+  } else {
+    el.innerHTML = '<span style="width:6px; height:6px; border-radius:50%; background:var(--warning); box-shadow:0 0 6px var(--warning);"></span>SAMPLE MODE';
+    el.style.color = 'var(--warning)';
+  }
+}
+
+function renderLifecycle(){
+  document.getElementById('lifecycleStatusRow').innerHTML =
+    '<div class="lc-stat"><span class="lc-stat-label">Current Mode</span><span class="lc-mode-pill ' + (systemMode==='LIVE'?'live':'sample') + '">' + systemMode + '</span></div>' +
+    '<div class="lc-stat"><span class="lc-stat-label">Campaign Status</span><span class="lc-stat-value">Active</span></div>' +
+    '<div class="lc-stat"><span class="lc-stat-label">Created</span><span class="lc-stat-value">Jun 18, 2026</span></div>' +
+    '<div class="lc-stat"><span class="lc-stat-label">Last Activity</span><span class="lc-stat-value">Jun 21, 2026</span></div>';
+}
+
+function renderModeToggle(){
+  document.getElementById('modeToggleRow').innerHTML =
+    '<div class="mode-option sample ' + (systemMode==='SAMPLE'?'active':'') + '" onclick="selectMode(\'SAMPLE\')">' +
+      '<div class="mode-option-head"><div class="mode-radio"></div><span class="mode-option-name">SAMPLE</span></div>' +
+      '<span class="mode-option-desc">Shows demo data. Used for learning AETHER and testing the execution loop. This is the default.</span>' +
+    '</div>' +
+    '<div class="mode-option live ' + (systemMode==='LIVE'?'active':'') + '" onclick="selectMode(\'LIVE\')">' +
+      '<div class="mode-option-head"><div class="mode-radio"></div><span class="mode-option-name">LIVE</span></div>' +
+      '<span class="mode-option-desc">Uses real missions, real evidence, real progress. Sample data is suppressed everywhere in AETHER.</span>' +
+    '</div>';
+}
+
+function selectMode(mode){
+  if(mode === systemMode) return;
+  openModal('switchMode', mode);
+}
+
+function renderDataCounts(){
+  /* Phase 2: these are now real counts read directly from the shared
+     store, not a hardcoded guess mirroring what each page used to show. */
+  const counts = {
+    missions: AetherStore.getMissions().length,
+    blueprints: AetherStore.getBlueprints().length,
+    evidence: AetherStore.getEvidence().length,
+    timeline: AetherStore.getTimelineEvents().length,
+    debriefs: AetherStore.getPastDebriefs().length,
+    blockers: AetherStore.getBlockers().length
+  };
+
+  document.getElementById('dataCountGrid').innerHTML =
+    '<div class="dc-cell"><span class="dc-cell-value">' + counts.missions + '</span><span class="dc-cell-label">Missions</span></div>' +
+    '<div class="dc-cell"><span class="dc-cell-value">' + counts.blueprints + '</span><span class="dc-cell-label">Blueprints</span></div>' +
+    '<div class="dc-cell"><span class="dc-cell-value">' + counts.evidence + '</span><span class="dc-cell-label">Evidence</span></div>' +
+    '<div class="dc-cell"><span class="dc-cell-value">' + counts.timeline + '</span><span class="dc-cell-label">Timeline Events</span></div>' +
+    '<div class="dc-cell"><span class="dc-cell-value">' + counts.debriefs + '</span><span class="dc-cell-label">Debriefs</span></div>' +
+    '<div class="dc-cell"><span class="dc-cell-value">' + counts.blockers + '</span><span class="dc-cell-label">Blockers</span></div>';
+}
+
+function renderDiagnostics(){
+  let storageSize = '0 KB';
+  try{
+    let total = 0;
+    for(let i=0; i<localStorage.length; i++){
+      const k = localStorage.key(i);
+      total += (k.length + (localStorage.getItem(k)||'').length);
+    }
+    storageSize = (total/1024).toFixed(1) + ' KB';
+  }catch(e){ storageSize = 'Unavailable'; }
+
+  const conn = window.__aetherConn || { authKnown:false, user:null, pendingWrites:0 };
+
+  let dbLabel, dbColor, fbLabel, fbColor, syncLabel, syncColor;
+  if (!conn.authKnown) {
+    dbLabel = 'Checking…'; dbColor = 'var(--text-faint)';
+    fbLabel = 'Checking…'; fbColor = 'var(--text-faint)';
+    syncLabel = 'Checking…'; syncColor = 'var(--text-faint)';
+  } else if (conn.user) {
+    dbLabel = 'Connected (Firestore)'; dbColor = 'var(--success, #22c55e)';
+    fbLabel = 'Live — aether-1e974'; fbColor = 'var(--success, #22c55e)';
+    if (conn.pendingWrites > 0) {
+      syncLabel = 'Syncing… (' + conn.pendingWrites + ' pending)'; syncColor = '#eab308';
+    } else {
+      syncLabel = 'Synced'; syncColor = 'var(--success, #22c55e)';
+    }
+  } else {
+    dbLabel = 'Not Connected'; dbColor = 'var(--text-faint)';
+    fbLabel = 'Signed Out'; fbColor = 'var(--text-faint)';
+    syncLabel = 'Local Only'; syncColor = 'var(--text-faint)';
+  }
+
+  let lastBackup = 'Never';
+  try{
+    const info = AetherStore.getLocalBackupInfo();
+    if (info && info.exportedAt) lastBackup = new Date(info.exportedAt).toLocaleString();
+  }catch(e){}
+
+  document.getElementById('diagGrid').innerHTML =
+    '<div class="diag-cell"><span class="diag-label">LocalStorage Size</span><span class="diag-value">' + storageSize + '</span></div>' +
+    '<div class="diag-cell"><span class="diag-label">Database Status</span><span class="diag-value"><span class="diag-dot" style="background:' + dbColor + ';"></span>' + dbLabel + '</span></div>' +
+    '<div class="diag-cell"><span class="diag-label">Firebase Status</span><span class="diag-value"><span class="diag-dot" style="background:' + fbColor + ';"></span>' + fbLabel + '</span></div>' +
+    '<div class="diag-cell"><span class="diag-label">Sync Status</span><span class="diag-value"><span class="diag-dot" style="background:' + syncColor + ';"></span>' + syncLabel + '</span></div>' +
+    '<div class="diag-cell"><span class="diag-label">Last Backup</span><span class="diag-value">' + lastBackup + '</span></div>';
+}
+window.renderDiagnostics = renderDiagnostics;
+
+function renderAll(){
+  renderModeIndicator();
+  renderLifecycle();
+  renderModeToggle();
+  renderDataCounts();
+  renderDiagnostics();
+  renderSampleGuideStatus();
+}
+renderAll();
+
+let pendingAction = null;
+
+function openModal(kind, payload){
+  pendingAction = { kind: kind, payload: payload };
+  const title = document.getElementById('modalTitle');
+  const body = document.getElementById('modalBody');
+  const confirmArea = document.getElementById('modalConfirmArea');
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  confirmArea.innerHTML = '';
+  confirmBtn.disabled = false;
+
+  if(kind === 'purge'){
+    title.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>Purge All Sample Data';
+    body.innerHTML = 'This action will remove all seeded missions, blueprints, evidence, timelines, blockers, and debriefs.<br><br>Your system settings, operator account, theme, and integrations will remain intact.<br><br>AETHER will switch to LIVE mode and every page will show its empty state, ready for your real campaign.';
+    confirmArea.innerHTML = '<span class="modal-confirm-label">Type I UNDERSTAND to continue</span><input class="modal-confirm-input" id="confirmTypedInput" placeholder="I UNDERSTAND" style="margin-top:6px;"/>';
+    confirmBtn.textContent = 'Purge Sample Data';
+    confirmBtn.disabled = true;
+  } else if(kind === 'switchMode'){
+    const target = payload;
+    title.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>Switch to ' + target + ' Mode';
+    if(target === 'LIVE'){
+      body.innerHTML = 'Switching to LIVE mode suppresses all sample data across AETHER. Every page will show its empty state until you create real missions, blueprints, and evidence.<br><br>This does not delete sample data, it only hides it. You can switch back to SAMPLE at any time.';
+      confirmArea.innerHTML = '<span class="modal-confirm-label">Type I UNDERSTAND to continue</span><input class="modal-confirm-input" id="confirmTypedInput" placeholder="I UNDERSTAND" style="margin-top:6px;"/>';
+      confirmBtn.disabled = true;
+    } else {
+      body.innerHTML = 'Switching back to SAMPLE mode restores demo data across AETHER for learning and testing.';
+    }
+    confirmBtn.textContent = 'Switch Mode';
+  } else if(kind === 'delete'){
+    title.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>Delete Campaign';
+    body.innerHTML = 'This permanently deletes the current campaign, including any real missions, blueprints, and evidence you have created. This cannot be undone.<br><br>Consider Export Campaign first to keep a backup.';
+    confirmArea.innerHTML = '<span class="modal-confirm-label">Type I UNDERSTAND to continue</span><input class="modal-confirm-input" id="confirmTypedInput" placeholder="I UNDERSTAND" style="margin-top:6px;"/>';
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Delete Campaign';
+  }
+
+  const typedInput = document.getElementById('confirmTypedInput');
+  if(typedInput){
+    typedInput.addEventListener('input', function(){
+      confirmBtn.disabled = (typedInput.value.trim().toUpperCase() !== 'I UNDERSTAND');
+    });
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+  confirmBtn.onclick = executeConfirmedAction;
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  pendingAction = null;
+  if(clearLiveCountdownTimer){ clearInterval(clearLiveCountdownTimer); clearLiveCountdownTimer = null; }
+}
+
+/* ============================================================
+   4-STAGE VERIFICATION — "Clear All My Real Data"
+   The only truly destructive, irreversible action in AETHER gets
+   real friction: a summary, an explicit checkbox, a typed
+   confirmation phrase, and a final countdown before the button
+   even becomes clickable. Every other action stays single-step.
+   ============================================================ */
+let clearLiveStage = 1;
+let clearLiveCountdownTimer = null;
+const CLEAR_LIVE_PHRASE = 'DELETE MY DATA';
+
+function openClearLiveWizard(){
+  clearLiveStage = 1;
+  pendingAction = { kind: 'clearLiveWizard' };
+  renderClearLiveStage();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function renderClearLiveStage(){
+  const title = document.getElementById('modalTitle');
+  const body = document.getElementById('modalBody');
+  const confirmArea = document.getElementById('modalConfirmArea');
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  confirmArea.innerHTML = '';
+  confirmBtn.disabled = false;
+
+  const warnIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+  const lm = AetherStore.getLiveMissions ? AetherStore.getLiveMissions().length : 0;
+  const lb = AetherStore.getLiveBlueprints ? AetherStore.getLiveBlueprints().length : 0;
+  const lk = AetherStore.getLiveCheckpoints ? AetherStore.getLiveCheckpoints().length : 0;
+  const lbl = AetherStore.getLiveBlockers ? AetherStore.getLiveBlockers().length : 0;
+  const ld = AetherStore.getLiveDebriefs ? AetherStore.getLiveDebriefs().length : 0;
+  const totalCount = lm + lb + lk + lbl + ld;
+
+  if(totalCount === 0){
+    title.innerHTML = warnIcon + 'Clear All My Real Data';
+    body.innerHTML = 'You have no real data to clear yet. Everything currently showing is sample/demo data.<br><br>Create a real mission first, then this will remove it.';
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Nothing to Clear';
+    confirmBtn.onclick = null;
+    return;
+  }
+
+  if(clearLiveStage === 1){
+    title.innerHTML = warnIcon + 'Clear All My Real Data — Step 1 of 4';
+    body.innerHTML = 'This will permanently remove your real campaign:<br><br>' +
+      '<strong>'+lm+'</strong> mission(s), <strong>'+lb+'</strong> blueprint(s), <strong>'+lk+'</strong> step(s), <strong>'+lbl+'</strong> blocker(s), <strong>'+ld+'</strong> debrief(s), plus all evidence and Timeline history.<br><br>' +
+      'Sample/demo data and your settings are never touched.';
+    confirmBtn.textContent = 'Continue';
+    confirmBtn.onclick = function(){ clearLiveStage = 2; renderClearLiveStage(); };
+
+  } else if(clearLiveStage === 2){
+    title.innerHTML = warnIcon + 'Are You Sure? — Step 2 of 4';
+    body.innerHTML = 'This cannot be undone. There is no backup, no recovery, no "restore" button.<br><br>Once you continue past this point, your real campaign is gone.';
+    confirmArea.innerHTML = '<label style="display:flex;align-items:flex-start;gap:10px;margin-top:10px;cursor:pointer;">'+
+      '<input type="checkbox" id="clearLiveCheck1" style="width:16px;height:16px;margin-top:2px;flex-shrink:0;accent-color:var(--danger);"/>'+
+      '<span style="font-family:var(--font-body);font-size:12.5px;color:var(--text-secondary);line-height:1.5;">I understand this is permanent and I will lose everything listed above.</span></label>';
+    confirmBtn.textContent = 'Continue';
+    confirmBtn.disabled = true;
+    confirmBtn.onclick = function(){ clearLiveStage = 3; renderClearLiveStage(); };
+    document.getElementById('clearLiveCheck1').addEventListener('change', function(){
+      confirmBtn.disabled = !this.checked;
+    });
+
+  } else if(clearLiveStage === 3){
+    title.innerHTML = warnIcon + 'Type To Confirm — Step 3 of 4';
+    body.innerHTML = 'Type <strong>' + CLEAR_LIVE_PHRASE + '</strong> exactly to continue.';
+    confirmArea.innerHTML = '<input class="modal-confirm-input" id="clearLiveTyped" placeholder="'+CLEAR_LIVE_PHRASE+'" style="margin-top:6px;" autocomplete="off"/>';
+    confirmBtn.textContent = 'Continue';
+    confirmBtn.disabled = true;
+    confirmBtn.onclick = function(){ clearLiveStage = 4; renderClearLiveStage(); };
+    document.getElementById('clearLiveTyped').addEventListener('input', function(){
+      confirmBtn.disabled = (this.value.trim().toUpperCase() !== CLEAR_LIVE_PHRASE);
+    });
+
+  } else if(clearLiveStage === 4){
+    title.innerHTML = warnIcon + 'Final Confirmation — Step 4 of 4';
+    body.innerHTML = 'Last chance. The button below deletes everything the moment you click it.';
+    confirmBtn.disabled = true;
+    confirmBtn.onclick = executeClearLiveData;
+    let secondsLeft = 3;
+    confirmBtn.textContent = 'Wait… (' + secondsLeft + ')';
+    clearLiveCountdownTimer = setInterval(function(){
+      secondsLeft--;
+      if(secondsLeft <= 0){
+        clearInterval(clearLiveCountdownTimer);
+        clearLiveCountdownTimer = null;
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Yes, Permanently Delete Everything';
+      } else {
+        confirmBtn.textContent = 'Wait… (' + secondsLeft + ')';
+      }
+    }, 1000);
+  }
+}
+
+function executeClearLiveData(){
+  const removed = AetherStore.clearAllLiveData();
+  renderAll();
+  renderSampleGuideStatus();
+  toast('Cleared your real data: '+removed.missions+' mission(s), '+removed.blueprints+' blueprint(s), '+removed.blockers+' blocker(s), '+removed.debriefs+' debrief(s).', 'var(--purple)', 'dataCleared');
+  closeModal();
+}
+
+function executeConfirmedAction(){
+  if(!pendingAction) return;
+
+  if(pendingAction.kind === 'purge'){
+    AetherStore.setSystemMode('LIVE');
+    systemMode = 'LIVE';
+    renderAll();
+  } else if(pendingAction.kind === 'switchMode'){
+    AetherStore.setSystemMode(pendingAction.payload);
+    systemMode = pendingAction.payload;
+    renderAll();
+  } else if(pendingAction.kind === 'delete'){
+    AetherStore.setSystemMode('SAMPLE');
+    systemMode = 'SAMPLE';
+    renderAll();
+  }
+
+  closeModal();
+}
+
+function initializeSampleCampaign(){
+  AetherStore.setSystemMode('SAMPLE');
+  systemMode = 'SAMPLE';
+  renderAll();
+}
+
+/* ═══ SAMPLE DATA GUIDE — load / clear in one clear place ═══ */
+function loadSampleData(){
+  AetherStore.setSystemMode('SAMPLE');
+  systemMode = 'SAMPLE';
+  renderAll();
+  renderSampleGuideStatus();
+  toast('Demo data loaded. Explore every page to learn the flow.', 'var(--warning)', 'demoLoaded');
+}
+function clearSampleData(){
+  AetherStore.setSystemMode('LIVE');
+  systemMode = 'LIVE';
+  renderAll();
+  renderSampleGuideStatus();
+  toast('Demo cleared. AETHER now shows only your real campaign.', 'var(--success)', 'demoCleared');
+}
+
+/* Sets up "AETHER v1.0" as a real, live mission — an honest reflection
+   of what's actually been built (marked verified, written to Timeline)
+   and what's genuinely still left (pending steps). Guards against
+   duplicate setup if run twice. */
+function setupAetherV1Mission(){
+  AetherStore.setSystemMode('LIVE');
+  systemMode = 'LIVE';
+
+  var existing = (AetherStore.getAllMissions ? AetherStore.getAllMissions() : AetherStore.getMissions())
+    .find(function(m){ return m.name === 'AETHER v1.0'; });
+  if(existing){
+    toast('AETHER v1.0 is already set up — opening it now.', 'var(--accent)');
+    setTimeout(function(){ window.location.href = 'blueprints.html?highlight=' + encodeURIComponent(existing.key); }, 600);
+    return;
+  }
+
+  var mission = AetherStore.saveMission({
+    name: 'AETHER v1.0',
+    tagline: 'Personal life-execution OS — built to run itself',
+    objective: 'Ship a stable, fully-functional AETHER for real daily use',
+    icon: 'mountain',
+    mountainStyle: 'alpine'
+  });
+
+  var blueprint = AetherStore.saveBlueprint({
+    name: 'AETHER v1.0 Foundation',
+    missionKey: mission.key,
+    missionName: mission.name,
+    currentPhase: 'Phase 1: Stabilization',
+    objective: 'Fix every structural bug, ship the core hierarchy, wire real data tracking',
+    nextMilestone: 'Add a real evidence-creation flow'
+  });
+
+  var STEPS = [
+    { name: 'Fix structural HTML bugs across all 11 pages',                 conf: 15, done: true },
+    { name: 'Build Mission \u2192 Blueprint \u2192 Steps hierarchy',        conf: 12, done: true },
+    { name: 'Fix dashboard hero mountain & sidebar rendering',              conf: 8,  done: true },
+    { name: 'Wire dead buttons and deep-link Threats/Opportunities/Victories', conf: 8, done: true },
+    { name: 'Build real Timeline write-path (steps, blockers, debriefs)',   conf: 10, done: true },
+    { name: 'Add a real evidence-creation flow',                            conf: 8,  done: false },
+    { name: 'Wire sample-mode checkpoints into the Mission Board demo',     conf: 5,  done: false },
+    { name: 'Full regression pass across every page after Go-Live',         conf: 5,  done: false },
+    { name: 'Tag this build as v1.0 somewhere visible in Command Center',   conf: 3,  done: false }
+  ];
+
+  STEPS.forEach(function(s){
+    var cp = AetherStore.saveCheckpoint({
+      name: s.name,
+      blueprintKey: blueprint.key,
+      confidenceValue: s.conf
+    });
+    if(s.done) AetherStore.toggleCheckpointDone(cp.id, blueprint.key);
+  });
+
+  AetherStore.recalcBlueprintProgress(blueprint.key);
+
+  toast('AETHER v1.0 is live. Opening your real Blueprint now\u2026', 'var(--success)');
+  setTimeout(function(){ window.location.href = 'blueprints.html?highlight=' + encodeURIComponent(mission.key); }, 900);
+}
+function renderSampleGuideStatus(){
+  var el = document.getElementById('sampleGuideStatus');
+  if(!el) return;
+  if(systemMode === 'LIVE'){
+    el.className = 'lc-mode-pill live';
+    el.innerHTML = 'LIVE · DEMO HIDDEN';
+  } else {
+    el.className = 'lc-mode-pill sample';
+    el.innerHTML = 'SAMPLE · DEMO LOADED';
+  }
+}
+/* lightweight toast so the user gets confirmation feedback. voiceKind
+   is optional -- when given, AetherVoice speaks a short natural
+   confirmation alongside the visual toast (see CONFIRM_LINES in
+   aether-voice.js) instead of reading the raw toast text aloud. */
+function toast(msg, color, voiceKind){
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed; bottom:28px; left:50%; transform:translateX(-50%); '+
+    'background:var(--bg-panel); border:1px solid '+(color||'var(--accent)')+'; '+
+    'color:var(--text-primary); font-family:var(--font-body); font-size:13px; '+
+    'padding:12px 22px; border-radius:10px; z-index:300; box-shadow:0 6px 30px rgba(0,0,0,0.5); '+
+    'opacity:0; transition:opacity 200ms ease;';
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){ t.style.opacity='1'; });
+  setTimeout(function(){ t.style.opacity='0'; setTimeout(function(){ t.remove(); }, 250); }, 2600);
+  if(voiceKind && window.AetherVoice) window.AetherVoice.confirmAction(voiceKind);
+}
+function archiveCampaign(){
+  alert('Archive Campaign will be available once the shared data layer (Phase 2) exists.');
+}
+function duplicateCampaign(){
+  alert('Duplicate Campaign will be available once the shared data layer (Phase 2) exists.');
+}
+function exportCampaign(){
+  var data = AetherStore.exportAllLiveData();
+  var counts = data.missions.length + ' missions, ' + data.blueprints.length + ' blueprints, ' +
+    data.evidence.length + ' evidence, ' + data.timeline.length + ' timeline events';
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  var dateStamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = 'aether-campaign-export-' + dateStamp + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported: ' + counts, 'var(--success)', 'exportDone');
+}
+
+function importCampaign(){
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = function(){
+    var file = input.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var data;
+      try{ data = JSON.parse(reader.result); }
+      catch(e){ toast('That file isn\'t valid AETHER export JSON.', 'var(--danger)', 'importFailed'); return; }
+
+      var counts = (data.missions||[]).length + ' missions, ' + (data.blueprints||[]).length + ' blueprints, ' +
+        (data.evidence||[]).length + ' evidence, ' + (data.timeline||[]).length + ' timeline events';
+      var when = data.exportedAt ? new Date(data.exportedAt).toLocaleString() : 'unknown date';
+      var proceed = confirm(
+        'This will OVERWRITE your current real campaign with the imported file (' + counts + ').\n' +
+        'Exported: ' + when + '\n\nThis can\'t be undone. Continue?'
+      );
+      if(proceed){
+        var ok = AetherStore.importAllLiveData(data);
+        if(ok){ toast('Campaign imported. Reloading…', 'var(--success)', 'importDone'); setTimeout(function(){ window.location.reload(); }, 900); }
+        else{ toast('Import failed — file may be corrupted.', 'var(--danger)', 'importFailed'); }
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function createBackup(){
+  var snapshot = AetherStore.createLocalBackup();
+  if(snapshot){
+    toast('Backup saved: ' + snapshot.missions.length + ' missions, ' + snapshot.evidence.length + ' evidence, ' + snapshot.timeline.length + ' timeline events', 'var(--success)', 'backupSaved');
+    renderBackupStatus();
+    if (typeof window.renderDiagnostics === 'function') window.renderDiagnostics();
+  } else {
+    toast('Backup failed — check browser storage permissions.', 'var(--danger)', 'backupFailed');
+  }
+}
+
+function restoreBackup(){
+  var info = AetherStore.getLocalBackupInfo();
+  if(!info){ toast('No backup found yet — create one first.', 'var(--warning)'); return; }
+  var proceed = confirm(
+    'Restores your campaign to the last backup, taken ' + new Date(info.exportedAt).toLocaleString() + '.\n' +
+    'This OVERWRITES anything you\'ve changed since then.\n\nThis can\'t be undone. Continue?'
+  );
+  if(proceed){
+    var ok = AetherStore.restoreLocalBackup();
+    if(ok){ toast('Backup restored. Reloading…', 'var(--success)', 'backupRestored'); setTimeout(function(){ window.location.reload(); }, 900); }
+    else{ toast('Restore failed.', 'var(--danger)'); }
+  }
+}
+
+function renderBackupStatus(){
+  var el = document.getElementById('lastBackupStatus');
+  if(!el) return;
+  var info = AetherStore.getLocalBackupInfo();
+  el.textContent = info ? ('Last backup: ' + new Date(info.exportedAt).toLocaleString()) : 'No backup yet';
+}
+if(document.getElementById('lastBackupStatus')) renderBackupStatus();
+
+</script>
+<script>
+/* Sync the sidebar blocker badge to the real open-blocker count */
+(function syncBlockerBadge(){
+  var badge = document.getElementById('navBlockerBadge');
+  if(!badge) return;
+  var bk = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  badge.textContent = bk.filter(function(b){ return b.status === 'open'; }).length;
+})();
+</script>
+<script src="aether-quotes.js"></script>
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script src="aether-nav.js"></script>
+<script>
+(function(){
+  function syncCcVoiceToggle(){
+    var el = document.getElementById('cctrVoiceToggle');
+    if(!el || !window.AetherVoice) return;
+    el.classList.toggle('on', window.AetherVoice.isEnabled());
+  }
+  window.__toggleCcVoice = function(){
+    if(!window.AetherVoice) return;
+    window.AetherVoice.setEnabled(!window.AetherVoice.isEnabled());
+    syncCcVoiceToggle();
+  };
+  function syncCcMusicToggle(){
+    var el = document.getElementById('cctrMusicToggle');
+    if(!el || !window.AetherMusic) return;
+    el.classList.toggle('on', window.AetherMusic.isEnabled());
+  }
+  window.__toggleCcMusic = function(){
+    if(!window.AetherMusic) return;
+    window.AetherMusic.setEnabled(!window.AetherMusic.isEnabled());
+    syncCcMusicToggle();
+  };
+
+  /* ---- Soundtrack Library: upload, replace, preview, remove a custom
+     track per slot. Works identically on desktop (file browser) and
+     mobile (device's music/file picker) since it's a plain file input
+     under the hood -- the browser supplies whichever picker UI fits
+     the platform. Stored via AetherMusic's IndexedDB layer, not the
+     file system, so there's nothing to manually place in a folder. */
+  var STL_LABELS = {
+    intro: 'Splash / Login Intro',
+    dashboardIntro: 'Command Deck Intro',
+    celebrationLoop: 'Mission Completion Loop'
+  };
+  function formatBytes(n){
+    if(n == null) return '';
+    if(n < 1024) return n + ' B';
+    if(n < 1024*1024) return (n/1024).toFixed(0) + ' KB';
+    return (n/(1024*1024)).toFixed(1) + ' MB';
+  }
+  function renderSoundtrackLibrary(){
+    var container = document.getElementById('soundtrackLibrary');
+    if(!container || !window.AetherMusic) return;
+
+    Promise.all(window.AetherMusic.TRACK_KEYS.map(function(key){
+      return window.AetherMusic.getCustomTrackInfo(key).then(function(info){ return { key: key, info: info }; });
+    })).then(function(results){
+      container.innerHTML = '';
+      results.forEach(function(r){
+        var row = document.createElement('div');
+        row.className = 'stl-row';
+
+        var left = document.createElement('div');
+        var label = document.createElement('div');
+        label.className = 'stl-label';
+        label.textContent = STL_LABELS[r.key] || r.key;
+        var status = document.createElement('div');
+        if(r.info){
+          status.className = 'stl-status has-custom';
+          status.textContent = 'Using: ' + r.info.name + ' (' + formatBytes(r.info.size) + ')';
+        } else {
+          status.className = 'stl-status';
+          status.textContent = 'Using default file (assets/audio/) — nothing uploaded yet';
+        }
+        left.appendChild(label);
+        left.appendChild(status);
+        row.appendChild(left);
+
+        var btns = document.createElement('div');
+        btns.className = 'stl-btns';
+
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'audio/*';
+        fileInput.className = 'stl-file-input';
+        fileInput.id = 'stlFile_' + r.key;
+        fileInput.addEventListener('change', function(){
+          var file = fileInput.files && fileInput.files[0];
+          if(!file) return;
+          window.AetherMusic.setCustomTrack(r.key, file).then(function(){
+            renderSoundtrackLibrary();
+            if(window.AetherVoice) window.AetherVoice.speak('Track updated.');
+          });
+        });
+
+        var uploadBtn = document.createElement('button');
+        uploadBtn.type = 'button';
+        uploadBtn.className = 'stl-btn';
+        uploadBtn.textContent = r.info ? 'Replace' : 'Upload';
+        uploadBtn.addEventListener('click', function(){ fileInput.click(); });
+
+        var previewBtn = document.createElement('button');
+        previewBtn.type = 'button';
+        previewBtn.className = 'stl-btn';
+        previewBtn.textContent = 'Preview';
+        previewBtn.addEventListener('click', function(){ window.AetherMusic.previewTrack(r.key); });
+
+        btns.appendChild(fileInput);
+        btns.appendChild(uploadBtn);
+        btns.appendChild(previewBtn);
+
+        if(r.info){
+          var removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'stl-btn stl-btn-danger';
+          removeBtn.textContent = 'Remove';
+          removeBtn.addEventListener('click', function(){
+            window.AetherMusic.removeCustomTrack(r.key).then(renderSoundtrackLibrary);
+          });
+          btns.appendChild(removeBtn);
+        }
+
+        row.appendChild(btns);
+        container.appendChild(row);
+      });
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', syncCcVoiceToggle);
+    document.addEventListener('DOMContentLoaded', syncCcMusicToggle);
+    document.addEventListener('DOMContentLoaded', renderSoundtrackLibrary);
+  } else {
+    syncCcVoiceToggle();
+    syncCcMusicToggle();
+    renderSoundtrackLibrary();
+  }
+})();
+</script>
+</body>
+</html>

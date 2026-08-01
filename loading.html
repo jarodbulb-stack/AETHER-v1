@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AETHER — Connecting</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  height:100vh;
+  overflow:hidden;
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:radial-gradient(circle at center,#061a3a 0%,#020814 70%,#01040a 100%);
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.stars{
+  position:fixed;inset:0;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%,rgba(255,255,255,.8),transparent),
+    radial-gradient(1px 1px at 70% 20%,rgba(255,255,255,.7),transparent),
+    radial-gradient(2px 2px at 80% 70%,rgba(255,255,255,.8),transparent),
+    radial-gradient(1px 1px at 40% 80%,rgba(255,255,255,.6),transparent),
+    radial-gradient(1px 1px at 60% 45%,rgba(255,255,255,.5),transparent),
+    radial-gradient(1px 1px at 15% 65%,rgba(255,255,255,.5),transparent);
+  opacity:.5;
+}
+
+.panel{
+  position:relative;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:30px;
+  padding:0 24px;
+}
+
+.text-block{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.bar-block{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+
+/* ---- rotating triangle mark, same orbit language as the boot screen ---- */
+.mark{
+  position:relative;
+  width:120px;
+  height:120px;
+}
+.mark svg{ width:100%; height:100%; }
+.orbit-ring-group{
+  transform-origin:60px 60px;
+  animation:orbitSpin 5s linear infinite;
+}
+@keyframes orbitSpin{
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
+}
+.orbit-ring-line{
+  animation:ringGlow 2.2s ease-in-out infinite;
+  transform-box:fill-box;
+  transform-origin:center;
+}
+@keyframes ringGlow{
+  0%,100%{ opacity:.5; filter:drop-shadow(0 0 1px #4ad4ff); }
+  50%{ opacity:1; filter:drop-shadow(0 0 10px #4ad4ff) drop-shadow(0 0 22px #4ad4ff); }
+}
+.tri-glow{
+  animation:triGlow 2.2s ease-in-out infinite;
+  transform-box:fill-box;
+  transform-origin:center;
+}
+@keyframes triGlow{
+  0%,100%{ opacity:.25; transform:scale(0.75); }
+  50%{ opacity:.9; transform:scale(1.15); }
+}
+.orbit-dot{
+  animation:orbitPulse 1.8s ease-in-out infinite;
+  transform-box:fill-box;
+  transform-origin:center;
+}
+.orbit-dot.d2{ animation-delay:.4s; }
+.orbit-dot.d3{ animation-delay:.8s; }
+.orbit-dot.d4{ animation-delay:1.2s; }
+@keyframes orbitPulse{
+  0%,100%{ opacity:.55; transform:scale(0.7); }
+  50%{ opacity:1; transform:scale(1.2); }
+}
+
+.title{
+  font-size:clamp(22px,2.4vw,32px);
+  letter-spacing:4px;
+  font-weight:600;
+  color:#eaf4ff;
+  text-shadow:0 0 20px rgba(80,180,255,.55);
+}
+.sub{
+  font-size:clamp(13px,1.2vw,16px);
+  letter-spacing:1.5px;
+  color:#8fb3e0;
+}
+
+.bar-track{
+  width:min(78vw,420px);
+  height:4px;
+  border-radius:4px;
+  background:rgba(74,168,255,0.14);
+  overflow:hidden;
+  border:1px solid rgba(74,168,255,0.22);
+}
+.bar-fill{
+  height:100%;
+  width:0%;
+  border-radius:4px;
+  background:linear-gradient(90deg,#2f6fcf,#4ad4ff);
+  box-shadow:0 0 14px rgba(74,212,255,.7);
+  transition:width .18s linear;
+}
+.pct{
+  font-family:'Space Mono',monospace;
+  font-size:11px;
+  letter-spacing:2px;
+  color:#5e86b8;
+}
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<div class="panel">
+  <div class="mark">
+    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="triGlowGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#4ad4ff" stop-opacity="0.9"/>
+          <stop offset="60%" stop-color="#4ad4ff" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#4ad4ff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <circle class="tri-glow" cx="60" cy="60" r="34" fill="url(#triGlowGrad)"/>
+      <g class="orbit-ring-group">
+        <circle class="orbit-ring-line" cx="60" cy="60" r="46" fill="none" stroke="#4ad4ff"
+          stroke-width="1.6" stroke-dasharray="3 7"/>
+        <circle class="orbit-dot d1" cx="60" cy="14" r="2.6" fill="#4ad4ff"/>
+        <circle class="orbit-dot d2" cx="104" cy="72" r="2.6" fill="#4ad4ff"/>
+        <circle class="orbit-dot d3" cx="30" cy="83" r="2.6" fill="#4ad4ff"/>
+        <circle class="orbit-dot d4" cx="90" cy="83" r="2.6" fill="#4ad4ff"/>
+      </g>
+      <path d="M60 32 L92 88 H28 Z" stroke="#00c8ff" stroke-width="3" stroke-linejoin="round" fill="none"/>
+      <circle cx="60" cy="72" r="3" fill="#00c8ff"/>
+    </svg>
+  </div>
+
+  <div class="text-block">
+    <div class="title" id="loadTitle">CONNECTING TO AETHER</div>
+    <div class="sub" id="loadSub">Syncing mission data&hellip;</div>
+  </div>
+
+  <div class="bar-block">
+    <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+    <div class="pct" id="pctLabel">0%</div>
+  </div>
+</div>
+
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script>
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var next  = params.get('next')  || 'dashboard.html';
+  var minMs = parseInt(params.get('min'), 10);
+  if (!minMs || isNaN(minMs)) minMs = 1600;
+
+  var titleEl = document.getElementById('loadTitle');
+  var subEl   = document.getElementById('loadSub');
+  var barBlock = document.querySelector('.bar-block');
+
+  /* Mode is passed explicitly by every caller now (index.html's ENTER
+     button -> mode=init, login.html on success -> mode=arrival,
+     aether-nav.js on sign-out -> mode=signout). Explicit beats
+     guessed -- the old version inferred mode from the "next"
+     filename, which is what let sign-out occasionally announce
+     "Connecting to AETHER" instead of "Data secured." Falls back to
+     the old inference only if an older link somewhere doesn't pass
+     mode yet, so nothing breaks mid-rollout. */
+  var mode = params.get('mode');
+  if(!mode){
+    mode = (next === 'login.html') ? 'init'
+         : (next === 'index.html') ? 'signout'
+         : 'arrival';
+  }
+
+  if(mode === 'signout' && barBlock) barBlock.style.display = 'none'; // not "loading" anything -- a farewell, not a connection
+
+  if(window.AetherMusic){
+    if(mode === 'signout') window.AetherMusic.stopAll();
+    else window.AetherMusic.continueSplashIntro();
+  }
+
+  if(window.AetherVoice){
+    var variant = window.AetherVoice.announceTransition(mode);
+    titleEl.textContent = variant.title;
+    subEl.textContent = variant.sub;
+  } else {
+    /* No voice module available -- fall back to plain static text */
+    var FALLBACK = {
+      init:    { title:'WELCOME BACK, DAN', sub:'Systems online, initializing\u2026' },
+      signout: { title:'DATA SECURED', sub:'Until next time, sir.' },
+      arrival: { title:'CONNECTING TO AETHER', sub:'Syncing mission data\u2026' }
+    };
+    var f = FALLBACK[mode] || FALLBACK.arrival;
+    titleEl.textContent = f.title;
+    subEl.textContent = f.sub;
+  }
+
+  var fill = document.getElementById('barFill');
+  var pct  = document.getElementById('pctLabel');
+  var start = performance.now();
+  var saidConnected = false;
+
+  function tick(now){
+    var elapsed = now - start;
+    var p = Math.min(100, Math.round((elapsed / minMs) * 100));
+    if(fill) fill.style.width = p + '%';
+    if(pct) pct.textContent = p + '%';
+
+    /* Arrival mode: swap to "connection established" text + voice in
+       the last ~350ms, once the bar is essentially full, rather than
+       only firing right at the very end where there'd be no time to
+       read it. */
+    if(mode === 'arrival' && !saidConnected && elapsed >= minMs - 350){
+      saidConnected = true;
+      if(window.AetherVoice){
+        var connectedVariant = window.AetherVoice.announceTransition('connected');
+        titleEl.textContent = connectedVariant.title;
+        subEl.textContent = connectedVariant.sub;
+      } else {
+        titleEl.textContent = 'CONNECTION ESTABLISHED';
+        subEl.textContent = 'Standing by for your command.';
+      }
+    }
+
+    if (elapsed < minMs){
+      requestAnimationFrame(tick);
+    } else {
+      var settleDelay = (mode === 'signout') ? 900 : 120; /* let "Data secured..." actually finish before navigating off */
+      setTimeout(function(){ window.location.href = next; }, settleDelay);
+    }
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+
+</body>
+</html>

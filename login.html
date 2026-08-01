@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Sign In</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<style>
+
+html, body{ height:100%; }
+body{ background-image:none; background:#04070f; }
+
+/* ---------- Full-bleed outer frame with HUD border + corner ticks ---------- */
+.login-frame{
+  position:relative;
+  min-height:100vh;
+  margin:10px;
+  border:1px solid rgba(74,168,255,0.22);
+  display:flex;
+  overflow:hidden;
+}
+.login-frame::before, .login-frame::after,
+.login-frame .tick-tr, .login-frame .tick-bl{
+  content:"";
+  position:absolute;
+  width:18px; height:18px;
+  border:1.5px solid var(--accent-glow);
+  opacity:0.8;
+  z-index:3;
+}
+.login-frame::before{ top:-1px; left:-1px; border-right:none; border-bottom:none; }
+.login-frame::after{ bottom:-1px; right:-1px; border-left:none; border-top:none; }
+.login-frame .tick-tr{ top:-1px; right:-1px; border-left:none; border-bottom:none; }
+.login-frame .tick-bl{ bottom:-1px; left:-1px; border-right:none; border-top:none; }
+
+/* faint corner readouts, decorative HUD detail */
+.hud-readout{
+  position:absolute;
+  font-family:var(--font-mono);
+  font-size:9px;
+  letter-spacing:0.12em;
+  color:rgba(110,150,200,0.35);
+  z-index:3;
+  display:flex;
+  gap:5px;
+  align-items:center;
+}
+.hud-readout svg{ width:9px; height:9px; opacity:0.5; }
+.hud-readout.top-left{ top:14px; left:30px; }
+.hud-readout.bottom-right{ bottom:14px; right:30px; }
+
+/* faint grid only inside the frame */
+.login-frame::after{ /* keep corner tick, add grid via separate element below */ }
+.frame-grid{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(74,168,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74,168,255,0.035) 1px, transparent 1px);
+  background-size:42px 42px;
+}
+
+/* ---------- Left: earth artwork ---------- */
+.login-art{
+  flex:1 1 52%;
+  position:relative;
+  overflow:hidden;
+  min-width:0;
+  z-index:1;
+}
+.login-art img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:left center;
+}
+.login-art::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:linear-gradient(90deg, rgba(4,7,15,0) 60%, rgba(4,7,15,0.85) 100%);
+}
+
+/* ---------- Right: form panel ---------- */
+.login-panel{
+  flex:1 1 48%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:40px 64px;
+  position:relative;
+  z-index:2;
+}
+.login-form-wrap{
+  width:100%;
+  max-width:480px;
+}
+
+/* ---------- Logo block ---------- */
+.login-logo{ margin-bottom:40px; }
+.login-logo svg{ display:block; }
+
+/* ---------- Welcome line ---------- */
+.login-welcome{
+  font-family:var(--font-body);
+  font-size:18px;
+  margin:28px 0 28px;
+  color:var(--text-secondary);
+}
+.login-welcome .accent{ color:var(--accent-glow); }
+
+/* ---------- Fields ---------- */
+.field{ margin-bottom:18px; position:relative; }
+.auth-error{
+  display:none;
+  background:rgba(255,92,108,0.08);
+  border:1px solid rgba(255,92,108,0.3);
+  color:#ff8c96;
+  font-size:12px;
+  letter-spacing:0.03em;
+  padding:10px 12px;
+  border-radius:8px;
+  margin-bottom:16px;
+  line-height:1.4;
+}
+.auth-error.show{ display:block; }
+.btn-signin.loading{ opacity:0.65; pointer-events:none; }
+.field input{
+  width:100%;
+  padding:17px 18px;
+  border-radius:7px;
+  background:rgba(11,18,32,0.55);
+  border:1px solid rgba(74,168,255,0.22);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  font-size:14px;
+  outline:none;
+  transition:var(--transition);
+}
+.field input::placeholder{ color:var(--text-dim); }
+.field input:focus{ border-color:var(--accent); box-shadow:var(--glow-accent); }
+
+.password-field input{ padding-right:50px; }
+.eye-toggle{
+  position:absolute;
+  right:14px; top:50%;
+  transform:translateY(-50%);
+  background:none; border:none;
+  color:var(--text-dim);
+  cursor:pointer;
+  display:flex; align-items:center;
+  padding:4px;
+}
+.eye-toggle:hover{ color:var(--accent-glow); }
+.eye-toggle svg{ width:19px; height:19px; }
+
+/* ---------- Sign in button ---------- */
+.btn-signin{
+  width:100%;
+  padding:18px 0;
+  margin-top:8px;
+  background:linear-gradient(180deg, #2f7de0 0%, #1452b8 100%);
+  border:1px solid rgba(120,190,255,0.5);
+  border-radius:7px;
+  color:#f3f8ff;
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:15px;
+  letter-spacing:0.18em;
+  cursor:pointer;
+  position:relative;
+  box-shadow:0 0 26px rgba(47,110,220,0.45), inset 0 1px 0 rgba(255,255,255,0.15);
+  transition:var(--transition), transform 120ms ease;
+}
+.btn-signin:hover{ box-shadow:0 0 36px rgba(47,125,224,0.6), inset 0 1px 0 rgba(255,255,255,0.2); }
+.btn-signin:active{ transform:translateY(1px); }
+.btn-signin::before, .btn-signin::after{
+  content:"";
+  position:absolute;
+  width:13px; height:13px;
+  border:1.5px solid rgba(255,255,255,0.65);
+  opacity:0.85;
+}
+.btn-signin::before{ top:6px; left:6px; border-right:none; border-bottom:none; }
+.btn-signin::after{ bottom:6px; right:6px; border-left:none; border-top:none; }
+
+/* ---------- Divider ---------- */
+.divider{
+  display:flex; align-items:center; gap:16px;
+  margin:26px 0;
+  font-family:var(--font-body);
+  font-size:13px;
+  color:var(--text-dim);
+}
+.divider::before, .divider::after{
+  content:"";
+  flex:1; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(74,168,255,0.3) 30%, rgba(74,168,255,0.3) 70%, transparent);
+}
+
+/* ---------- Google button ---------- */
+.btn-google{
+  width:100%;
+  padding:16px 0;
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  background:rgba(11,18,32,0.45);
+  border:1px solid rgba(74,168,255,0.22);
+  border-radius:7px;
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  font-size:14.5px;
+  cursor:pointer;
+  transition:var(--transition);
+}
+.btn-google:hover{ border-color:var(--accent); background:var(--bg-elevated); }
+
+/* ---------- Forgot link ---------- */
+.forgot-link{
+  display:block;
+  text-align:center;
+  margin-top:28px;
+  font-family:var(--font-body);
+  font-size:13.5px;
+  color:var(--accent-glow);
+}
+
+/* ---------- Mobile: stack, hide art ---------- */
+@media (max-width:860px){
+  .login-art{ display:none; }
+  .login-panel{ flex:1 1 100%; padding:40px 28px; }
+  .hud-readout{ display:none; }
+}
+
+</style>
+<script type="module" src="firebase-config.js"></script>
+</head>
+<body class="login-body">
+
+<div class="login-frame">
+  <div class="frame-grid"></div>
+  <span class="tick-tr"></span>
+  <span class="tick-bl"></span>
+
+  <div class="hud-readout top-left">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+    SYSTEM ONLINE
+  </div>
+  <div class="hud-readout bottom-right">
+    ENCRYPTED CHANNEL
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+  </div>
+
+  <!-- Left: earth artwork -->
+  <div class="login-art">
+    <img src="earth-night.png" alt="Earth at night, city lights visible">
+    <canvas id="loginEarthFlickerCanvas" style="position:absolute;top:0;left:0;pointer-events:none;z-index:2;"></canvas>
+  </div>
+
+  <!-- Right: sign-in form -->
+  <div class="login-panel">
+    <div class="login-form-wrap">
+
+      <!-- Logo -->
+      <div class="login-logo">
+        <svg width="330" height="76" viewBox="0 0 330 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- dotted orbit -->
+          <circle cx="38" cy="38" r="27" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 4" opacity="0.55"/>
+          <circle cx="38" cy="11" r="2.4" fill="var(--accent-glow)"/>
+          <circle cx="61" cy="56" r="1.8" fill="var(--accent-glow)"/>
+          <!-- triangle mark -->
+          <path d="M38 16 L58 60 H18 Z" stroke="var(--accent-glow)" stroke-width="2.6" stroke-linejoin="round" fill="none"/>
+          <path d="M38 28 L49 52 H27 Z" stroke="var(--teal)" stroke-width="1.8" stroke-linejoin="round" fill="none"/>
+          <circle cx="38" cy="16" r="2.4" fill="var(--accent-glow)"/>
+          <!-- ETHER wordmark -->
+          <text x="84" y="46" font-family="Orbitron, sans-serif" font-weight="500" font-size="32" letter-spacing="11" fill="var(--text-primary)">ETHER</text>
+          <text x="84" y="64" font-family="Space Mono, monospace" font-size="10" letter-spacing="3.5" fill="var(--text-dim)">MISSION COMMAND SYSTEM</text>
+          <!-- bar chart icon -->
+          <g fill="var(--accent)">
+            <rect x="290" y="44" width="7" height="18" opacity="0.5"/>
+            <rect x="301" y="34" width="7" height="28" opacity="0.7"/>
+            <rect x="312" y="22" width="7" height="40"/>
+            <rect x="323" y="40" width="7" height="22" opacity="0.6"/>
+          </g>
+        </svg>
+      </div>
+
+      <form id="loginForm">
+        <div class="auth-error" id="authError"></div>
+        <div class="field">
+          <input type="email" id="emailInput" placeholder="Email" autocomplete="email" required>
+        </div>
+        <div class="field password-field">
+          <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password" required>
+          <button type="button" class="eye-toggle" id="pwToggle" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="eyeIcon">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+
+        <button type="submit" class="btn-signin">SIGN IN</button>
+      </form>
+
+      <div class="divider">OR</div>
+
+      <button class="btn-google" id="googleBtn">
+        <svg width="20" height="20" viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.4 0 5.7 1.5 7 2.7l5.1-5C32.9 4 28.9 2 24 2 14.8 2 7 7.7 3.7 15.6l6 4.7C11.2 14.2 17 9.5 24 9.5Z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4H24v8h12.7c-.3 2.2-1.6 5.5-4.7 7.7l6 4.6c3.5-3.2 5.5-8 5.5-16.3Z"/>
+          <path fill="#FBBC05" d="M9.7 20.3a14.5 14.5 0 0 0 0 7.4l-6 4.7a23.9 23.9 0 0 1 0-16.8l6 4.7Z"/>
+          <path fill="#34A853" d="M24 46c5 0 9.1-1.6 12.1-4.4l-6-4.6c-1.6 1.1-3.8 2-6.1 2-7 0-12.8-4.7-14.3-11l-6 4.7C7 40.3 14.8 46 24 46Z"/>
+        </svg>
+        Sign in with Google
+      </button>
+
+      <a href="#" class="forgot-link">Forgot Password?</a>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const pwInput = document.getElementById('passwordInput');
+const pwToggle = document.getElementById('pwToggle');
+const eyeIcon = document.getElementById('eyeIcon');
+const eyeOpen = `<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/>`;
+const eyeClosed = `<path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.2A10.7 10.7 0 0 1 12 4c7 0 11 7 11 7a13.2 13.2 0 0 1-3.1 3.7M6.2 6.2A13.4 13.4 0 0 0 1 11s2.5 4.5 7 6.3"/>`;
+pwToggle.addEventListener('click', ()=>{
+  const showing = pwInput.type === 'text';
+  pwInput.type = showing ? 'password' : 'text';
+  eyeIcon.innerHTML = showing ? eyeOpen : eyeClosed;
+});
+
+// Real Firebase Auth — replaces the old placeholder redirect.
+const redirectTarget = new URLSearchParams(window.location.search).get('redirect');
+const safeTarget = (redirectTarget && /^[a-zA-Z0-9_-]+\.html$/.test(redirectTarget))
+  ? redirectTarget
+  : 'dashboard.html';
+const AETHER_LOADING_URL = 'loading.html?next=' + encodeURIComponent(safeTarget) +
+  '&mode=arrival&label=CONNECTING%20TO%20AETHER&sub=Syncing%20mission%20data%E2%80%A6';
+const errorBox = document.getElementById('authError');
+const signInBtn = document.querySelector('.btn-signin');
+
+function showAuthError(msg){
+  errorBox.textContent = msg;
+  errorBox.classList.add('show');
+}
+function clearAuthError(){
+  errorBox.classList.remove('show');
+  errorBox.textContent = '';
+}
+
+// Friendly text for Firebase's error codes — operators shouldn't see raw
+// "auth/invalid-credential" style strings.
+function friendlyAuthError(err){
+  const code = err && err.code ? err.code : '';
+  if (code === 'auth/invalid-email') return 'That email address doesn\u2019t look right.';
+  if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'Incorrect password. Try again.';
+  if (code === 'auth/too-many-requests') return 'Too many attempts. Wait a moment and try again.';
+  if (code === 'auth/weak-password') return 'Password should be at least 6 characters.';
+  if (code === 'auth/popup-closed-by-user') return 'Google sign-in was closed before finishing.';
+  if (code === 'auth/network-request-failed') return 'No connection \u2014 check your internet and try again.';
+  return 'Sign-in failed. Please try again.';
+}
+
+import(
+  './firebase-config.js'
+).then(({ auth }) => {
+  import('https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js').then((authSdk) => {
+    const {
+      signInWithEmailAndPassword,
+      createUserWithEmailAndPassword,
+      GoogleAuthProvider,
+      signInWithPopup,
+      fetchSignInMethodsForEmail
+    } = authSdk;
+
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      clearAuthError();
+      const email = document.getElementById('emailInput').value.trim();
+      const password = document.getElementById('passwordInput').value;
+      signInBtn.classList.add('loading');
+
+      signInWithEmailAndPassword(auth, email, password)
+        .then(() => {
+          window.location.href = AETHER_LOADING_URL;
+        })
+        .catch((err) => {
+          // No account yet with this email — since AETHER doesn't have a
+          // separate "create account" screen, first sign-in doubles as
+          // account creation. But first check whether this email already
+          // belongs to a Google-only account, so we can point the operator
+          // to the right button instead of a confusing generic failure.
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            fetchSignInMethodsForEmail(auth, email)
+              .then((methods) => {
+                if (methods.includes('google.com') && !methods.includes('password')) {
+                  signInBtn.classList.remove('loading');
+                  showAuthError('This email uses Google sign-in \u2014 tap "Sign in with Google" below instead.');
+                  return;
+                }
+                createUserWithEmailAndPassword(auth, email, password)
+                  .then(() => { window.location.href = AETHER_LOADING_URL; })
+                  .catch((createErr) => {
+                    signInBtn.classList.remove('loading');
+                    showAuthError(friendlyAuthError(createErr));
+                  });
+              })
+              .catch(() => {
+                signInBtn.classList.remove('loading');
+                showAuthError(friendlyAuthError(err));
+              });
+          } else {
+            signInBtn.classList.remove('loading');
+            showAuthError(friendlyAuthError(err));
+          }
+        });
+    });
+
+    document.getElementById('googleBtn').addEventListener('click', () => {
+      clearAuthError();
+      const provider = new GoogleAuthProvider();
+      signInWithPopup(auth, provider)
+        .then(() => { window.location.href = AETHER_LOADING_URL; })
+        .catch((err) => { showAuthError(friendlyAuthError(err)); });
+    });
+  });
+});
+</script>
+
+<script src="earth-flicker.js"></script>
+<script>
+  var LOGIN_EARTH_LIGHT_POINTS = [[0.5937,0.5464],[0.2628,0.6025],[0.3747,0.3921],[0.4818,0.3825],[0.4428,0.3852],[0.5061,0.3893],[0.4161,0.4877],[0.253,0.4754],[0.3358,0.4126],[0.2409,0.6872],[0.5499,0.3415],[0.5499,0.4891],[0.3066,0.5164],[0.3674,0.4781],[0.4696,0.4768],[0.0511,0.5232],[0.6326,0.5861],[0.5718,0.5574],[0.4526,0.4959],[0.0681,0.3661],[0.5961,0.5656],[0.2019,0.6093],[0.2628,0.5191],[0.3747,0.4522],[0.3187,0.3552],[0.5377,0.4645],[0.4112,0.444],[0.2603,0.6954],[0.3674,0.5164],[0.2311,0.7022],[0.8783,0.7773],[0.4404,0.4795],[0.5085,0.4577],[0.2993,0.5505],[0.3747,0.709],[0.1484,0.6844],[0.2263,0.5833],[0.5207,0.377],[0.2895,0.4426],[0.2409,0.5478],[0.5718,0.5219],[0.4209,0.459],[0.4234,0.6803],[0.4526,0.4153],[0.1265,0.388],[0.3455,0.2773],[0.7762,0.873],[0.163,0.4822],[0.4891,0.4672],[0.3674,0.5314],[0.3114,0.4358],[0.5766,0.806],[0.8273,0.7787],[0.3869,0.5082],[0.399,0.3934],[0.3917,0.5355],[0.1971,0.6735],[0.2263,0.5697],[0.2214,0.679],[0.5888,0.5792],[0.2725,0.4672],[0.5693,0.3497]];
+  initEarthFlicker('loginEarthFlickerCanvas', '.login-art img', LOGIN_EARTH_LIGHT_POINTS, 'rgba(255,205,120,ALPHA)', {posX:0, posY:0.5}, {
+    minOpacity: 0.15,
+    ampMain: 0.85,
+    spikeBoost: 0.55,
+    sizeBase: 1.6,
+    sizeAmp: 1.8
+  });
+</script>
+
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script>
+  /* Login page gets its own short line -- separate from "Welcome back,
+     Dan" which already played on the loading screen just before this.
+     This guarantees the login step is never silent, even if that
+     transition was brief. */
+  if(window.AetherVoice) window.AetherVoice.announceLoginArrival();
+  if(window.AetherMusic) window.AetherMusic.continueSplashIntro();
+</script>
+
+</body>
+</html>

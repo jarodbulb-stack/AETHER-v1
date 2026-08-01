@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Blueprints</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<script src="mission-mountain.js"></script>
+<script src="aether-celebration.js"></script>
+<style>
+
+.section-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; }
+.section-head-left{ display:flex; align-items:center; gap:9px; }
+.section-head-left svg{ width:16px; height:16px; color:var(--accent); flex-shrink:0; }
+.section-head-left .ttl{ font-family:var(--font-display); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; }
+.section-head a{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; white-space:nowrap; display:flex; align-items:center; gap:4px; }
+.section-head a svg{ width:11px; height:11px; }
+
+/* SECTION 1 — BLUEPRINT STATUS STRIP */
+.xstrip{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+@media (max-width:1200px){ .xstrip{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:680px){ .xstrip{ grid-template-columns:repeat(2,1fr); } }
+.xcard{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+.xcard-head{ display:flex; align-items:center; gap:6px; }
+.xcard-head svg{ width:13px; height:13px; flex-shrink:0; color:var(--xc-color, var(--accent)); }
+.xcard-label{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.xcard-value{ font-family:var(--font-display); font-size:26px; font-weight:600; line-height:1; color:var(--xc-color, var(--text-primary)); }
+.xcard-sub{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); }
+
+/* SECTION 2 — BLUEPRINT COMMAND BOARD */
+.bp-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:14px; }
+@media (max-width:1300px){ .bp-grid{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:760px){ .bp-grid{ grid-template-columns:repeat(2,1fr); } }
+@media (max-width:480px){ .bp-grid{ grid-template-columns:1fr; } }
+
+.bpcard{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px; display:flex; flex-direction:column; gap:11px; cursor:pointer; transition:var(--transition); text-decoration:none; border-left:3px solid var(--bp-color, var(--accent)); }
+.bpcard:hover{ border-color:var(--border-strong); transform:translateY(-2px); box-shadow:var(--shadow-panel); }
+.bpcard.selected{ box-shadow:0 0 0 1px var(--bp-color, var(--accent)) inset; }
+.bpcard-head{ display:flex; align-items:center; gap:8px; }
+.bpcard-icon{ width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--bp-color, var(--accent)); flex-shrink:0; }
+.bpcard-icon svg{ width:14px; height:14px; }
+.bpcard-titles{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.bpcard-name{ font-family:var(--font-display); font-size:12.5px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bpcard-mission{ font-family:var(--font-mono); font-size:9px; color:var(--text-faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bpcard-status{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; color:var(--bp-color, var(--accent)); }
+.bpcard-phase{ font-family:var(--font-body); font-size:11.5px; color:var(--text-secondary); }
+.bpcard-milestone{ font-family:var(--font-body); font-size:10.5px; color:var(--text-dim); }
+.bpcard-progress-row{ display:flex; align-items:center; justify-content:space-between; }
+.bpcard-pct{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--bp-color, var(--text-primary)); }
+.bpcard-conf{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); }
+
+/* ---- Mission → Blueprint → Steps nested board ---- */
+.mission-board{ display:flex; flex-direction:column; gap:14px; }
+.mission-group{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); overflow:hidden; }
+.mission-group.deep-highlight{ animation:bpMissionHighlightPulse 1.8s ease-out 2; }
+@keyframes bpMissionHighlightPulse{
+  0%{ box-shadow:0 0 0 2px var(--accent), 0 0 30px rgba(74,168,255,0.5); }
+  100%{ box-shadow:0 0 0 1px var(--border-subtle); }
+}
+.mg-head{ display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border-subtle); background:rgba(255,255,255,0.015); }
+.mg-icon{ width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--mg-color, var(--accent)); flex-shrink:0; }
+.mg-icon svg{ width:18px; height:18px; }
+.mg-titles{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.mg-name{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-faint); }
+.mg-tagline{ font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mg-meta{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.mg-pct{ font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--mg-color, var(--text-primary)); }
+.mg-camp{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); text-align:right; }
+.mg-body{ padding:16px 20px; display:flex; flex-direction:column; gap:12px; }
+
+.bp-block{ border:1px solid var(--border-subtle); border-radius:10px; background:var(--bg-panel-alt); overflow:hidden; }
+.bp-block-head{ display:flex; align-items:center; gap:10px; padding:13px 15px; cursor:pointer; user-select:none; }
+.bp-block-icon{ width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--bp-color, var(--accent)); flex-shrink:0; }
+.bp-block-icon svg{ width:13px; height:13px; }
+.bp-block-titles{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.bp-block-name{ font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--text-primary); }
+.bp-block-phase{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); }
+.bp-block-progress-wrap{ display:flex; align-items:center; gap:8px; width:120px; flex-shrink:0; }
+.bp-block-progress-wrap .progress-track{ flex:1; }
+.bp-block-pct{ font-family:var(--font-display); font-size:12.5px; font-weight:700; color:var(--bp-color, var(--text-primary)); width:34px; text-align:right; flex-shrink:0; }
+.bp-block-chevron{ color:var(--text-faint); flex-shrink:0; transition:transform .18s; }
+.bp-block-chevron svg{ width:14px; height:14px; }
+.bp-block.expanded .bp-block-chevron{ transform:rotate(90deg); }
+.bp-steps{ display:none; padding:4px 15px 14px 15px; border-top:1px solid rgba(255,255,255,0.05); }
+.bp-block.expanded .bp-steps{ display:block; }
+.bp-steps .cp-row{ padding:8px 0; }
+.bp-steps-empty{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint); padding:10px 0; }
+.mg-add-bp-btn{
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  padding:11px; border-radius:9px; border:1px dashed var(--border-strong);
+  background:transparent; color:var(--text-dim); cursor:pointer;
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase;
+  transition:var(--transition);
+}
+.mg-add-bp-btn:hover{ border-color:var(--accent); color:var(--accent-glow); background:rgba(74,168,255,0.05); }
+.mg-add-bp-btn svg{ width:13px; height:13px; }
+.mg-no-bp{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); padding:6px 0 4px 0; }
+
+/* SECTION 3 — SELECTED BLUEPRINT INTELLIGENCE */
+.sel-card{ display:flex; flex-direction:column; }
+.sel-mission-name{ font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--accent-glow); margin-top:10px; }
+.sel-mission-objective{ font-family:var(--font-body); font-size:12.5px; color:var(--text-dim); margin-top:2px; padding-bottom:14px; border-bottom:1px solid var(--border-subtle); }
+.sel-fact-list{ display:flex; flex-direction:column; margin-top:14px; }
+.sel-fact-row{ display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid var(--border-subtle); }
+.sel-fact-row:last-child{ border-bottom:none; }
+.sel-fact-icon{ width:16px; height:16px; flex-shrink:0; color:var(--text-dim); margin-top:1px; }
+.sel-fact-label{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); width:130px; flex-shrink:0; }
+.sel-fact-value{ font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); flex:1; }
+.sel-fact-value.hazard{ color:var(--warning); }
+.sel-fact-value.recovery{ color:var(--success); }
+.sel-view-link{ margin-top:14px; }
+
+/* SECTION 4 — BLUEPRINT HEALTH */
+.health-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:14px; }
+@media (max-width:900px){ .health-grid{ grid-template-columns:repeat(2,1fr); } }
+.health-card{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px; display:flex; flex-direction:column; gap:8px; border-top:2px solid var(--hc-color, var(--accent)); }
+.health-card-label{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--hc-color, var(--text-dim)); display:flex; align-items:center; gap:7px; }
+.health-card-label svg{ width:14px; height:14px; }
+.health-card-value{ font-family:var(--font-display); font-size:30px; font-weight:700; color:var(--hc-color, var(--text-primary)); line-height:1; }
+.health-card-names{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); line-height:1.5; }
+
+/* SECTION 5 — RECENT BLUEPRINT PROGRESS */
+.progress-feed{ display:flex; flex-direction:column; margin-top:12px; }
+.pf-item{ display:flex; align-items:flex-start; gap:11px; padding:11px 0; border-bottom:1px solid var(--border-subtle); }
+.pf-item:last-child{ border-bottom:none; }
+.pf-icon{ width:26px; height:26px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.pf-icon.milestone{ background:rgba(74,168,255,0.1); color:var(--accent); }
+.pf-icon.evidence{ background:rgba(61,220,132,0.1); color:var(--success); }
+.pf-icon svg{ width:13px; height:13px; }
+.pf-body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.pf-name{ font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); }
+.pf-sub{ font-family:var(--font-mono); font-size:10px; color:var(--text-dim); }
+.pf-date{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); flex-shrink:0; }
+
+.manifesto-line{ text-align:center; padding:18px 0 4px; font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); }
+
+.empty-state{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:48px 20px; text-align:center; }
+.empty-state-icon{ width:48px; height:48px; border-radius:50%; background:rgba(74,168,255,0.08); display:flex; align-items:center; justify-content:center; color:var(--accent); }
+.empty-state-icon svg{ width:22px; height:22px; }
+.empty-state-title{ font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text-primary); }
+.empty-state-sub{ font-family:var(--font-body); font-size:12px; color:var(--text-dim); max-width:340px; line-height:1.5; }
+.empty-state-cta{ margin-top:6px; }
+
+</style>
+<style>
+@keyframes aether-pulse {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(0,200,255,0.9)) drop-shadow(0 0 18px rgba(0,200,255,0.4)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(0,200,255,1)) drop-shadow(0 0 35px rgba(0,200,255,0.7)) drop-shadow(0 0 6px #fff); }
+}
+.sidebar-logo-mark { animation: aether-pulse 2.8s ease-in-out infinite; }
+
+/* ── Checkpoint execution panel ── */
+.cp-execution-panel{margin-top:18px;border-top:1px solid var(--border-subtle);padding-top:16px;}
+.cp-execution-title{font-family:var(--font-mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.cp-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);transition:background .15s;}
+/* ---- Lightweight single-item confirm modal ---- */
+.mini-confirm-overlay{
+  position:fixed; inset:0; z-index:9500; background:rgba(2,8,20,0.82); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center;
+}
+.mini-confirm-overlay.open{ display:flex; }
+.mini-confirm-box{
+  width:100%; max-width:380px; background:var(--bg-panel); border:1px solid rgba(255,92,108,0.3);
+  border-radius:var(--radius-lg); padding:22px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.mini-confirm-title{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.mini-confirm-title svg{ width:17px; height:17px; color:var(--danger); }
+.mini-confirm-body{ font-family:var(--font-body); font-size:12.5px; color:var(--text-secondary); line-height:1.55; margin-bottom:18px; }
+.mini-confirm-body strong{ color:var(--text-primary); }
+.mini-confirm-actions{ display:flex; gap:10px; justify-content:flex-end; }
+.data-tag{
+  display:inline-block; font-family:var(--font-mono); font-size:8.5px; font-weight:700; letter-spacing:0.1em;
+  padding:2px 7px; border-radius:99px; text-transform:uppercase; vertical-align:middle;
+}
+.sample-tag{ background:rgba(255,184,77,0.14); color:var(--warning); border:1px solid rgba(255,184,77,0.35); }
+.cp-evidence-link, .cp-delete-btn{
+  width:22px; height:22px; border-radius:6px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:1px solid transparent; cursor:pointer;
+  color:var(--text-faint); opacity:0; transition:var(--transition); text-decoration:none;
+}
+.cp-evidence-link svg, .cp-delete-btn svg{ width:12px; height:12px; }
+.cp-row:hover .cp-evidence-link, .cp-row:hover .cp-delete-btn{ opacity:1; }
+.cp-evidence-link:hover{ background:rgba(74,168,255,0.12); border-color:rgba(74,168,255,0.3); color:var(--accent-glow); }
+.cp-delete-btn:hover{ background:rgba(255,92,108,0.12); border-color:rgba(255,92,108,0.3); color:var(--danger); }
+.bp-block-delete-btn{
+  width:24px; height:24px; border-radius:7px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:1px solid transparent; cursor:pointer;
+  color:var(--text-faint); opacity:0; transition:var(--transition);
+}
+.bp-block-delete-btn svg{ width:12px; height:12px; }
+.bp-block:hover .bp-block-delete-btn{ opacity:1; }
+.bp-block-delete-btn:hover{ background:rgba(255,92,108,0.12); border-color:rgba(255,92,108,0.3); color:var(--danger); }
+.cp-row:last-child{border-bottom:none;}
+.cp-row.done .cp-name{text-decoration:line-through;color:var(--text-faint);}
+.cp-row.done .cp-conf{color:var(--success);}
+.cp-row.is-current{background:rgba(74,168,255,0.06);border-radius:8px;padding:10px 10px;margin:0 -10px;}
+.cp-checkbox{width:20px;height:20px;border-radius:5px;border:2px solid var(--border-strong);background:transparent;cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.15s;}
+.cp-checkbox.checked{background:var(--success);border-color:var(--success);}
+.cp-checkbox.checked::after{content:"✓";color:#fff;font-size:12px;font-weight:700;}
+.cp-name{flex:1;font-size:13px;font-weight:500;color:var(--text-primary);}
+.cp-conf{font-family:var(--font-mono);font-size:11px;color:var(--accent);flex-shrink:0;}
+.cp-current-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:0.1em;background:rgba(74,168,255,0.15);color:var(--accent);padding:2px 8px;border-radius:99px;border:1px solid rgba(74,168,255,0.3);}
+.cp-camp-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:0.08em;background:rgba(255,209,102,0.14);color:#ffd166;padding:2px 8px;border-radius:99px;border:1px solid rgba(255,209,102,0.35);white-space:nowrap;display:inline-flex;align-items:center;gap:4px;}
+
+/* ── Completion overlay ── */
+.cp-completion-overlay{
+  position:fixed;inset:0;background:rgba(4,7,15,0.92);z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.cp-completion-overlay.show{opacity:1;pointer-events:all;}
+.cp-completion-card{
+  background:var(--bg-panel);border:1px solid rgba(74,168,255,0.3);
+  border-radius:20px;padding:40px 44px;max-width:480px;width:90%;
+  text-align:center;
+  box-shadow:0 0 60px rgba(0,200,255,0.15);
+}
+.cp-completion-icon{font-size:48px;margin-bottom:16px;}
+.cp-completion-step{font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;color:var(--text-dim);text-transform:uppercase;margin-bottom:8px;}
+.cp-completion-name{font-family:var(--font-display);font-size:22px;font-weight:600;color:var(--text-primary);margin-bottom:20px;}
+.cp-completion-gains{display:flex;gap:16px;justify-content:center;margin-bottom:28px;}
+.cp-gain-pill{background:rgba(61,220,132,0.12);border:1px solid rgba(61,220,132,0.3);border-radius:99px;padding:6px 16px;font-family:var(--font-mono);font-size:12px;color:var(--success);}
+.cp-gain-pill.blue{background:rgba(74,168,255,0.12);border-color:rgba(74,168,255,0.3);color:var(--accent);}
+.cp-next-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;color:var(--text-dim);text-transform:uppercase;margin-bottom:10px;}
+.cp-next-name{font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:24px;padding:12px 16px;background:rgba(74,168,255,0.08);border-radius:10px;border:1px solid rgba(74,168,255,0.2);}
+.cp-next-name.summit{color:var(--gold);background:rgba(255,209,102,0.08);border-color:rgba(255,209,102,0.2);}
+.cp-completion-btns{display:flex;gap:12px;justify-content:center;}
+.cp-btn-accept{background:var(--accent);color:#04101f;border:none;border-radius:10px;padding:14px 28px;font-family:var(--font-body);font-size:14px;font-weight:600;cursor:pointer;transition:.15s;}
+.cp-btn-accept:hover{background:var(--accent-glow);}
+.cp-btn-defer{background:transparent;color:var(--text-dim);border:1px solid var(--border-strong);border-radius:10px;padding:14px 20px;font-family:var(--font-body);font-size:14px;cursor:pointer;transition:.15s;}
+.cp-btn-defer:hover{color:var(--text-primary);border-color:var(--border-accent);}
+
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow-strong" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow-soft" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Outer dashed orbit circle -->
+          <circle cx="50" cy="50" r="42" stroke="#1a4a6a" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.7"/>
+          <!-- Inner dashed circle -->
+          <circle cx="50" cy="50" r="34" stroke="#1a3a5a" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.5"/>
+          <!-- Orbit dots -->
+          <circle cx="50" cy="8" r="2.5" fill="#00c8ff" filter="url(#glow-soft)" opacity="0.9"/>
+          <circle cx="88" cy="62" r="1.8" fill="#4aa8ff" filter="url(#glow-soft)" opacity="0.7"/>
+          <circle cx="14" cy="38" r="1.5" fill="#4aa8ff" opacity="0.5"/>
+          <!-- Triangle glow layer -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="5" stroke-linejoin="round" fill="none" opacity="0.15" filter="url(#glow-strong)"/>
+          <!-- Inner green triangle -->
+          <path d="M50 30 L76 70 H24 Z" stroke="#00ff88" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.5"/>
+          <!-- Main neon triangle -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="2.5" stroke-linejoin="round" fill="none" filter="url(#glow-strong)"/>
+          <!-- Center dot -->
+          <circle cx="50" cy="60" r="3.5" fill="#00c8ff" filter="url(#glow-strong)"/>
+          <circle cx="50" cy="60" r="1.5" fill="white" opacity="0.9"/>
+          <!-- Corner accent dots -->
+          <circle cx="50" cy="22" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="82" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="18" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-wordmark">ETHER</span>
+        <span class="sidebar-logo-tagline">Mission Command System</span>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg></span>
+        <span class="nav-item-label">Command Deck</span>
+      </a>
+      <a href="life-advancement.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 5l4 6 3-4 5 10"/></svg></span>
+        <span class="nav-item-label">Life Advancement</span>
+      </a>
+      <a href="missions.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span>
+        <span class="nav-item-label">Missions</span>
+      </a>
+      <a href="blueprints.html" class="nav-item active">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="nav-item-label">Blueprints</span>
+      </a>
+      <a href="problems-blockers.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg></span>
+        <span class="nav-item-label">Blockers</span>
+        <span class="badge" id="navBlockerBadge">3</span>
+      </a>
+      <a href="evidence-vault.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg></span>
+        <span class="nav-item-label">Evidence Vault</span>
+      </a>
+      <a href="timeline.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="nav-item-label">Timeline</span>
+      </a>
+      <a href="debrief.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V7a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 5v5h5"/></svg></span>
+        <span class="nav-item-label">Debrief</span>
+      </a>
+            <a href="summit-archive.html" class="nav-item">
+        <span class="nav-item-icon">🏔️</span>
+        <span class="nav-item-label">Summit Archive</span>
+      </a>
+      <a href="knowledge-library.html" class="nav-item">
+        <span class="nav-item-icon">📚</span>
+        <span class="nav-item-label">Knowledge Library</span>
+      </a>
+      <a href="command-center.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
+        <span class="nav-item-label">Command Center</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-profile">
+      <div class="profile-header">
+        <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+        <div class="profile-info">
+          <span class="profile-name">ROD ENTERA</span>
+          <span class="profile-rank">Operator</span>
+        </div>
+      </div>
+            <div style="display:flex;gap:16px;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:4px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--teal);" id="sidebarDaysClimbing">14</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Days Climbing</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--gold);" id="sidebarSummits">0</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Summits</span>
+        </div>
+      </div>
+      <div class="profile-quote">"The mission is progress. The evidence is proof. The mountain is the journey."</div>
+      <div class="profile-focus-row">
+        <span class="focus-dot"></span>
+        <div class="focus-text">
+          <span class="focus-label">Focus Mode</span>
+          <span class="focus-value">High Performance</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>BLUEPRINTS</h1>
+        <span class="topbar-subtitle">The proven route from Base Camp to Summit.</span>
+      </div>
+      <div class="topbar-meta">
+        <button class="btn btn-primary" onclick="openNewBlueprintModal()" style="gap:7px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14"/></svg>
+          Create Execution Plan
+        </button>
+        <span class="pill on-track" style="display:flex; align-items:center; gap:6px;">
+          <span style="width:6px; height:6px; border-radius:50%; background:var(--success); box-shadow:0 0 6px var(--success);"></span>
+          Operator: Aether Prime
+        </span>
+        <span class="mono" style="font-size:11px; color:var(--text-dim);">SUNDAY, JUNE 18, 2026 · 14:18 ZULU</span>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ═══ SECTION 1 — BLUEPRINT STATUS STRIP ═══ -->
+      <div class="xstrip" id="xstrip"><!-- JS --></div>
+
+      <!-- ═══ SECTION 2 — MISSION COMMAND BOARD (Mission → Blueprint → Steps) ═══ -->
+      <div>
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+            <span class="ttl">Mission Command Board</span>
+          </div>
+          <span style="font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint);">Mission → Blueprint → Steps</span>
+        </div>
+        <div class="mission-board" id="missionBoard" style="margin-top:14px;"><!-- JS --></div>
+      </div>
+
+      <!-- ═══ SECTION 3 — SELECTED BLUEPRINT INTELLIGENCE ═══ -->
+      <div class="panel sel-card">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+            <span class="ttl">Selected Blueprint Intelligence</span>
+          </div>
+        </div>
+        <div id="selBlueprintBody"><!-- JS --></div>
+      </div>
+
+      <!-- ═══ SECTION 4 — BLUEPRINT HEALTH ═══ -->
+      <div>
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            <span class="ttl">Blueprint Health</span>
+          </div>
+        </div>
+        <div class="health-grid" id="healthGrid"><!-- JS --></div>
+      </div>
+
+      <!-- ═══ SECTION 5 — RECENT BLUEPRINT PROGRESS ═══ -->
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            <span class="ttl">Recent Blueprint Progress</span>
+          </div>
+        </div>
+        <div class="progress-feed" id="progressFeed"><!-- JS --></div>
+      </div>
+
+      <div class="manifesto-line">Mission is the destination. Blueprint is the route.</div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+const missionIcons = {
+  mountain:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>`,
+  hexagon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7Z"/></svg>`,
+  heart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.3 4.5 6 4.5c2.1 0 3.6 1.2 4.5 2.8C11.4 5.7 12.9 4.5 15 4.5c3.7 0 5.5 3.5 4 7.2-2.5 4.7-10 9.3-10 9.3Z"/></svg>`,
+  book:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5V5.2C4 4 5 3.3 6.1 3.5 8 3.9 10 4.7 12 6c2-1.3 4-2.1 5.9-2.5C19 3.3 20 4 20 5.2v14.3"/><path d="M4 19.5c0-1 .8-1.5 1.8-1.5H10c.8 0 1.5.3 2 .8.5-.5 1.2-.8 2-.8h4.2c1 0 1.8.5 1.8 1.5"/></svg>`,
+  rocket:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2.5c2 0 4.5 1.5 6 5-1.5 4-5 7-7.5 8l-3-3c1-2.5 4-6 7-7.5 3.5-1.5 5-4 5-6Z"/><path d="M7 14l-4 1 1-4M11 21l1-4 1.5 1.5"/></svg>`,
+  shield:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6Z"/></svg>`,
+  star:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.6 5.8 6.2.6-4.7 4.2 1.4 6.1L12 16.8 6.5 19.7l1.4-6.1L3.2 9.4l6.2-.6Z"/></svg>`,
+  target:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>`,
+  leaf:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 19c8-1 13-6 14-14-8 0-13 5-14 14Z"/><path d="M5 19c2-3 4.5-5.5 8-8"/></svg>`
+};
+
+/* ---------- AETHER systemMode + data (Phase 2: shared campaign store) ----------
+   Blueprints no longer owns its own sample array. AetherStore is the
+   single source of truth, shared with Missions and every other page. */
+const systemMode = AetherStore.getSystemMode();
+const blueprints = AetherStore.getBlueprints();
+
+
+const statusColor = {advancing:'var(--success)', stable:'var(--accent)', warning:'var(--warning)', critical:'var(--danger)'};
+const statusLabel = {advancing:'Advancing', stable:'Stable', warning:'Warning', critical:'Critical'};
+
+const selectedKey = (blueprints.find(b=> b.key === 'aether') ? 'aether' : (blueprints[0] ? blueprints[0].key : 'aether'));
+const selectedBlueprint = blueprints.find(b=> b.key === selectedKey) || {};
+
+/* ============================================================
+   RENDER — Section 1: Blueprint Status Strip
+   ============================================================ */
+const totalBlueprints = blueprints.length;
+const activeCount = blueprints.filter(b=> b.status==='advancing' || b.status==='stable').length;
+const stalledCount = blueprints.filter(b=> b.status==='warning' || b.status==='critical').length;
+const verifiedCount = blueprints.filter(b=> b.pct >= 100).length;
+const avgConfidence = Math.round(blueprints.reduce((s,b)=> s+b.confidence, 0) / blueprints.length);
+
+if(blueprints.length === 0){
+  const emptyMsg = `
+    <div class="empty-state">
+      <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+      <span class="empty-state-title">No blueprints yet</span>
+      <span class="empty-state-sub">Create a blueprint once you have a real mission to map a route for.</span>
+      <button class="btn btn-primary empty-state-cta" onclick="openNewBlueprintModal()">Create First Blueprint</button>
+    </div>`;
+  document.getElementById('xstrip').innerHTML = '';
+  document.getElementById('missionBoard').innerHTML = emptyMsg;
+  document.getElementById('selBlueprintBody').innerHTML = '';
+  document.getElementById('healthGrid').innerHTML = '';
+  document.getElementById('progressFeed').innerHTML = '';
+} else {
+
+document.getElementById('xstrip').innerHTML = `
+  <div class="xcard">
+    <div class="xcard-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="xcard-label">Total Blueprints</span></div>
+    <span class="xcard-value">${totalBlueprints}</span>
+    <span class="xcard-sub">Across all missions</span>
+  </div>
+  <div class="xcard">
+    <div class="xcard-head" style="--xc-color:var(--success);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg><span class="xcard-label" style="color:var(--success);">Active Blueprints</span></div>
+    <span class="xcard-value" style="color:var(--success);">${activeCount}</span>
+    <span class="xcard-sub">Advancing or stable</span>
+  </div>
+  <div class="xcard">
+    <div class="xcard-head" style="--xc-color:var(--warning);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg><span class="xcard-label" style="color:var(--warning);">Stalled Blueprints</span></div>
+    <span class="xcard-value" style="color:var(--warning);">${stalledCount}</span>
+    <span class="xcard-sub">Warning or critical</span>
+  </div>
+  <div class="xcard">
+    <div class="xcard-head" style="--xc-color:var(--gold);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 13l4 4 10-10"/></svg><span class="xcard-label" style="color:var(--gold);">Verified Blueprints</span></div>
+    <span class="xcard-value" style="color:var(--gold);">${verifiedCount}</span>
+    <span class="xcard-sub">Reached Summit</span>
+  </div>
+  <div class="xcard">
+    <div class="xcard-head" style="--xc-color:var(--accent-glow);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5l-8-3Z"/></svg><span class="xcard-label" style="color:var(--accent-glow);">Blueprint Confidence</span></div>
+    <span class="xcard-value" style="color:var(--accent-glow);">${avgConfidence}%</span>
+    <span class="xcard-sub">Mean across blueprints</span>
+  </div>
+`;
+
+/* ============================================================
+   RENDER — Section 2: Blueprint Command Board
+   ============================================================ */
+/* ============================================================
+   RENDER — Section 2: Mission Command Board
+   Groups every mission (even ones with zero blueprints yet) and
+   nests each mission's blueprint(s) underneath it, with an
+   inline, expandable step checklist per blueprint.
+   ============================================================ */
+const allMissionsForBoard = AetherStore.getAllMissions ? AetherStore.getAllMissions() : AetherStore.getMissions();
+const missionStatusColor = {advancing:'var(--success)', stable:'var(--accent)', warning:'var(--warning)', critical:'var(--danger)'};
+
+function renderStepRow(cp, idx, isCurrent, done, missionKey, campName){
+  var safeName = cp.name.replace(/'/g,"\\'");
+  var evidenceLink = done ? '<a class="cp-evidence-link" title="Attach evidence" href="evidence-vault.html?missionKey='+encodeURIComponent(missionKey||'')+'&blueprintKey='+encodeURIComponent(cp.blueprintKey||'')+'&checkpointId='+encodeURIComponent(cp.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg></a>' : '';
+  var deleteBtn = cp.isLive ? '<button class="cp-delete-btn" title="Delete this step" onclick="event.stopPropagation();confirmDeleteCheckpoint(\''+cp.id+'\',\''+safeName+'\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' : '';
+  var campBadge = campName ? '<span class="cp-camp-badge" title="Reaching this step puts you at '+campName+' on the mountain">&#9650; '+campName+'</span>' : '';
+  return '<div class="cp-row'+(done?' done':'')+(isCurrent?' is-current':'')+'">' +
+    '<div class="cp-checkbox'+(done?' checked':'')+'" onclick="window.__mbToggleStep(event,\''+cp.id+'\',\''+cp.blueprintKey+'\')"></div>' +
+    '<div class="cp-name">'+(idx+1)+'. '+cp.name+'</div>' +
+    (isCurrent ? '<span class="cp-current-badge">CURRENT</span>' : '') +
+    campBadge +
+    '<div class="cp-conf">+'+cp.confidenceValue+' pts</div>' +
+    evidenceLink + deleteBtn +
+    '</div>';
+}
+
+function renderBlueprintStepsHtml(bp){
+  var cps = (AetherStore.getCheckpointsForBlueprint ? AetherStore.getCheckpointsForBlueprint(bp.key) : [])
+    .slice().sort(function(a,b){ return (a.sortOrder||0)-(b.sortOrder||0); });
+  if(!cps.length) return '<div class="bp-steps-empty">No steps yet on this execution plan.</div>';
+  var states = AetherStore.getCheckpointStates ? AetherStore.getCheckpointStates(bp.key) : {};
+  var nextUndone = null;
+  for(var i=0;i<cps.length;i++){ if(!states[cps[i].id]){ nextUndone = cps[i]; break; } }
+  /* Same camp-threshold math the mountain graphic uses (mission-mountain.js),
+     so "Camp III" on this checklist and "Camp III" on the mountain always
+     point at the same real progress — not two separate guesses. */
+  var milestoneByStep = {};
+  if(typeof MissionMountain !== 'undefined' && MissionMountain.campMilestones){
+    MissionMountain.campMilestones(cps.length).forEach(function(m){ milestoneByStep[m.step] = m.name; });
+  }
+  return cps.map(function(cp, idx){
+    cp.blueprintKey = bp.key; /* stash for the onclick handler */
+    var done = !!states[cp.id];
+    var isCurrent = nextUndone && cp.id === nextUndone.id;
+    var campName = milestoneByStep[idx+1] || null;
+    return renderStepRow(cp, idx, isCurrent, done, bp.missionKey, campName);
+  }).join('');
+}
+
+function renderBlueprintBlock(bp, forceExpand){
+  const color = statusColor[bp.status] || 'var(--accent)';
+  return `
+  <div class="bp-block${forceExpand ? ' expanded' : ''}" id="bpblock-${bp.key}" style="--bp-color:${color};">
+    <div class="bp-block-head" onclick="window.__mbToggleBlock('${bp.key}')">
+      <div class="bp-block-icon">${missionIcons[bp.icon] || missionIcons.mountain}</div>
+      <div class="bp-block-titles">
+        <span class="bp-block-name">${!bp.isLive ? '<span class="data-tag sample-tag" style="position:static;">SAMPLE</span> ' : ''}${bp.name}</span>
+        <span class="bp-block-phase">${bp.currentPhase || 'Phase 1'} · Next: ${bp.nextMilestone || '—'}</span>
+      </div>
+      <div class="bp-block-progress-wrap">
+        <div class="progress-track"><div class="progress-fill" style="width:${bp.pct}%; background:${color};"></div></div>
+        <span class="bp-block-pct" style="color:${color};">${bp.pct}%</span>
+      </div>
+      <span class="bp-block-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+      ${bp.isLive ? `<button class="bp-block-delete-btn" title="Delete this execution plan" onclick="event.stopPropagation();confirmDeleteBlueprint('${bp.key}','${(bp.name||'').replace(/'/g,"\\'")}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+      </button>` : ''}
+    </div>
+    <div class="bp-steps" id="bpsteps-${bp.key}">${renderBlueprintStepsHtml(bp)}</div>
+  </div>`;
+}
+
+function renderMissionGroup(mission, missionBlueprints, expandFirst){
+  const color = missionStatusColor[mission.status] || 'var(--accent)';
+  const bpHtml = missionBlueprints.length
+    ? missionBlueprints.map(function(bp, i){ return renderBlueprintBlock(bp, expandFirst && i===0); }).join('')
+    : '<div class="mg-no-bp">No execution plan yet — this mission has no blueprint mapping the route to summit.</div>';
+  return `
+  <div class="mission-group" data-mission="${mission.key}" style="--mg-color:${color};">
+    <div class="mg-head">
+      <div class="mg-icon">${missionIcons[mission.icon] || missionIcons.mountain}</div>
+      <div class="mg-titles">
+        <span class="mg-name">MISSION</span>
+        <span class="mg-tagline">${mission.name}${mission.tagline ? ' — ' + mission.tagline : ''}</span>
+      </div>
+      <div class="mg-meta">
+        <span class="mg-pct" style="color:${color};">${mission.pct}%</span>
+        <span class="mg-camp">${mission.camp || 'Base Camp'}</span>
+      </div>
+    </div>
+    <div class="mg-body">
+      ${bpHtml}
+      <button class="mg-add-bp-btn" onclick="openNewBlueprintModal('${mission.key}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Create Execution Plan
+      </button>
+    </div>
+  </div>`;
+}
+
+document.getElementById('missionBoard').innerHTML = allMissionsForBoard.map(function(mission, mIdx){
+  var missionBps = blueprints.filter(function(b){ return b.missionName === mission.name; });
+  return renderMissionGroup(mission, missionBps, mIdx === 0);
+}).join('');
+
+/* Expand/collapse a blueprint's step list */
+window.__mbToggleBlock = function(bpKey){
+  var block = document.getElementById('bpblock-'+bpKey);
+  if(block) block.classList.toggle('expanded');
+};
+
+/* Toggle a step's done state from within the nested board (independent
+   of which blueprint is "selected" below — every card is interactive). */
+window.__mbToggleStep = function(evt, cpId, blueprintKey){
+  evt.stopPropagation(); /* don't let the click bubble to the block header */
+  var bp = blueprints.find(function(b){ return b.key === blueprintKey; });
+  if(!bp) return;
+
+  var cps = (AetherStore.getCheckpointsForBlueprint ? AetherStore.getCheckpointsForBlueprint(blueprintKey) : [])
+    .slice().sort(function(a,b){ return (a.sortOrder||0)-(b.sortOrder||0); });
+  var wasDone = !!(AetherStore.getCheckpointStates ? AetherStore.getCheckpointStates(blueprintKey) : {})[cpId];
+
+  if(AetherStore.toggleCheckpointDone) AetherStore.toggleCheckpointDone(cpId, blueprintKey);
+  if(AetherStore.recalcBlueprintProgress) AetherStore.recalcBlueprintProgress(blueprintKey);
+
+  var newStates = AetherStore.getCheckpointStates ? AetherStore.getCheckpointStates(blueprintKey) : {};
+  var nowDone = !!newStates[cpId];
+
+  var stepsEl = document.getElementById('bpsteps-'+blueprintKey);
+  if(stepsEl) stepsEl.innerHTML = renderBlueprintStepsHtml(bp);
+
+  /* Only celebrate when marking AS DONE (not undoing) */
+  if(nowDone && !wasDone && window.__aetherShowCompletion){
+    var idx = cps.findIndex(function(c){ return c.id === cpId; });
+    var cpObj = cps[idx];
+    var nextCp = window.__aetherFindNextUndone(cps.filter(function(c){ return c.id !== cpId; }), newStates);
+    window.__aetherShowCompletion(blueprintKey, cpObj.name, cpObj.confidenceValue, idx+1, nextCp, cps.length);
+  }
+};
+
+/* ============================================================
+   RENDER — Section 3: Selected Blueprint Intelligence
+   ============================================================ */
+document.getElementById('selBlueprintBody').innerHTML = `
+  <div class="sel-mission-name">${selectedBlueprint.name}</div>
+  <div class="sel-mission-objective">${selectedBlueprint.objective}</div>
+  <div class="sel-fact-list">
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+      <span class="sel-fact-label">Current Phase</span><span class="sel-fact-value">${selectedBlueprint.currentPhase}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <span class="sel-fact-label">Next Milestone</span><span class="sel-fact-value">${selectedBlueprint.nextMilestone}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+      <span class="sel-fact-label">Primary Hazard</span><span class="sel-fact-value hazard">${selectedBlueprint.hazard}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 2.6 6.4M3 12v6h6"/></svg>
+      <span class="sel-fact-label">Recovery Route</span><span class="sel-fact-value recovery">${selectedBlueprint.recovery}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg>
+      <span class="sel-fact-label">Evidence Required</span><span class="sel-fact-value">${selectedBlueprint.evidence}</span>
+    </div>
+  </div>
+  <a class="btn btn-ghost sel-view-link" href="#">View Full Blueprint <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left:4px;"><polyline points="9 18 15 12 9 6"/></svg></a>
+`;
+
+/* ============================================================
+   RENDER — Section 4: Blueprint Health
+   ============================================================ */
+const healthBuckets = [
+  {key:'advancing', label:'Advancing', color:'var(--success)', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>`},
+  {key:'stable', label:'Stable', color:'var(--accent)', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18"/></svg>`},
+  {key:'warning', label:'Warning', color:'var(--warning)', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>`},
+  {key:'critical', label:'Critical', color:'var(--danger)', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.1"/></svg>`}
+];
+
+document.getElementById('healthGrid').innerHTML = healthBuckets.map(h=>{
+  const items = blueprints.filter(b=> b.status === h.key);
+  return `
+  <div class="health-card" style="--hc-color:${h.color};">
+    <div class="health-card-label">${h.icon}${h.label}</div>
+    <span class="health-card-value">${items.length}</span>
+    <span class="health-card-names">${items.length ? items.map(i=>i.missionName).join(', ') : 'None right now'}</span>
+  </div>`;
+}).join('');
+
+/* ============================================================
+   RENDER — Section 5: Recent Blueprint Progress
+   ============================================================ */
+const progressFeed = [
+  {type:'milestone', name:'Sleep Schedule Audit Verified', sub:'Health Optimization · Phase 2', date:'Jun 19'},
+  {type:'evidence', name:'Deployment URL submitted', sub:'AETHER · Phase 2 evidence', date:'Jun 19'},
+  {type:'milestone', name:'Week 5 Reading Plan Verified', sub:'Bible Study System · Phase 2', date:'Jun 18'},
+  {type:'evidence', name:'Budget Sheet submitted', sub:'Financial Recovery · Phase 1 evidence', date:'Jun 17'},
+  {type:'milestone', name:'Routine Log: 10-day streak', sub:'Discipline Engine · Phase 1', date:'Jun 16'}
+];
+
+document.getElementById('progressFeed').innerHTML = progressFeed.map(p=>`
+  <div class="pf-item">
+    <div class="pf-icon ${p.type}">
+      ${p.type === 'milestone'
+        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L19 7"/></svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg>`}
+    </div>
+    <div class="pf-body">
+      <span class="pf-name">${p.name}</span>
+      <span class="pf-sub">${p.sub}</span>
+    </div>
+    <span class="pf-date">${p.date}</span>
+  </div>`).join('');
+
+} /* end else (blueprints.length > 0) */
+
+</script>
+<!-- ============================================================
+     PHASE 4A — BLUEPRINT + CHECKPOINT CREATION MODALS
+     ============================================================ -->
+<style>
+.modal-overlay{
+  position:fixed; inset:0; z-index:200;
+  background:rgba(2,8,20,0.88); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity 200ms ease;
+}
+.modal-overlay.open{ opacity:1; pointer-events:all; }
+.modal-box{
+  background:var(--bg-panel); border:1px solid var(--border-accent);
+  border-radius:var(--radius-lg);
+  box-shadow:0 0 60px rgba(74,168,255,0.15), var(--shadow-panel);
+  width:min(620px, 94vw); max-height:90vh; overflow-y:auto;
+  display:flex; flex-direction:column;
+  transform:translateY(16px); transition:transform 200ms ease;
+}
+.modal-overlay.open .modal-box{ transform:translateY(0); }
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px 24px 16px; border-bottom:1px solid var(--border-subtle); flex-shrink:0;
+}
+.modal-header-left{ display:flex; flex-direction:column; gap:3px; }
+.modal-title{ font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-primary); }
+.modal-sub{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent); }
+.modal-close{ width:32px; height:32px; border-radius:50%; background:transparent; border:1px solid var(--border-strong); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:var(--transition); }
+.modal-close:hover{ border-color:var(--danger); color:var(--danger); }
+.modal-close svg{ width:14px; height:14px; }
+.modal-body{ padding:24px; display:flex; flex-direction:column; gap:18px; }
+.form-group{ display:flex; flex-direction:column; gap:6px; }
+.form-label{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim); }
+.form-label span{ color:var(--danger); margin-left:2px; }
+.form-input, .form-textarea, .form-select{
+  background:var(--bg-panel-alt); border:1px solid var(--border-strong);
+  border-radius:var(--radius-md); color:var(--text-primary);
+  font-family:var(--font-body); font-size:13px; padding:10px 14px;
+  transition:var(--transition); width:100%;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus{
+  outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(74,168,255,0.15);
+}
+.form-input::placeholder, .form-textarea::placeholder{ color:var(--text-faint); }
+.form-textarea{ resize:vertical; min-height:72px; line-height:1.6; }
+.form-select{ cursor:pointer; }
+.form-select option{ background:var(--bg-panel); color:var(--text-primary); }
+.form-row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-error{ font-family:var(--font-mono); font-size:10px; color:var(--danger); margin-top:2px; display:none; }
+.form-group.has-error .form-input,
+.form-group.has-error .form-textarea,
+.form-group.has-error .form-select{ border-color:var(--danger); }
+.form-group.has-error .form-error{ display:block; }
+.modal-footer{
+  padding:16px 24px 20px; border-top:1px solid var(--border-subtle);
+  display:flex; align-items:center; justify-content:space-between; flex-shrink:0; gap:12px;
+}
+.modal-footer-note{ font-family:var(--font-mono); font-size:10px; color:var(--text-faint); letter-spacing:0.06em; }
+.modal-footer-actions{ display:flex; gap:10px; }
+.modal-success{
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; padding:48px 24px; text-align:center;
+}
+.modal-success.show{ display:flex; }
+.modal-success-icon{
+  width:56px; height:56px; border-radius:50%;
+  background:rgba(74,168,255,0.12); border:1px solid rgba(74,168,255,0.35);
+  display:flex; align-items:center; justify-content:center; color:var(--accent);
+}
+.modal-success-icon svg{ width:26px; height:26px; }
+.modal-success-title{ font-family:var(--font-display); font-size:17px; font-weight:600; letter-spacing:0.1em; color:var(--accent); }
+.modal-success-sub{ font-family:var(--font-body); font-size:13px; color:var(--text-secondary); max-width:360px; line-height:1.6; }
+
+/* Checkpoint list inside BP modal */
+.cp-list{ display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+.cp-item{
+  display:flex; align-items:center; gap:10px;
+  background:var(--bg-panel-alt); border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md); padding:10px 12px;
+}
+.cp-item-num{
+  width:22px; height:22px; border-radius:50%; flex-shrink:0;
+  background:rgba(74,168,255,0.12); border:1px solid rgba(74,168,255,0.25);
+  font-family:var(--font-mono); font-size:10px; font-weight:700; color:var(--accent);
+  display:flex; align-items:center; justify-content:center;
+}
+.cp-item-name{ flex:1; font-family:var(--font-body); font-size:13px; color:var(--text-primary); }
+.cp-item-del{
+  width:26px; height:26px; border-radius:6px; flex-shrink:0;
+  background:transparent; border:1px solid transparent;
+  color:var(--text-faint); cursor:pointer; transition:var(--transition);
+  display:flex; align-items:center; justify-content:center;
+}
+.cp-item-del:hover{ border-color:var(--danger); color:var(--danger); }
+.cp-item-del svg{ width:13px; height:13px; }
+.cp-add-row{ display:flex; gap:8px; align-items:flex-start; }
+.cp-add-row .form-input{ flex:1; }
+.cp-confidence-mini{ width:90px; flex-shrink:0; }
+
+/* Section divider inside modal */
+.modal-section-divider{
+  font-family:var(--font-mono); font-size:9px; letter-spacing:0.18em;
+  text-transform:uppercase; color:var(--text-faint);
+  padding-top:8px; border-top:1px solid var(--border-subtle);
+  display:flex; align-items:center; gap:10px;
+}
+.modal-section-divider::after{
+  content:''; flex:1; height:1px; background:var(--border-subtle);
+}
+</style>
+
+<!-- Blueprint Creation Modal -->
+<div class="modal-overlay" id="newBlueprintModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <span class="modal-title">Create New Blueprint</span>
+        <span class="modal-sub" id="bpModalSub">Define the route</span>
+      </div>
+      <button class="modal-close" onclick="closeBlueprintModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body" id="bpFormBody">
+
+      <!-- Mission selector -->
+      <div class="form-group" id="bpfg-mission">
+        <label class="form-label" for="bpMissionSelect">Mission <span>*</span></label>
+        <select id="bpMissionSelect" class="form-select" onchange="onBpMissionChange(this)">
+          <option value="">— Select a mission —</option>
+        </select>
+        <span class="form-error" id="bperr-mission">Select a mission first.</span>
+      </div>
+
+      <!-- Blueprint name -->
+      <div class="form-group" id="bpfg-name">
+        <label class="form-label" for="bpName">Blueprint Name <span>*</span></label>
+        <input type="text" id="bpName" class="form-input"
+          placeholder="e.g. Phase 4 Operator Workflow, Financial Debt Paydown Plan"
+          maxlength="80" autocomplete="off"/>
+        <span class="form-error" id="bperr-name">Blueprint name is required.</span>
+      </div>
+
+      <!-- Objective -->
+      <div class="form-group" id="bpfg-objective">
+        <label class="form-label" for="bpObjective">Objective <span>*</span></label>
+        <textarea id="bpObjective" class="form-textarea"
+          placeholder="What does completing this blueprint achieve? Be specific."
+          maxlength="300"></textarea>
+        <span class="form-error" id="bperr-objective">Objective is required.</span>
+      </div>
+
+      <!-- Phase + Milestone row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="bpPhase">Current Phase</label>
+          <input type="text" id="bpPhase" class="form-input" placeholder="e.g. Phase 1: Foundation" maxlength="60" autocomplete="off"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="bpMilestone">Next Milestone</label>
+          <input type="text" id="bpMilestone" class="form-input" placeholder="e.g. Complete Week 1" maxlength="80" autocomplete="off"/>
+        </div>
+      </div>
+
+      <!-- Hazard + Recovery row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="bpHazard">Known Hazard</label>
+          <input type="text" id="bpHazard" class="form-input" placeholder="What could derail this?" maxlength="120" autocomplete="off"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="bpRecovery">Recovery Plan</label>
+          <input type="text" id="bpRecovery" class="form-input" placeholder="If derailed, do this first" maxlength="120" autocomplete="off"/>
+        </div>
+      </div>
+
+      <!-- Evidence types -->
+      <div class="form-group">
+        <label class="form-label" for="bpEvidence">Evidence Types</label>
+        <input type="text" id="bpEvidence" class="form-input"
+          placeholder="e.g. Screenshot, Git Commit, Invoice, Sleep Log" maxlength="160" autocomplete="off"/>
+      </div>
+
+      <!-- Checkpoints section -->
+      <div class="modal-section-divider">Checkpoints</div>
+
+      <div class="form-group">
+        <label class="form-label">Add Checkpoints <span style="color:var(--text-faint); font-weight:400;">(build the actual steps)</span></label>
+        <div class="cp-list" id="cpList">
+          <!-- Dynamic checkpoint items rendered here -->
+        </div>
+
+        <!-- Bulk paste toggle -->
+        <button type="button" class="btn btn-ghost" id="bulkPasteToggleBtn" onclick="toggleBulkPaste()" style="margin-top:8px; font-size:11px; padding:7px 12px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+          Paste a whole checklist instead
+        </button>
+        <div id="bulkPasteBox" style="display:none; margin-top:8px; flex-direction:column; gap:8px;">
+          <textarea id="bulkPasteInput" class="form-input" rows="8" style="font-family:var(--font-mono); font-size:12px; resize:vertical;"
+            placeholder="Paste one step per line. Numbers, bullets, or a markdown table all work fine — e.g.&#10;1. Decide the architecture&#10;2. Build the data layer&#10;3. Build all core pages"></textarea>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button type="button" class="btn btn-primary" onclick="addCheckpointsFromBulkText()" style="font-size:11px; padding:8px 14px;">Add All From List</button>
+            <span style="font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint);">Each line becomes one checkpoint. Confidence points are read from the line if present, otherwise default to +3.</span>
+          </div>
+        </div>
+
+
+      <!-- ── Campaign DNA ── -->
+      <div style="margin-top:4px;padding:14px 16px;background:rgba(74,168,255,0.04);border:1px solid rgba(74,168,255,0.1);border-radius:10px;">
+        <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.16em;color:var(--text-faint);text-transform:uppercase;margin-bottom:14px;">Blueprint DNA — Why This Exists</div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Purpose — Why does this blueprint exist?</label>
+          <textarea id="bpPurpose" class="form-input" maxlength="200"
+            placeholder="The deeper reason this plan matters." style="min-height:52px;resize:vertical;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Expected Outcome — What does success look like?</label>
+          <textarea id="bpExpectedOutcome" class="form-input" maxlength="200"
+            placeholder="Specific, measurable. I will know I am done when..." style="min-height:52px;resize:vertical;"></textarea>
+        </div>
+      </div>
+
+        <!-- Add checkpoint input row -->
+        <div class="cp-add-row" style="margin-top:10px;">
+          <input type="text" id="cpNameInput" class="form-input"
+            placeholder="Checkpoint name, e.g. Build Mission Creation Form"
+            maxlength="120" autocomplete="off"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();addCheckpointToList();}"/>
+          <select id="cpConfidenceInput" class="form-select cp-confidence-mini" title="Confidence value">
+            <option value="1">+1 pts</option>
+            <option value="2" selected>+2 pts</option>
+            <option value="3">+3 pts</option>
+            <option value="4">+4 pts</option>
+            <option value="5">+5 pts</option>
+          </select>
+          <button class="btn btn-ghost" onclick="addCheckpointToList()" style="flex-shrink:0; white-space:nowrap;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>
+            Add
+          </button>
+        </div>
+        <span style="font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); margin-top:6px;">
+          You can add more checkpoints later from Blueprint Detail. Press Enter or click Add.
+        </span>
+      </div>
+
+    </div><!-- /bpFormBody -->
+
+    <!-- Success state -->
+    <div class="modal-success" id="bpSuccessState">
+      <div class="modal-success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:26px;height:26px;"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+      </div>
+      <div class="modal-success-title" id="bpSuccessTitle">Blueprint Created</div>
+      <div class="modal-success-sub" id="bpSuccessSub">Blueprint and checkpoints saved. Ready to execute.</div>
+      <div style="display:flex; gap:10px; margin-top:4px;">
+        <button class="btn btn-ghost" onclick="createAnotherBlueprintFn()">Add Another Blueprint</button>
+        <button class="btn btn-ghost" onclick="closeBlueprintModal()">Done</button>
+      </div>
+    </div>
+
+    <div class="modal-footer" id="bpFormFooter">
+      <span class="modal-footer-note">Saved to local storage. No server required.</span>
+      <div class="modal-footer-actions">
+        <button class="btn btn-ghost" onclick="closeBlueprintModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitBlueprint()" id="saveBpBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+          Create Blueprint
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var pendingCheckpoints = [];  /* {name, confidenceValue} */
+
+  /* ---- Open ---- */
+  window.openNewBlueprintModal = function(preselectedMissionKey){
+    resetBpForm();
+    populateMissionDropdown(preselectedMissionKey);
+    document.getElementById('newBlueprintModal').classList.add('open');
+    setTimeout(function(){ document.getElementById('bpMissionSelect').focus(); }, 220);
+  };
+
+  /* Auto-open if arriving from missions page with a pre-selected mission */
+  (function checkAutoOpen(){
+    var key = sessionStorage.getItem('aether_new_bp_mission');
+    if(key){
+      sessionStorage.removeItem('aether_new_bp_mission');
+      setTimeout(function(){ window.openNewBlueprintModal(key); }, 300);
+    }
+  })();
+
+  window.closeBlueprintModal = function(){
+    document.getElementById('newBlueprintModal').classList.remove('open');
+    /* Reload page to reflect new blueprints in the list */
+    if(document.getElementById('bpSuccessState').classList.contains('show')){
+      window.location.reload();
+    }
+  };
+
+  document.getElementById('newBlueprintModal').addEventListener('click', function(e){
+    if(e.target === this) window.closeBlueprintModal();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') window.closeBlueprintModal();
+  });
+
+  /* ---- Populate mission dropdown ---- */
+  function populateMissionDropdown(preselectedKey){
+    var select = document.getElementById('bpMissionSelect');
+    /* getAllMissions returns sample + live in SAMPLE mode, live-only in LIVE mode */
+    var missions = AetherStore.getAllMissions ? AetherStore.getAllMissions() : AetherStore.getMissions();
+    select.innerHTML = '<option value="">— Select a mission —</option>';
+    missions.forEach(function(m){
+      var opt = document.createElement('option');
+      opt.value = m.key;
+      opt.textContent = m.name + (m.isLive ? ' ✦' : '');
+      if(m.key === preselectedKey) opt.selected = true;
+      select.appendChild(opt);
+    });
+    if(preselectedKey){
+      var sel = missions.find(function(m){ return m.key === preselectedKey; });
+      if(sel) document.getElementById('bpModalSub').textContent = 'Mission: ' + sel.name;
+    }
+  }
+
+  window.onBpMissionChange = function(sel){
+    var key = sel.value;
+    var missions = AetherStore.getAllMissions ? AetherStore.getAllMissions() : AetherStore.getMissions();
+    var m = missions.find(function(x){ return x.key === key; });
+    if(m) document.getElementById('bpModalSub').textContent = 'Mission: ' + m.name;
+    else document.getElementById('bpModalSub').textContent = 'Define the route';
+  };
+
+  /* ---- Checkpoint list management ---- */
+  function renderCpList(){
+    var list = document.getElementById('cpList');
+    if(pendingCheckpoints.length === 0){
+      list.innerHTML = '<span style="font-family:var(--font-mono);font-size:10px;color:var(--text-faint);padding:8px 0;">No checkpoints yet. Add the steps you will execute.</span>';
+      return;
+    }
+    list.innerHTML = pendingCheckpoints.map(function(cp, i){
+      return '<div class="cp-item">' +
+        '<span class="cp-item-num">' + (i+1) + '</span>' +
+        '<span class="cp-item-name">' + escHtml(cp.name) + '</span>' +
+        '<span style="font-family:var(--font-mono);font-size:9.5px;color:var(--accent);margin-right:4px;">+' + cp.confidenceValue + '</span>' +
+        '<button class="cp-item-del" onclick="removeCp(' + i + ')" title="Remove">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+        '</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  window.addCheckpointToList = function(){
+    var nameEl = document.getElementById('cpNameInput');
+    var confEl = document.getElementById('cpConfidenceInput');
+    var name   = (nameEl.value || '').trim();
+    if(!name) return;
+    pendingCheckpoints.push({ name: name, confidenceValue: parseInt(confEl.value, 10) || 2 });
+    nameEl.value = '';
+    nameEl.focus();
+    renderCpList();
+  };
+
+  window.toggleBulkPaste = function(){
+    var box = document.getElementById('bulkPasteBox');
+    var open = box.style.display === 'flex';
+    box.style.display = open ? 'none' : 'flex';
+    document.getElementById('bulkPasteToggleBtn').textContent = open ? 'Paste a whole checklist instead' : 'Hide bulk paste';
+    if(!open) document.getElementById('bulkPasteInput').focus();
+  };
+
+  /* Parses pasted checklist text into individual checkpoints.
+     Handles plain lines, numbered lists ("1. Step" / "1) Step"),
+     bullets ("- Step" / "* Step" / "• Step"), markdown table rows
+     ("| 1 | Step name | 3 |"), and trailing point markers
+     ("Step name (+3)" / "Step name — 3 pts"). Falls back to a
+     default of +3 confidence when no number is found. */
+  function parseChecklistText(raw){
+    var lines = raw.split('\n');
+    var results = [];
+    lines.forEach(function(line){
+      var t = line.trim();
+      if(!t) return;
+      /* skip markdown table separator rows like |---|---|---| */
+      if(/^\|?[\s:|-]+\|?$/.test(t)) return;
+
+      var name = t, conf = null;
+
+      if(t.charAt(0) === '|'){
+        var cells = t.split('|').map(function(c){ return c.trim(); }).filter(function(c){ return c !== ''; });
+        /* skip header rows like | # | Step | Points | */
+        var isHeaderRow = cells.some(function(c){ return /^(#|step|checkpoint|name|points?|pts?)$/i.test(c); });
+        if(isHeaderRow) return;
+        if(cells.length >= 2){
+          var last = cells[cells.length - 1];
+          if(/^\d+$/.test(last)){ conf = parseInt(last, 10); cells.pop(); }
+          /* first remaining cell is often a numeric index — drop it if so */
+          if(cells.length > 1 && /^\d+$/.test(cells[0])) cells.shift();
+          name = cells.join(' ').trim();
+        }
+      } else {
+        /* strip leading numbering / bullets */
+        name = name.replace(/^\s*(\d+[\.\)]|[-*•])\s*/, '');
+        /* trailing "(+3)" / "(3 pts)" / "— 3 pts" / "+3" */
+        var m = name.match(/[\(\-—]\s*\+?(\d+)\s*(pts?|points?)?\s*\)?\s*$/i);
+        if(m){ conf = parseInt(m[1], 10); name = name.slice(0, m.index).trim(); }
+      }
+
+      name = name.replace(/\s{2,}/g, ' ').trim();
+      if(!name) return;
+      results.push({ name: name, confidenceValue: (conf && conf > 0 && conf <= 20) ? conf : 3 });
+    });
+    return results;
+  }
+
+  window.addCheckpointsFromBulkText = function(){
+    var input = document.getElementById('bulkPasteInput');
+    var parsed = parseChecklistText(input.value || '');
+    if(!parsed.length){
+      input.focus();
+      return;
+    }
+    pendingCheckpoints = pendingCheckpoints.concat(parsed);
+    renderCpList();
+    input.value = '';
+    toggleBulkPaste();
+    if(window.AetherVoice) window.AetherVoice.confirmAction('stepsAdded', parsed.length + ' step' + (parsed.length !== 1 ? 's' : '') + '.');
+  };
+
+  window.removeCp = function(idx){
+    pendingCheckpoints.splice(idx, 1);
+    renderCpList();
+  };
+
+  function escHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ---- Validate ---- */
+  function bpValidate(){
+    var ok = true;
+    function check(groupId, inputId){ var v=(document.getElementById(inputId).value||'').trim(); var g=document.getElementById(groupId); if(!v){g.classList.add('has-error'); ok=false;} else{g.classList.remove('has-error');} }
+    check('bpfg-mission',   'bpMissionSelect');
+    check('bpfg-name',      'bpName');
+    check('bpfg-objective', 'bpObjective');
+    return ok;
+  }
+
+  /* ---- Submit ---- */
+  window.submitBlueprint = function(){
+    if(!bpValidate()) return;
+    var btn = document.getElementById('saveBpBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    var bpData = {
+      missionKey:    document.getElementById('bpMissionSelect').value,
+      name:          document.getElementById('bpName').value.trim(),
+      objective:     document.getElementById('bpObjective').value.trim(),
+      currentPhase:  document.getElementById('bpPhase').value.trim() || 'Phase 1',
+      nextMilestone: document.getElementById('bpMilestone').value.trim(),
+      hazard:        document.getElementById('bpHazard').value.trim(),
+      recovery:      document.getElementById('bpRecovery').value.trim(),
+      evidence:      document.getElementById('bpEvidence').value.trim()
+    };
+
+    var savedBp = AetherStore.saveBlueprint(bpData);
+
+    /* Save each pending checkpoint under this blueprint */
+    pendingCheckpoints.forEach(function(cp){
+      AetherStore.saveCheckpoint({
+        blueprintKey:     savedBp.key,
+        name:             cp.name,
+        evidenceRequired: bpData.evidence,
+        confidenceValue:  cp.confidenceValue
+      });
+    });
+
+    /* Show success */
+    document.getElementById('bpFormBody').style.display   = 'none';
+    document.getElementById('bpFormFooter').style.display = 'none';
+    document.getElementById('bpSuccessTitle').textContent = savedBp.name + ' — Created';
+    document.getElementById('bpSuccessSub').textContent   =
+      savedBp.missionName + ' · ' + pendingCheckpoints.length + ' checkpoint' +
+      (pendingCheckpoints.length !== 1 ? 's' : '') + ' ready to execute.';
+    document.getElementById('bpSuccessState').classList.add('show');
+    if(window.AetherVoice) window.AetherVoice.confirmAction('blueprintSaved');
+  };
+
+  window.createAnotherBlueprintFn = function(){
+    resetBpForm();
+    document.getElementById('bpFormBody').style.display   = '';
+    document.getElementById('bpFormFooter').style.display = '';
+    document.getElementById('bpSuccessState').classList.remove('show');
+    document.getElementById('bpMissionSelect').focus();
+  };
+
+  function resetBpForm(){
+    ['bpName','bpObjective','bpPhase','bpMilestone','bpHazard','bpRecovery','bpEvidence','cpNameInput']
+      .forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('cpConfidenceInput').value = '2';
+    pendingCheckpoints = [];
+    renderCpList();
+    document.querySelectorAll('#bpFormBody .form-group.has-error').forEach(function(g){ g.classList.remove('has-error'); });
+    document.getElementById('bpFormBody').style.display   = '';
+    document.getElementById('bpFormFooter').style.display = '';
+    document.getElementById('bpSuccessState').classList.remove('show');
+    document.getElementById('bpModalSub').textContent = 'Define the route';
+    var btn = document.getElementById('saveBpBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg> Create Blueprint';
+  }
+
+  /* ---- Initial render of empty checkpoint list ---- */
+  renderCpList();
+
+})();
+</script>
+<script>
+/* Sync the sidebar blocker badge to the real open-blocker count */
+(function syncBlockerBadge(){
+  var badge = document.getElementById('navBlockerBadge');
+  if(!badge) return;
+  var bk = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  badge.textContent = bk.filter(function(b){ return b.status === 'open'; }).length;
+})();
+</script>
+<script src="aether-quotes.js"></script>
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script src="aether-nav.js"></script>
+
+<!-- ── Step Completion Overlay ── -->
+<!-- Lightweight single-item delete confirmation -->
+<div class="mini-confirm-overlay" id="miniConfirmOverlay">
+  <div class="mini-confirm-box">
+    <div class="mini-confirm-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+      Delete this?
+    </div>
+    <div class="mini-confirm-body" id="miniConfirmBody"></div>
+    <div class="mini-confirm-actions">
+      <button class="btn btn-ghost" onclick="closeMiniConfirm()">Cancel</button>
+      <button class="btn btn-danger-solid" id="miniConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="cp-completion-overlay" id="cpCompletionOverlay">
+  <div class="cp-completion-card">
+    <div class="cp-completion-icon">⛰️</div>
+    <div class="cp-completion-step" id="cpOverlayStep">STEP VERIFIED</div>
+    <div class="cp-completion-name" id="cpOverlayName">—</div>
+    <div class="cp-completion-gains">
+      <div class="cp-gain-pill" id="cpOverlayConf">+0 Confidence</div>
+      <div class="cp-gain-pill blue" id="cpOverlayCamp">Camp II</div>
+    </div>
+    <div class="cp-next-label" id="cpNextLabel">NEXT COMMAND</div>
+    <div class="cp-next-name" id="cpNextName">—</div>
+    <div class="cp-completion-btns">
+      <button class="cp-btn-accept" id="cpBtnAccept">Accept Next Command</button>
+      <button class="cp-btn-defer" id="cpBtnDefer">Return to Dashboard</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Step completion overlay (shared celebration UI, triggered by the
+   Mission Board's inline step checklists) ── */
+(function(){
+
+  function findNextUndone(cps, states){
+    for(var i=0;i<cps.length;i++){
+      if(!states[cps[i].id]) return cps[i];
+    }
+    return null;
+  }
+
+  function showCompletionOverlay(bpKey, cpName, confValue, stepNum, nextCp, totalSteps){
+    var overlay = document.getElementById('cpCompletionOverlay');
+    var states = AetherStore.getCheckpointStates ? AetherStore.getCheckpointStates(bpKey) : {};
+    var doneCount = Object.values(states).filter(Boolean).length;
+    var campNum = Math.ceil((doneCount / totalSteps) * 4); // 4 camps max
+    var camps = ['Base Camp','Camp I','Camp II','Camp III','Summit'];
+    var campLabel = camps[Math.min(campNum, 4)];
+
+    document.getElementById('cpOverlayStep').textContent = 'STEP ' + stepNum + ' VERIFIED';
+    document.getElementById('cpOverlayName').textContent = cpName;
+    document.getElementById('cpOverlayConf').textContent = '+' + confValue + ' Confidence';
+    document.getElementById('cpOverlayCamp').textContent = campLabel;
+
+    if(nextCp){
+      document.getElementById('cpNextLabel').textContent = 'NEXT COMMAND';
+      document.getElementById('cpNextName').textContent = (stepNum+1) + '. ' + nextCp.name;
+      document.getElementById('cpNextName').className = 'cp-next-name';
+      document.getElementById('cpBtnAccept').textContent = 'Accept Next Command';
+      document.getElementById('cpBtnAccept').onclick = function(){
+        hideOverlay();
+        var nextRow = document.getElementById('bpsteps-'+bpKey);
+        if(nextRow) nextRow.scrollIntoView({behavior:'smooth',block:'center'});
+      };
+      /* Two distinct choices mid-blueprint: accept the next step, or
+         defer and go back to the dashboard instead. Both buttons make
+         sense here. */
+      document.getElementById('cpBtnDefer').style.display = '';
+    } else {
+      /* This blueprint's last step just got checked off. Before showing
+         the modest "blueprint complete" modal, check whether this also
+         means the whole MISSION is done — a mission can have more than
+         one blueprint, so finishing this one doesn't always mean the
+         mission itself is finished. Only the real, full mission summit
+         gets the epic celebration; a single finished blueprint inside a
+         still-ongoing mission keeps the normal modal below. */
+      var allBpsNow = AetherStore.getBlueprints ? AetherStore.getBlueprints() : blueprints;
+      var thisBp = allBpsNow.find(function(b){ return b.key === bpKey; });
+      var allMissionsNow = AetherStore.getAllMissions ? AetherStore.getAllMissions() : (AetherStore.getMissions ? AetherStore.getMissions() : []);
+      var mission = thisBp ? allMissionsNow.find(function(m){ return m.key === thisBp.missionKey; }) : null;
+      var missionFullyComplete = mission && mission.pct >= 100;
+
+      if(missionFullyComplete && window.AetherCelebration){
+        var missionBps = allBpsNow.filter(function(b){ return b.missionKey === mission.key; });
+        var totalStepsAll = 0, doneStepsAll = 0;
+        missionBps.forEach(function(b){
+          var cps = AetherStore.getCheckpointsForBlueprint ? AetherStore.getCheckpointsForBlueprint(b.key) : [];
+          var st  = AetherStore.getCheckpointStates ? AetherStore.getCheckpointStates(b.key) : {};
+          totalStepsAll += cps.length;
+          cps.forEach(function(c){ if(st[c.id]) doneStepsAll++; });
+        });
+        var evidenceCountForMission = 0;
+        try{
+          var allEv = AetherStore.getEvidence ? AetherStore.getEvidence() : [];
+          evidenceCountForMission = allEv.filter(function(e){ return e.missionKey === mission.key; }).length;
+        }catch(e){}
+        /* Reuse the same "Days Climbing" figure already shown in every
+           sidebar, rather than computing a separate number the rest of
+           the app doesn't have — keeps this consistent, not fake-precise. */
+        var daysClimbingEl = document.getElementById('sidebarDaysClimbing');
+        var daysClimbing = daysClimbingEl ? (parseInt(daysClimbingEl.textContent, 10) || 0) : 0;
+
+        if(AetherStore.addTimelineEvent){
+          AetherStore.addTimelineEvent({
+            type: 'summit',
+            name: 'Summit Reached — ' + mission.name,
+            sub:  'Mission complete. All ' + totalStepsAll + ' steps verified across ' + missionBps.length + ' blueprint' + (missionBps.length===1?'':'s') + '.',
+            delta: ''
+          });
+        }
+
+        /* A domain can only cross to 100% at the exact moment its last
+           remaining in-progress mission completes -- which is exactly
+           what just happened, if it happened at all. Check each of
+           this mission's domains: if every OTHER mission tagged to
+           that domain is also already done, this completion is what
+           conquered it. Small toast, not a second full-screen takeover. */
+        if(window.AetherCelebration.showDomainToast){
+          var domainColors = {};
+          (AetherStore.getDomains ? AetherStore.getDomains() : []).forEach(function(d){ domainColors[d.name] = d.color; });
+          (mission.domains || []).forEach(function(domainName){
+            var taggedMissions = allMissionsNow.filter(function(m){ return (m.domains||[]).indexOf(domainName) !== -1; });
+            var domainConquered = taggedMissions.length > 0 && taggedMissions.every(function(m){ return m.pct >= 100; });
+            if(domainConquered){
+              window.AetherCelebration.showDomainToast({ domainName: domainName, color: domainColors[domainName] });
+            }
+          });
+        }
+
+        AetherCelebration.show({
+          missionName:   mission.name,
+          daysClimbing:  daysClimbing,
+          totalSteps:    totalStepsAll,
+          evidenceCount: evidenceCountForMission,
+          confidencePct: mission.pct,
+          mountainOpts:  (window.MissionMountain ? window.MissionMountain.fromMission(mission) : null),
+          onNextMission: function(){ window.location.href = 'missions.html'; },
+          onArchive:  function(){ window.location.href = 'summit-archive.html'; },
+          onContinue: function(){ window.location.href = 'dashboard.html'; }
+        });
+        return; /* skip the small modal entirely — the epic one covers it */
+      }
+
+      document.getElementById('cpNextLabel').textContent = 'SUMMIT REACHED';
+      document.getElementById('cpNextName').textContent = '🏔️ Blueprint Complete — All steps verified!';
+      document.getElementById('cpNextName').className = 'cp-next-name summit';
+      document.getElementById('cpBtnAccept').textContent = 'Return to Dashboard';
+      document.getElementById('cpBtnAccept').onclick = function(){
+        window.location.href = 'dashboard.html';
+      };
+      /* There's no "next step" to accept or defer once the blueprint
+         is complete — both buttons would say and do the exact same
+         thing. Show only the one real action. */
+      document.getElementById('cpBtnDefer').style.display = 'none';
+    }
+
+    document.getElementById('cpBtnDefer').onclick = function(){
+      hideOverlay();
+      window.location.href = 'dashboard.html';
+    };
+
+    overlay.classList.add('show');
+  }
+
+  function hideOverlay(){
+    document.getElementById('cpCompletionOverlay').classList.remove('show');
+  }
+
+  document.getElementById('cpCompletionOverlay').addEventListener('click', function(e){
+    if(e.target === this) hideOverlay();
+  });
+
+  window.__aetherShowCompletion = showCompletionOverlay;
+  window.__aetherFindNextUndone = findNextUndone;
+
+})();
+
+/* ---- Lightweight single-item confirm modal (reusable) ---- */
+function openMiniConfirm(bodyHtml, onConfirm){
+  document.getElementById('miniConfirmBody').innerHTML = bodyHtml;
+  document.getElementById('miniConfirmOverlay').classList.add('open');
+  document.getElementById('miniConfirmBtn').onclick = function(){ onConfirm(); closeMiniConfirm(); };
+}
+window.closeMiniConfirm = function(){
+  document.getElementById('miniConfirmOverlay').classList.remove('open');
+};
+document.getElementById('miniConfirmOverlay').addEventListener('click', function(e){
+  if(e.target === this) closeMiniConfirm();
+});
+
+window.confirmDeleteBlueprint = function(key, name){
+  openMiniConfirm(
+    'Deletes <strong>"' + name + '"</strong> permanently — along with every step, evidence, and blocker tied to it. This can\'t be undone.',
+    function(){ AetherStore.deleteBlueprint(key); window.location.reload(); }
+  );
+};
+
+window.confirmDeleteCheckpoint = function(cpId, name){
+  openMiniConfirm(
+    'Deletes the step <strong>"' + name + '"</strong> permanently, along with any evidence attached to it.',
+    function(){ AetherStore.deleteCheckpoint(cpId); window.location.reload(); }
+  );
+};
+</script>
+<script>
+/* Deep-link support: ?highlight=<missionKey> from Command Center's
+   "Set Up AETHER v1.0" flow (and anywhere else that links here)
+   scrolls to and highlights that mission's blueprint group. This
+   was previously a dead parameter — linked to, but never read. */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var key = params.get('highlight');
+  if(!key) return;
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      var group = document.querySelector('[data-mission="'+CSS.escape(key)+'"]');
+      if(!group) return;
+      group.scrollIntoView({behavior:'smooth', block:'center'});
+      group.classList.add('deep-highlight');
+    }, 200);
+  });
+})();
+</script>
+
+</body>

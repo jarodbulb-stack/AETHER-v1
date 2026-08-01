@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Missions Command</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<script src="mission-mountain.js"></script>
+<style>
+
+.section-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:2px; }
+.section-head-left{ display:flex; align-items:center; gap:9px; }
+.section-head-left svg{ width:16px; height:16px; color:var(--accent); flex-shrink:0; }
+.section-head-left .ttl{ font-family:var(--font-display); font-size:12.5px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; }
+.section-head a{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; white-space:nowrap; display:flex; align-items:center; gap:4px; }
+.section-head a svg{ width:11px; height:11px; }
+
+/* SECTION 1 — STATUS STRIP */
+.xstrip{ display:grid; grid-template-columns:1.3fr 1.3fr 1.3fr 0.85fr 0.85fr; gap:14px; }
+@media (max-width:1200px){ .xstrip{ grid-template-columns:repeat(3,1fr); } }
+@media (max-width:680px){ .xstrip{ grid-template-columns:repeat(2,1fr); } }
+.xcard{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:14px 16px; display:flex; flex-direction:column; gap:8px; }
+.xcard-head{ display:flex; align-items:center; gap:6px; }
+.xcard-head svg{ width:13px; height:13px; flex-shrink:0; color:var(--xc-color, var(--accent)); }
+.xcard-label{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); }
+.xcard-name{ font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text-primary); }
+.xcard-camp-row{ display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px; }
+.xcard-camp-row .camp{ color:var(--text-dim); }
+.xcard-camp-row .pct{ color:var(--xc-color, var(--accent)); font-weight:700; }
+.xcard-bar-track{ height:4px; border-radius:3px; background:rgba(255,255,255,0.06); overflow:hidden; margin-top:2px; }
+.xcard-bar-fill{ height:100%; border-radius:3px; background:var(--xc-color, var(--accent)); }
+.xcard-simple-value{ font-family:var(--font-display); font-size:22px; font-weight:600; color:var(--xc-color, var(--text-primary)); }
+.xcard-simple-sub{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); }
+
+/* SECTION 2 — MISSION COMMAND BOARD */
+.mission-grid{ display:grid; grid-auto-flow:column; grid-auto-columns:minmax(180px,340px); gap:14px; overflow-x:auto; padding-bottom:4px; scroll-snap-type:x proximity; }
+.mission-grid::-webkit-scrollbar{ height:6px; }
+.mcard{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px; display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer; transition:var(--transition); text-decoration:none; scroll-snap-align:start; }
+.mcard:hover{ border-color:var(--border-strong); transform:translateY(-2px); box-shadow:var(--shadow-panel); }
+.mcard.selected{ border-color:var(--mc-color, var(--accent)); box-shadow:0 0 0 1px var(--mc-color, var(--accent)) inset; }
+.mcard.deep-highlight{ animation:mcardHighlightPulse 1.8s ease-out 2; }
+@keyframes mcardHighlightPulse{
+  0%{ box-shadow:0 0 0 2px var(--accent), 0 0 30px rgba(74,168,255,0.5); }
+  100%{ box-shadow:0 0 0 1px var(--border-subtle); }
+}
+.mcard-head{ display:flex; align-items:center; gap:8px; align-self:flex-start; }
+.mcard-icon{ width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); color:var(--mc-color, var(--accent)); flex-shrink:0; }
+.mcard-icon svg{ width:14px; height:14px; }
+.mcard-titles{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+.mcard-name{ font-family:var(--font-display); font-size:12.5px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px; }
+.mcard-tagline{ font-family:var(--font-body); font-size:9.5px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:130px; }
+.mcard-ring-wrap{ position:relative; width:96px; height:96px; }
+.mcard-ring-wrap svg{ width:100%; height:100%; transform:rotate(-90deg); }
+.mcard-ring-track{ fill:none; stroke:rgba(255,255,255,0.06); stroke-width:7; }
+.mcard-ring-fill{ fill:none; stroke-width:7; stroke-linecap:round; transition:stroke-dashoffset 600ms ease; }
+.mcard-ring-pct{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:21px; font-weight:700; color:var(--text-primary); }
+/* small mission mountain on card (replaces the % ring) */
+.mcard-mtn-wrap{ width:100%; max-width:360px; aspect-ratio:16/9; border-radius:10px; overflow:hidden; border:1px solid rgba(120,150,200,0.18); box-shadow:inset 0 0 16px rgba(0,0,0,0.4); }
+.mcard-mtn-wrap svg{ width:100%; height:100%; transform:none; display:block; }
+.mcard-mtn-pct{ position:absolute; right:6px; bottom:5px; inset:auto; display:block; font-size:12px; font-weight:700; color:#fff; text-shadow:0 1px 4px #000, 0 0 6px rgba(0,0,0,0.7); background:rgba(8,12,20,0.55); padding:1px 6px; border-radius:6px; }
+.mcard-camp{ font-family:var(--font-body); font-size:11.5px; color:var(--text-secondary); }
+.mcard-status{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; font-weight:700; color:var(--mc-color, var(--accent)); }
+.mcard-confidence{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); }
+.mcb-dots{ display:flex; justify-content:center; gap:6px; margin-top:14px; }
+.mcb-dot{ width:6px; height:6px; border-radius:50%; background:var(--border-strong); }
+.mcb-dot.active{ background:var(--accent); width:16px; border-radius:3px; }
+
+/* SECTION 3 — SELECTED MISSION INTELLIGENCE + ROUTE PROGRESS */
+.sel-2col{ display:grid; grid-template-columns:1.15fr 1fr; gap:16px; align-items:stretch; }
+@media (max-width:1100px){ .sel-2col{ grid-template-columns:1fr; } }
+.sel-card{ display:flex; flex-direction:column; }
+.sel-edit-link{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.06em; display:flex; align-items:center; gap:5px; }
+.sel-edit-link svg{ width:11px; height:11px; }
+.sel-mission-name{ font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--accent-glow); margin-top:10px; }
+.sel-mission-objective{ font-family:var(--font-body); font-size:12.5px; color:var(--text-dim); margin-top:2px; padding-bottom:14px; border-bottom:1px solid var(--border-subtle); }
+.sel-fact-list{ display:flex; flex-direction:column; margin-top:14px; }
+.sel-fact-row{ display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--border-subtle); }
+.sel-fact-row:last-child{ border-bottom:none; }
+.sel-fact-icon{ width:16px; height:16px; flex-shrink:0; color:var(--text-dim); }
+.sel-fact-label{ font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim); width:130px; flex-shrink:0; }
+.sel-fact-value{ font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); display:flex; align-items:center; gap:8px; flex:1; }
+.sel-fact-value .progress-track{ flex:1; max-width:140px; }
+.sel-fact-value .pct-num{ font-family:var(--font-mono); font-size:11px; color:var(--text-secondary); flex-shrink:0; }
+.sel-domain-dots{ display:flex; gap:6px; flex-wrap:wrap; }
+.sel-domain-dot{ display:inline-flex; align-items:center; gap:5px; padding:4px 10px 4px 6px; border-radius:99px; background:rgba(255,255,255,0.06); font-family:var(--font-body); font-size:11px; font-weight:500; color:var(--text-primary); }
+.sel-domain-dot .dot-icon{ width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.08); flex-shrink:0; }
+.sel-domain-dot svg{ width:11px; height:11px; }
+
+.route-card{ display:flex; flex-direction:column; }
+.route-stage{ position:relative; flex:1; min-height:300px; margin-top:14px; border-radius:var(--radius-md); overflow:hidden; background:linear-gradient(180deg, #0c1422 0%, #0a0f1c 40%, #070b14 100%); }
+.route-path-svg{ position:absolute; inset:0; width:100%; height:100%; }
+.route-node{ position:absolute; transform:translate(-50%,-50%); display:flex; align-items:center; gap:9px; }
+.route-node-dot{ width:11px; height:11px; border-radius:50%; border:2px solid; flex-shrink:0; background:var(--bg-void); }
+.route-node-dot.summit{ width:14px; height:14px; background:var(--gold); border-color:var(--gold); box-shadow:0 0 10px rgba(255,209,102,0.6); }
+.route-node-dot.current{ background:var(--success); border-color:var(--success); box-shadow:0 0 0 4px rgba(61,220,132,0.2); }
+.route-node-dot.base{ background:var(--accent); border-color:var(--accent); }
+.route-node-label{ display:flex; flex-direction:column; gap:0; white-space:nowrap; }
+.route-node-name{ font-family:var(--font-body); font-size:11.5px; color:var(--text-secondary); }
+.route-node-pct{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); }
+.route-node.current .route-node-name{ color:var(--success); font-weight:600; font-size:13px; }
+.route-node.current .route-node-pct{ color:var(--success); }
+.route-node.summit .route-node-name{ color:var(--gold); }
+
+/* SECTION 4 — NEXT MILESTONES / EVIDENCE / RECOVERY */
+.triple-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+@media (max-width:1000px){ .triple-grid{ grid-template-columns:1fr; } }
+.checklist{ display:flex; flex-direction:column; margin-top:12px; }
+.checklist-item{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-subtle); }
+.checklist-item:last-child{ border-bottom:none; }
+.checklist-box{ width:15px; height:15px; border-radius:4px; border:1.5px solid var(--border-strong); flex-shrink:0; }
+.checklist-body{ flex:1; min-width:0; }
+.checklist-name{ font-family:var(--font-body); font-size:12px; color:var(--text-primary); }
+.checklist-due{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); flex-shrink:0; }
+.evidence-checklist{ display:flex; flex-direction:column; margin-top:12px; }
+.evidence-row{ display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-bottom:1px solid var(--border-subtle); }
+.evidence-row:last-child{ border-bottom:none; }
+.evidence-icon{ width:16px; height:16px; color:var(--accent); flex-shrink:0; margin-top:1px; }
+.evidence-name{ font-family:var(--font-body); font-size:12px; color:var(--text-primary); }
+.evidence-sub{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); }
+.recovery-card{ border-top:2px solid var(--danger); }
+.recovery-warn{ font-family:var(--font-body); font-size:12px; color:var(--danger); margin-top:10px; }
+.recovery-plan-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); margin-top:16px; margin-bottom:8px; }
+.recovery-step{ display:flex; align-items:center; gap:10px; padding:7px 0; }
+.recovery-step-num{ width:18px; height:18px; border-radius:50%; background:rgba(255,92,108,0.12); color:var(--danger); font-family:var(--font-mono); font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.recovery-step-text{ font-family:var(--font-body); font-size:12px; color:var(--text-secondary); }
+.footer-link{ margin-top:14px; font-family:var(--font-mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; display:flex; align-items:center; gap:5px; }
+.footer-link svg{ width:11px; height:11px; }
+
+/* SECTION 5 — BLOCKED MISSIONS */
+.blocked-table{ display:flex; flex-direction:column; margin-top:12px; }
+.blocked-row{ display:grid; grid-template-columns:1.4fr 1.6fr 90px 1.6fr 90px; gap:16px; align-items:center; padding:13px 0; border-bottom:1px solid var(--border-subtle); }
+.blocked-row:last-child{ border-bottom:none; }
+.blocked-row.head{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); padding-bottom:10px; }
+.blocked-mission{ display:flex; align-items:center; gap:8px; }
+.blocked-mission svg{ width:14px; height:14px; color:var(--warning); flex-shrink:0; }
+.blocked-mission-name{ font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); }
+.blocked-reason{ font-family:var(--font-body); font-size:12px; color:var(--text-secondary); }
+.blocked-days{ font-family:var(--font-display); font-size:15px; font-weight:600; color:var(--text-primary); }
+.blocked-action{ font-family:var(--font-body); font-size:12px; color:var(--text-secondary); }
+.blocked-impact{ display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:10.5px; font-weight:700; }
+.blocked-impact-dot{ width:7px; height:7px; border-radius:50%; }
+
+.manifesto-line{ text-align:center; padding:18px 0 4px; font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-faint); }
+
+/* ---------- Empty state (systemMode = LIVE, no real data yet) ---------- */
+.empty-state{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:48px 20px; text-align:center; }
+.empty-state-icon{ width:48px; height:48px; border-radius:50%; background:rgba(74,168,255,0.08); display:flex; align-items:center; justify-content:center; color:var(--accent); }
+.empty-state-icon svg{ width:22px; height:22px; }
+.empty-state-title{ font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text-primary); }
+.empty-state-sub{ font-family:var(--font-body); font-size:12px; color:var(--text-dim); max-width:340px; line-height:1.5; }
+.empty-state-cta{ margin-top:6px; }
+
+</style>
+<style>
+@keyframes aether-pulse {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(0,200,255,0.9)) drop-shadow(0 0 18px rgba(0,200,255,0.4)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(0,200,255,1)) drop-shadow(0 0 35px rgba(0,200,255,0.7)) drop-shadow(0 0 6px #fff); }
+}
+.sidebar-logo-mark { animation: aether-pulse 2.8s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow-strong" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow-soft" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Outer dashed orbit circle -->
+          <circle cx="50" cy="50" r="42" stroke="#1a4a6a" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.7"/>
+          <!-- Inner dashed circle -->
+          <circle cx="50" cy="50" r="34" stroke="#1a3a5a" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.5"/>
+          <!-- Orbit dots -->
+          <circle cx="50" cy="8" r="2.5" fill="#00c8ff" filter="url(#glow-soft)" opacity="0.9"/>
+          <circle cx="88" cy="62" r="1.8" fill="#4aa8ff" filter="url(#glow-soft)" opacity="0.7"/>
+          <circle cx="14" cy="38" r="1.5" fill="#4aa8ff" opacity="0.5"/>
+          <!-- Triangle glow layer -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="5" stroke-linejoin="round" fill="none" opacity="0.15" filter="url(#glow-strong)"/>
+          <!-- Inner green triangle -->
+          <path d="M50 30 L76 70 H24 Z" stroke="#00ff88" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.5"/>
+          <!-- Main neon triangle -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="2.5" stroke-linejoin="round" fill="none" filter="url(#glow-strong)"/>
+          <!-- Center dot -->
+          <circle cx="50" cy="60" r="3.5" fill="#00c8ff" filter="url(#glow-strong)"/>
+          <circle cx="50" cy="60" r="1.5" fill="white" opacity="0.9"/>
+          <!-- Corner accent dots -->
+          <circle cx="50" cy="22" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="82" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="18" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-wordmark">ETHER</span>
+        <span class="sidebar-logo-tagline">Mission Command System</span>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg></span>
+        <span class="nav-item-label">Command Deck</span>
+      </a>
+      <a href="life-advancement.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 5l4 6 3-4 5 10"/></svg></span>
+        <span class="nav-item-label">Life Advancement</span>
+      </a>
+      <a href="missions.html" class="nav-item active">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span>
+        <span class="nav-item-label">Missions</span>
+      </a>
+      <a href="blueprints.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="nav-item-label">Blueprints</span>
+      </a>
+      <a href="problems-blockers.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg></span>
+        <span class="nav-item-label">Problems / Blockers</span>
+        <span class="badge" id="navBlockerBadge">3</span>
+      </a>
+      <a href="evidence-vault.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg></span>
+        <span class="nav-item-label">Evidence Vault</span>
+      </a>
+      <a href="timeline.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="nav-item-label">Timeline</span>
+      </a>
+      <a href="debrief.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V7a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 5v5h5"/></svg></span>
+        <span class="nav-item-label">Debrief</span>
+      </a>
+            <a href="summit-archive.html" class="nav-item">
+        <span class="nav-item-icon">🏔️</span>
+        <span class="nav-item-label">Summit Archive</span>
+      </a>
+      <a href="knowledge-library.html" class="nav-item">
+        <span class="nav-item-icon">📚</span>
+        <span class="nav-item-label">Knowledge Library</span>
+      </a>
+      <a href="command-center.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
+        <span class="nav-item-label">Command Center</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-profile">
+      <div class="profile-header">
+        <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+        <div class="profile-info">
+          <span class="profile-name">ROD ENTERA</span>
+          <span class="profile-rank">Operator</span>
+        </div>
+      </div>
+            <div style="display:flex;gap:16px;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:4px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--teal);" id="sidebarDaysClimbing">14</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Days Climbing</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--gold);" id="sidebarSummits">0</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Summits</span>
+        </div>
+      </div>
+      <div class="profile-quote">"The mission is progress. The evidence is proof. The mountain is the journey."</div>
+      <div class="profile-focus-row">
+        <span class="focus-dot"></span>
+        <div class="focus-text">
+          <span class="focus-label">Focus Mode</span>
+          <span class="focus-value">High Performance</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>MISSIONS COMMAND</h1>
+        <span class="topbar-subtitle">Execute missions. Generate evidence. Advance your life.</span>
+      </div>
+      <div class="topbar-meta">
+        <button class="btn btn-primary" onclick="openNewMissionModal()" style="gap:7px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14"/></svg>
+          New Mission
+        </button>
+        <span class="pill on-track" style="display:flex; align-items:center; gap:6px;">
+          <span style="width:6px; height:6px; border-radius:50%; background:var(--success); box-shadow:0 0 6px var(--success);"></span>
+          Operator: Aether Prime
+        </span>
+        <span class="mono" style="font-size:11px; color:var(--text-dim);">SUNDAY, JUNE 18, 2026 · 14:18 ZULU</span>
+      </div>
+    </header>
+
+    <main class="content">
+      <div id="domainFilterBanner"></div>
+
+      <div class="xstrip" id="xstrip"><!-- JS --></div>
+
+      <div>
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+            <span class="ttl">Mission Command Board</span>
+          </div>
+          <a href="#">View All Missions <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+        <div class="mission-grid" id="missionGrid" style="margin-top:14px;"><!-- JS --></div>
+        <div class="mcb-dots" id="mcbDots"><!-- JS --></div>
+      </div>
+
+      <div class="sel-2col">
+        <div class="panel sel-card">
+          <div class="section-head">
+            <div class="section-head-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+              <span class="ttl">Selected Mission Intelligence</span>
+            </div>
+            <a class="sel-edit-link" id="editMissionLink" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Edit Mission</a>
+          </div>
+          <div id="selMissionBody"><!-- JS --></div>
+        </div>
+
+        <div class="panel route-card">
+          <div class="section-head">
+            <div class="section-head-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+              <span class="ttl">Route Progress</span>
+            </div>
+          </div>
+          <div class="route-stage" id="routeStage"><!-- JS --></div>
+        </div>
+
+      </div>
+
+      <div class="triple-grid">
+        <div class="panel">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+            <span class="ttl">Next Milestones</span>
+          </div>
+          <div class="checklist" id="milestoneList"><!-- JS --></div>
+          <a class="footer-link" href="#">View All Milestones <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+
+        <div class="panel">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+            <span class="ttl">Required Evidence</span>
+          </div>
+          <div class="evidence-checklist" id="evidenceList"><!-- JS --></div>
+          <a class="footer-link" href="evidence-vault.html">View Evidence Vault <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+
+        <div class="panel recovery-card">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+            <span class="ttl" style="color:var(--danger);">Recovery Route</span>
+          </div>
+          <div id="recoveryBody"><!-- JS --></div>
+          <a class="footer-link" href="#" style="color:var(--danger);">View Recovery Protocols <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+            <span class="ttl">Blocked Missions</span>
+          </div>
+          <a href="problems-blockers.html">View All Blockers <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></a>
+        </div>
+        <div class="blocked-table" id="blockedTable"><!-- JS --></div>
+      </div>
+
+      <div class="manifesto-line">Every mission is a route. Every route advances the mountain.</div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+const domainColors = {
+  Health:'var(--danger)', Finance:'var(--success)', Relationships:'var(--purple)',
+  Learning:'var(--accent)', Business:'var(--warning)', 'Skills & Mastery':'var(--gold)',
+  'Character & Discipline':'var(--teal)', 'Spiritual Life':'var(--gold)',
+  'Purpose & Mission':'var(--purple)', 'Environment & Lifestyle':'var(--success)'
+};
+const domainIcons = {
+  Health:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.3 4.5 6 4.5c2.1 0 3.6 1.2 4.5 2.8C11.4 5.7 12.9 4.5 15 4.5c3.7 0 5.5 3.5 4 7.2-2.5 4.7-10 9.3-10 9.3Z"/></svg>`,
+  Finance:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1.4 1.1-2 2.5-2s2.5.7 2.5 2-1.1 1.7-2.5 2-2.5.6-2.5 2 1.1 2 2.5 2 2.5-.6 2.5-2"/></svg>`,
+  Relationships:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6"/><circle cx="18" cy="9" r="2.4"/><path d="M16 20c0-2.5 1.6-4.3 4-4.3"/></svg>`,
+  Learning:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5V5.2C4 4 5 3.3 6.1 3.5 8 3.9 10 4.7 12 6c2-1.3 4-2.1 5.9-2.5C19 3.3 20 4 20 5.2v14.3"/><path d="M4 19.5c0-1 .8-1.5 1.8-1.5H10c.8 0 1.5.3 2 .8.5-.5 1.2-.8 2-.8h4.2c1 0 1.8.5 1.8 1.5"/></svg>`,
+  Business:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>`,
+  'Skills & Mastery':`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.6 5.8 6.2.6-4.7 4.2 1.4 6.1L12 16.8 6.5 19.7l1.4-6.1L3.2 9.4l6.2-.6Z"/></svg>`,
+  'Character & Discipline':`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6Z"/></svg>`,
+  'Spiritual Life':`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M21.5 12H19M5 12H2.5M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8M18.4 18.4l-1.8-1.8M7.4 7.4 5.6 5.6"/></svg>`,
+  'Purpose & Mission':`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>`,
+  'Environment & Lifestyle':`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 19c8-1 13-6 14-14-8 0-13 5-14 14Z"/><path d="M5 19c2-3 4.5-5.5 8-8"/></svg>`
+};
+
+const missionIcons = {
+  mountain:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>`,
+  hexagon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7Z"/></svg>`,
+  heart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-10-9.3C.5 8 2.3 4.5 6 4.5c2.1 0 3.6 1.2 4.5 2.8C11.4 5.7 12.9 4.5 15 4.5c3.7 0 5.5 3.5 4 7.2-2.5 4.7-10 9.3-10 9.3Z"/></svg>`,
+  book:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5V5.2C4 4 5 3.3 6.1 3.5 8 3.9 10 4.7 12 6c2-1.3 4-2.1 5.9-2.5C19 3.3 20 4 20 5.2v14.3"/><path d="M4 19.5c0-1 .8-1.5 1.8-1.5H10c.8 0 1.5.3 2 .8.5-.5 1.2-.8 2-.8h4.2c1 0 1.8.5 1.8 1.5"/></svg>`,
+  rocket:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2.5c2 0 4.5 1.5 6 5-1.5 4-5 7-7.5 8l-3-3c1-2.5 4-6 7-7.5 3.5-1.5 5-4 5-6Z"/><path d="M7 14l-4 1 1-4M11 21l1-4 1.5 1.5"/></svg>`,
+  shield:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6Z"/></svg>`,
+  star:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.6 5.8 6.2.6-4.7 4.2 1.4 6.1L12 16.8 6.5 19.7l1.4-6.1L3.2 9.4l6.2-.6Z"/></svg>`,
+  target:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>`,
+  leaf:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 19c8-1 13-6 14-14-8 0-13 5-14 14Z"/><path d="M5 19c2-3 4.5-5.5 8-8"/></svg>`
+};
+
+/* ---------- AETHER systemMode + data (Phase 2: shared campaign store) ----------
+   Missions no longer owns its own sample array. AetherStore.getMissions()
+   is the single source of truth, shared across every page that needs
+   mission data. systemMode is also read from the store so this page
+   can never drift out of sync with what Command Center set. */
+const systemMode = AetherStore.getSystemMode();
+const allMissionsUnfiltered = AetherStore.getMissions();
+
+/* Domain filter: clicking a domain card on Life Advancement links here
+   with ?domain=Learning (etc). When present, scope the whole page to
+   just the missions tagged to that domain — completed and in-progress
+   together, exactly as they'd appear on the full board, just filtered.
+   Everything below (stat strip, mission grid, selected-mission panel)
+   already reads from `missions`, so filtering once here is enough to
+   make the entire page domain-scoped with no further changes. */
+const urlParams = new URLSearchParams(window.location.search);
+const domainFilter = urlParams.get('domain');
+const missions = domainFilter
+  ? allMissionsUnfiltered.filter(m => (m.domains||[]).indexOf(domainFilter) !== -1)
+  : allMissionsUnfiltered;
+
+if(domainFilter){
+  var domainInfo = (AetherStore.getDomains ? AetherStore.getDomains() : []).find(d => d.name === domainFilter);
+  var completedInDomain = missions.filter(m => m.pct >= 100).length;
+  var climbingInDomain = missions.filter(m => m.pct < 100).length;
+  document.getElementById('domainFilterBanner').innerHTML = `
+    <div class="panel" style="margin-bottom:16px; border-color:${domainInfo?domainInfo.color:'var(--accent)'};">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.14em;color:var(--text-dim);text-transform:uppercase;">Domain View</div>
+          <div style="font-family:var(--font-display);font-size:20px;font-weight:700;color:${domainInfo?domainInfo.color:'var(--text-primary)'};margin-top:2px;">${domainFilter}</div>
+          <div style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);margin-top:4px;">
+            ${domainInfo ? domainInfo.pct+'% Elevation &middot; '+domainInfo.camp+' &middot; ' : ''}${completedInDomain} summited &middot; ${climbingInDomain} climbing
+          </div>
+        </div>
+        <a href="missions.html" class="btn btn-secondary" style="text-decoration:none;">← All Missions</a>
+      </div>
+    </div>`;
+}
+
+
+const statusColor = {advancing:'var(--success)', stable:'var(--accent)', warning:'var(--warning)', critical:'var(--danger)'};
+const statusLabel = {advancing:'Advancing', stable:'Stable', warning:'Warning', critical:'Critical'};
+
+const selectedMissionKey = (missions.find(m=> m.key === 'aether') ? 'aether' : (missions[0] ? missions[0].key : 'aether'));
+const selectedMission = missions.find(m=> m.key === selectedMissionKey) || {};
+
+const closestSummit = [...missions].sort((a,b)=> b.pct - a.pct)[0];
+const leadExpedition = selectedMission;
+const furthestBehind = [...missions].sort((a,b)=> a.pct - b.pct)[0];
+const blockedMissions = missions.filter(m=> m.blocked);
+const openCount = missions.length - blockedMissions.length;
+
+if(missions.length === 0){
+  /* LIVE mode, no real missions yet — show a real empty state, not a crash */
+  const emptyMsg = domainFilter ? `
+    <div class="empty-state">
+      <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4M4 4h13l-2.5 4L17 12H4"/></svg></div>
+      <span class="empty-state-title">No missions tagged to ${domainFilter} yet</span>
+      <span class="empty-state-sub">Create a mission and tag it to ${domainFilter} in the domain picker to start climbing this one.</span>
+      <button class="btn btn-primary empty-state-cta" onclick="openNewMissionModal()">Create a Mission</button>
+    </div>` : `
+    <div class="empty-state">
+      <div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4M4 4h13l-2.5 4L17 12H4"/></svg></div>
+      <span class="empty-state-title">No missions yet</span>
+      <span class="empty-state-sub">Your campaign is empty and ready for real missions. Create your first mission to begin climbing.</span>
+      <button class="btn btn-primary empty-state-cta" onclick="openNewMissionModal()">Create First Mission</button>
+    </div>`;
+  document.getElementById('xstrip').innerHTML = '';
+  document.getElementById('missionGrid').innerHTML = emptyMsg;
+  document.getElementById('mcbDots').innerHTML = '';
+  document.getElementById('selMissionBody').innerHTML = '';
+  document.getElementById('routeStage').innerHTML = '';
+  document.getElementById('milestoneList').innerHTML = '';
+  document.getElementById('evidenceList').innerHTML = '';
+  document.getElementById('recoveryBody').innerHTML = '';
+  document.getElementById('blockedTable').innerHTML = '';
+} else {
+
+document.getElementById('xstrip').innerHTML = `
+  <div class="xcard">
+    <div class="xcard-head" style="--xc-color:var(--gold);">${missionIcons.mountain}<span class="xcard-label" style="color:var(--gold);">Closest Summit</span></div>
+    <span class="xcard-name">${closestSummit.name}</span>
+    <div class="xcard-camp-row"><span class="camp">${closestSummit.camp}</span><span style="color:var(--text-faint);">·</span><span class="pct" style="color:var(--gold);">${closestSummit.pct}%</span></div>
+    <div class="xcard-bar-track"><div class="xcard-bar-fill" style="width:${closestSummit.pct}%; background:var(--gold);"></div></div>
+  </div>
+  <div class="xcard">
+    <div class="xcard-head" style="--xc-color:var(--accent);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V4M4 4h13l-2.5 4L17 12H4"/></svg><span class="xcard-label" style="color:var(--accent);">Lead Expedition</span></div>
+    <span class="xcard-name">${leadExpedition.name}</span>
+    <div class="xcard-camp-row"><span class="camp">${leadExpedition.camp}</span><span style="color:var(--text-faint);">·</span><span class="pct">${leadExpedition.pct}%</span></div>
+    <div class="xcard-bar-track"><div class="xcard-bar-fill" style="width:${leadExpedition.pct}%;"></div></div>
+  </div>
+  <div class="xcard">
+    <div class="xcard-head" style="--xc-color:var(--danger);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg><span class="xcard-label" style="color:var(--danger);">Furthest Behind</span></div>
+    <span class="xcard-name">${furthestBehind.name}</span>
+    <div class="xcard-camp-row"><span class="camp">${furthestBehind.camp}</span><span style="color:var(--text-faint);">·</span><span class="pct" style="color:var(--danger);">${furthestBehind.pct}%</span></div>
+    <div class="xcard-bar-track"><div class="xcard-bar-fill" style="width:${furthestBehind.pct}%; background:var(--danger);"></div></div>
+  </div>
+  <div class="xcard">
+    <div class="xcard-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="xcard-label">Blocked Routes</span></div>
+    <span class="xcard-simple-value" style="color:var(--danger);">${blockedMissions.length}</span>
+    <span class="xcard-simple-sub">Missions</span>
+  </div>
+  <div class="xcard">
+    <div class="xcard-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg><span class="xcard-label">Open Routes</span></div>
+    <span class="xcard-simple-value" style="color:var(--success);">${openCount}</span>
+    <span class="xcard-simple-sub">Missions</span>
+  </div>
+`;
+
+const R = 42;
+const CIRC = 2 * Math.PI * R;
+
+document.getElementById('missionGrid').innerHTML = missions.map(m=>{
+  const color = statusColor[m.status];
+  const offset = CIRC - (m.pct/100) * CIRC;
+  return `
+  <a class="mcard ${m.key===selectedMissionKey ? 'selected' : ''}" href="#" style="--mc-color:${color};" data-mission="${m.key}">
+    ${!m.isLive ? '<span class="data-tag sample-tag" title="Demo data — not yours">SAMPLE</span>' : ''}
+    ${m.isLive ? `<button class="card-delete-btn" title="Delete this mission" onclick="event.preventDefault();event.stopPropagation();confirmDeleteMission('${m.key}','${(m.name||'').replace(/'/g,"\\'")}');"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>` : ''}
+    <div class="mcard-head">
+      <div class="mcard-icon">${missionIcons[m.icon]}</div>
+      <div class="mcard-titles">
+        <span class="mcard-name">${m.name}</span>
+        <span class="mcard-tagline">${m.tagline}</span>
+      </div>
+    </div>
+    <div class="mcard-ring-wrap mcard-mtn-wrap">
+      ${(function(){
+        try{
+          var mm = MissionMountain.render(Object.assign(MissionMountain.fromMission(m), {variant:'hero'}));
+          return mm.svg;
+        }catch(e){ return ''; }
+      })()}
+      <div class="mcard-ring-pct mcard-mtn-pct">${m.pct}%</div>
+    </div>
+    <span class="mcard-camp">${m.camp}</span>
+    <span class="mcard-status" style="color:${color};">${statusLabel[m.status]}</span>
+    <span class="mcard-confidence">+${m.confidenceGain} Confidence</span>
+  </a>`;
+}).join('');
+
+const dotsCount = Math.ceil(missions.length / 5);
+document.getElementById('mcbDots').innerHTML = Array.from({length: Math.max(dotsCount, 1)}).map((_,i)=>
+  `<span class="mcb-dot ${i===0 ? 'active' : ''}"></span>`).join('');
+
+document.getElementById('selMissionBody').innerHTML = `
+  <div class="sel-mission-name">${selectedMission.name}</div>
+  <div class="sel-mission-objective">${selectedMission.objective}</div>
+  <div class="sel-fact-list">
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+      <span class="sel-fact-label">Current Camp</span><span class="sel-fact-value">${selectedMission.camp}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <span class="sel-fact-label">Next Camp</span><span class="sel-fact-value">${selectedMission.nextCamp}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>
+      <span class="sel-fact-label">Progress</span><span class="sel-fact-value"><div class="progress-track"><div class="progress-fill" style="width:${selectedMission.pct}%;"></div></div><span class="pct-num">${selectedMission.pct}%</span></span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.5 2.5c2 0 4.5 1.5 6 5-1.5 4-5 7-7.5 8l-3-3c1-2.5 4-6 7-7.5 3.5-1.5 5-4 5-6Z"/></svg>
+      <span class="sel-fact-label">Confidence Gain</span><span class="sel-fact-value" style="color:var(--success); font-weight:600;">+${selectedMission.confidenceGain}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="sel-fact-label">Domain Impact</span><span class="sel-fact-value"><div class="sel-domain-dots">${selectedMission.domains.length ? selectedMission.domains.map(d=>`<span class="sel-domain-dot" style="color:${domainColors[d]||'var(--accent)'};"><span class="dot-icon">${domainIcons[d]||''}</span>${d}</span>`).join('') : '<span style="font-family:var(--font-body);font-size:11px;color:var(--text-faint);">No domain assigned — click Edit Mission</span>'}</div></span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10h14M3 14h18M5 18h14"/></svg>
+      <span class="sel-fact-label">Weather</span><span class="sel-fact-value">${selectedMission.weather}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span class="sel-fact-label">Forecast</span><span class="sel-fact-value">${selectedMission.forecast}</span>
+    </div>
+    <div class="sel-fact-row">
+      <svg class="sel-fact-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 1 2.6 6.4M3 12v6h6"/></svg>
+      <span class="sel-fact-label">Last Activity</span><span class="sel-fact-value">${selectedMission.lastActivity}</span>
+    </div>
+  </div>
+`;
+
+var editLinkEl = document.getElementById('editMissionLink');
+if(editLinkEl && selectedMission && selectedMission.key){
+  editLinkEl.onclick = function(e){
+    e.preventDefault();
+    if(typeof window.openEditMissionModal === 'function') window.openEditMissionModal(selectedMission.key);
+  };
+}
+
+(function renderRoute(){
+  try{
+    /* fromMission() only knows about sample-data 'milestones' — a real
+       mission has none, so it falls back to steps=1, which rounds any
+       progress >=50% up to a full 100%. Pull the mission's actual
+       checkpoint totals across all its blueprints instead. */
+    var realBps = (AetherStore.getBlueprints ? AetherStore.getBlueprints() : [])
+      .filter(function(b){ return b.missionKey === selectedMission.key; });
+    var totalSteps = 0, doneSteps = 0;
+    realBps.forEach(function(b){
+      var cps = AetherStore.getCheckpointsForBlueprint ? AetherStore.getCheckpointsForBlueprint(b.key) : [];
+      var states = AetherStore.getCheckpointStates ? AetherStore.getCheckpointStates(b.key) : {};
+      totalSteps += cps.length;
+      cps.forEach(function(c){ if(states[c.id]) doneSteps++; });
+    });
+
+    var base = MissionMountain.fromMission(selectedMission);
+    if(totalSteps > 0){
+      base.steps = totalSteps;
+      base.pct = Math.round((doneSteps / totalSteps) * 100);
+      base.checkpoints = null; /* let render() use steps+pct, not the sample-only milestones path */
+    }
+
+    var mm = MissionMountain.render(Object.assign(base, {variant:'detail'}));
+    document.getElementById('routeStage').innerHTML = mm.svg + mm.labelsHtml;
+  }catch(e){
+    document.getElementById('routeStage').innerHTML = '<div style="padding:20px;color:var(--text-dim);font-size:12px;">Mountain unavailable.</div>';
+  }
+})();
+
+document.getElementById('milestoneList').innerHTML = selectedMission.milestones.map(ms=>`
+  <div class="checklist-item">
+    <span class="checklist-box"></span>
+    <div class="checklist-body"><span class="checklist-name">${ms.name}</span></div>
+    <span class="checklist-due">${ms.due}</span>
+  </div>`).join('');
+
+document.getElementById('evidenceList').innerHTML = selectedMission.evidence.map(ev=>`
+  <div class="evidence-row">
+    <svg class="evidence-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-10"/></svg>
+    <div><div class="evidence-name">${ev.name}</div><div class="evidence-sub">${ev.sub}</div></div>
+  </div>`).join('');
+
+const riskMission = blockedMissions.length ? blockedMissions[0] : null;
+document.getElementById('recoveryBody').innerHTML = riskMission ? `
+  <div class="recovery-warn">No progress detected on <strong>${riskMission.name}</strong> for ${riskMission.stalledDays} days</div>
+  <div class="recovery-plan-label">Recovery Plan</div>
+  <div class="recovery-step"><span class="recovery-step-num">1</span><span class="recovery-step-text">Reduce scope</span></div>
+  <div class="recovery-step"><span class="recovery-step-num">2</span><span class="recovery-step-text">${riskMission.recoveryAction}</span></div>
+  <div class="recovery-step"><span class="recovery-step-num">3</span><span class="recovery-step-text">Submit required evidence</span></div>
+  <div class="recovery-step"><span class="recovery-step-num">4</span><span class="recovery-step-text">Resume climb</span></div>
+` : `<div class="recovery-warn" style="color:var(--success);">No missions currently require recovery action.</div>`;
+
+const impactColor = {High:'var(--danger)', Medium:'var(--warning)', Low:'var(--text-dim)'};
+
+document.getElementById('blockedTable').innerHTML = `
+  <div class="blocked-row head"><span>Mission</span><span>Blocker</span><span>Days Stalled</span><span>Recovery Action</span><span>Impact</span></div>
+  ${blockedMissions.length ? blockedMissions.map(m=>`
+    <div class="blocked-row">
+      <div class="blocked-mission"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg><span class="blocked-mission-name">${m.name}</span></div>
+      <span class="blocked-reason">${m.blocker}</span>
+      <span class="blocked-days">${m.stalledDays}</span>
+      <span class="blocked-action">${m.recoveryAction}</span>
+      <span class="blocked-impact" style="color:${impactColor[m.impact]||'var(--text-dim)'};"><span class="blocked-impact-dot" style="background:${impactColor[m.impact]||'var(--text-dim)'};"></span>${m.impact}</span>
+    </div>`).join('') : '<div class="blocked-row"><span style="color:var(--text-dim); font-family:var(--font-body); font-size:12.5px;">No blocked missions. Every route is open.</span></div>'}
+`;
+
+} /* end else (missions.length > 0) */
+</script>
+<!-- ============================================================
+     PHASE 4A — MISSION CREATION MODAL
+     ============================================================ -->
+<style>
+/* Modal overlay */
+.modal-overlay{
+  position:fixed; inset:0; z-index:200;
+  background:rgba(2,8,20,0.88);
+  backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity 200ms ease;
+}
+.modal-overlay.open{ opacity:1; pointer-events:all; }
+
+.modal-box{
+  background:var(--bg-panel);
+  border:1px solid var(--border-accent);
+  border-radius:var(--radius-lg);
+  box-shadow:0 0 60px rgba(74,168,255,0.15), var(--shadow-panel);
+  width:min(600px, 94vw);
+  max-height:90vh;
+  overflow-y:auto;
+  display:flex; flex-direction:column;
+  transform:translateY(16px);
+  transition:transform 200ms ease;
+}
+.modal-overlay.open .modal-box{ transform:translateY(0); }
+
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px 24px 16px;
+  border-bottom:1px solid var(--border-subtle);
+  flex-shrink:0;
+}
+.modal-header-left{ display:flex; flex-direction:column; gap:3px; }
+.modal-title{
+  font-family:var(--font-display); font-size:15px; font-weight:600;
+  letter-spacing:0.1em; text-transform:uppercase; color:var(--text-primary);
+}
+.modal-sub{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent);
+}
+.modal-close{
+  width:32px; height:32px; border-radius:50%;
+  background:transparent; border:1px solid var(--border-strong);
+  color:var(--text-secondary); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:var(--transition);
+}
+.modal-close:hover{ border-color:var(--danger); color:var(--danger); }
+.modal-close svg{ width:14px; height:14px; }
+
+.modal-body{ padding:24px; display:flex; flex-direction:column; gap:18px; }
+
+.form-group{ display:flex; flex-direction:column; gap:6px; }
+.form-label{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--text-dim);
+}
+.form-label span{ color:var(--danger); margin-left:2px; }
+.form-input, .form-textarea, .form-select{
+  background:var(--bg-panel-alt);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-md);
+  color:var(--text-primary);
+  font-family:var(--font-body); font-size:13px;
+  padding:10px 14px;
+  transition:var(--transition);
+  width:100%;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(74,168,255,0.15);
+}
+.form-input::placeholder, .form-textarea::placeholder{ color:var(--text-faint); }
+.form-textarea{ resize:vertical; min-height:80px; line-height:1.6; }
+.form-select{ cursor:pointer; }
+.form-select option{ background:var(--bg-panel); color:var(--text-primary); }
+
+/* Domain multi-select pills */
+.domain-picker{ display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+.domain-pill{
+  padding:6px 14px; border-radius:var(--radius-pill);
+  border:1px solid var(--border-strong);
+  background:transparent;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--text-secondary);
+  cursor:pointer; transition:var(--transition);
+}
+.domain-pill:hover{ border-color:var(--accent); color:var(--accent-glow); }
+.domain-pill.selected{
+  background:rgba(74,168,255,0.15);
+  border-color:var(--accent);
+  color:var(--accent-glow);
+}
+
+/* Icon selector */
+.icon-picker{ display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+.icon-option{
+  width:40px; height:40px; border-radius:var(--radius-md);
+  border:1px solid var(--border-strong);
+  background:var(--bg-panel-alt);
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:var(--transition); color:var(--text-secondary);
+}
+.icon-option:hover{ border-color:var(--accent); }
+.icon-option.selected{ border-color:var(--accent); background:rgba(74,168,255,0.12); color:var(--accent); }
+.icon-option svg{ width:18px; height:18px; }
+
+/* Form row helper */
+.form-row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+.mtn-style-picker{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.mtn-style-swatch{ display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; padding:4px; border-radius:8px; border:1px solid transparent; transition:border-color .15s, background .15s; }
+.mtn-style-swatch:hover{ background:rgba(120,150,200,0.08); }
+.mtn-style-swatch.selected{ border-color:var(--accent); background:rgba(74,168,255,0.1); }
+.mtn-style-swatch .chip{ width:46px; height:30px; border-radius:6px; overflow:hidden; border:1px solid rgba(120,150,200,0.25); }
+.mtn-style-swatch .chip svg{ width:100%; height:100%; display:block; }
+.mtn-style-swatch .lab{ font-family:var(--font-mono,monospace); font-size:8px; letter-spacing:0.03em; color:var(--text-dim); white-space:nowrap; }
+.mtn-style-preview{ position:relative; width:100%; height:170px; border-radius:10px; overflow:hidden; border:1px solid rgba(120,150,200,0.2); background:#0a1322; }
+.mtn-style-preview svg{ width:100%; height:100%; display:block; }
+.modal-footer{
+  padding:16px 24px 20px;
+  border-top:1px solid var(--border-subtle);
+  display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0; gap:12px;
+}
+.modal-footer-note{
+  font-family:var(--font-mono); font-size:10px; color:var(--text-faint);
+  letter-spacing:0.06em;
+}
+.modal-footer-actions{ display:flex; gap:10px; }
+
+/* Inline validation */
+.form-error{
+  font-family:var(--font-mono); font-size:10px;
+  color:var(--danger); margin-top:2px;
+  display:none;
+}
+.form-group.has-error .form-input,
+.form-group.has-error .form-textarea{ border-color:var(--danger); }
+.form-group.has-error .form-error{ display:block; }
+
+/* Success flash */
+.modal-success{
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; padding:48px 24px; text-align:center;
+}
+.modal-success.show{ display:flex; }
+.modal-success-icon{
+  width:56px; height:56px; border-radius:50%;
+  background:rgba(61,220,132,0.12);
+  border:1px solid rgba(61,220,132,0.35);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--success);
+}
+.modal-success-icon svg{ width:26px; height:26px; }
+.modal-success-title{
+  font-family:var(--font-display); font-size:17px; font-weight:600;
+  letter-spacing:0.1em; color:var(--success);
+}
+.modal-success-sub{
+  font-family:var(--font-body); font-size:13px; color:var(--text-secondary);
+  max-width:340px; line-height:1.6;
+}
+
+/* Live badge on mission cards */
+.mcard-live-badge{
+  position:absolute; top:8px; right:8px;
+  font-family:var(--font-mono); font-size:8px; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--success);
+  background:rgba(61,220,132,0.1); border:1px solid rgba(61,220,132,0.25);
+  border-radius:var(--radius-pill); padding:2px 7px;
+}
+.mcard{ position:relative; }
+
+/* ---- Sample/Live data tag ---- */
+.data-tag{
+  position:absolute; top:10px; left:10px; z-index:2;
+  font-family:var(--font-mono); font-size:8.5px; font-weight:700; letter-spacing:0.1em;
+  padding:2px 7px; border-radius:99px; text-transform:uppercase;
+}
+.sample-tag{ background:rgba(255,184,77,0.14); color:var(--warning); border:1px solid rgba(255,184,77,0.35); }
+
+/* ---- Per-card delete button (real/live data only) ---- */
+.card-delete-btn{
+  position:absolute; top:8px; right:8px; z-index:2;
+  width:24px; height:24px; border-radius:7px;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(255,92,108,0.08); border:1px solid rgba(255,92,108,0.2);
+  color:var(--danger); cursor:pointer; opacity:0; transition:var(--transition);
+}
+.card-delete-btn svg{ width:12px; height:12px; }
+.mcard:hover .card-delete-btn{ opacity:1; }
+.card-delete-btn:hover{ background:rgba(255,92,108,0.2); border-color:rgba(255,92,108,0.5); }
+
+/* ---- Lightweight single-item confirm modal ---- */
+.mini-confirm-overlay{
+  position:fixed; inset:0; z-index:9500; background:rgba(2,8,20,0.82); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center;
+}
+.mini-confirm-overlay.open{ display:flex; }
+.mini-confirm-box{
+  width:100%; max-width:380px; background:var(--bg-panel); border:1px solid rgba(255,92,108,0.3);
+  border-radius:var(--radius-lg); padding:22px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.mini-confirm-title{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.mini-confirm-title svg{ width:17px; height:17px; color:var(--danger); }
+.mini-confirm-body{ font-family:var(--font-body); font-size:12.5px; color:var(--text-secondary); line-height:1.55; margin-bottom:18px; }
+.mini-confirm-body strong{ color:var(--text-primary); }
+.mini-confirm-actions{ display:flex; gap:10px; justify-content:flex-end; }
+</style>
+
+<!-- Lightweight single-item delete confirmation -->
+<div class="mini-confirm-overlay" id="miniConfirmOverlay">
+  <div class="mini-confirm-box">
+    <div class="mini-confirm-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+      Delete this?
+    </div>
+    <div class="mini-confirm-body" id="miniConfirmBody"></div>
+    <div class="mini-confirm-actions">
+      <button class="btn btn-ghost" onclick="closeMiniConfirm()">Cancel</button>
+      <button class="btn btn-danger-solid" id="miniConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Mission Creation Modal -->
+<div class="modal-overlay" id="newMissionModal">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <span class="modal-title" id="modalTitle">Create New Mission</span>
+        <span class="modal-sub">Phase 4A — Real Campaign Data</span>
+      </div>
+      <button class="modal-close" onclick="closeNewMissionModal()" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Form body -->
+    <div class="modal-body" id="missionFormBody">
+
+      <!-- Bulk paste toggle -->
+      <div class="form-group" style="margin-bottom:0;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-ghost" id="bulkMissionToggleBtn" onclick="toggleBulkMissionPaste()" style="font-size:11px; padding:8px 14px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+            Paste the whole mission instead
+          </button>
+          <button type="button" class="btn btn-ghost" id="rodTemplateToggleBtn" onclick="toggleRodTemplateBox()" style="font-size:11px; padding:8px 14px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            Get ROD prompt template
+          </button>
+        </div>
+
+        <div id="bulkMissionBox" style="display:none; flex-direction:column; gap:8px; margin-top:10px;">
+          <textarea id="bulkMissionInput" class="form-input" rows="12" style="font-family:var(--font-mono); font-size:12px; resize:vertical;"
+            placeholder="Paste the whole thing — mission fields and steps together. e.g.&#10;&#10;Mission Name: AETHER v1.0&#10;Tagline: ...&#10;Objective: ...&#10;Purpose: ...&#10;Definition of Done: ...&#10;&#10;Steps:&#10;1. First step (3)&#10;2. Second step (5)"></textarea>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary" onclick="fillMissionFromBulkText()" style="font-size:11px; padding:8px 14px;">Fill Form From Paste</button>
+            <span style="font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint);">Recognizes Mission Name, Tagline, Objective, Purpose, Definition of Done, and a Steps/Checklist section.</span>
+          </div>
+        </div>
+
+        <div id="rodTemplateBox" style="display:none; flex-direction:column; gap:8px; margin-top:10px;">
+          <span style="font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); line-height:1.6;">
+            Fill in your mission idea on the first line, send this whole block to ROD, then paste the reply into "Paste the whole mission instead" above.
+          </span>
+          <textarea id="rodTemplateText" class="form-input" rows="14" readonly style="font-family:var(--font-mono); font-size:11.5px; resize:vertical; color:var(--text-secondary);">I want to plan a mission called: [describe what you want to build/achieve, in your own words]
+
+Please answer using exactly this format, with these exact labels, so I can paste your answer straight into a form:
+
+Mission Name: [a short, clear name for this mission]
+Tagline: [one line — what this mission is really about]
+Objective: [what does success look like — be specific, describe outcomes, not feelings]
+Purpose: [the deeper reason this matters — not what I'll do, why it matters]
+Definition of Done: [specific and measurable — "I will know I'm done when..."]
+
+Steps:
+1. [first concrete step] (points 1-5 based on how much it matters)
+2. [second step] (points)
+3. [continue numbering every real step needed to complete this mission]</textarea>
+          <div>
+            <button type="button" class="btn btn-primary" id="copyRodTemplateBtn" onclick="copyRodTemplate()" style="font-size:11px; padding:8px 14px;">Copy Template</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mission Name -->
+      <div class="form-group" id="fg-name">
+        <label class="form-label" for="missionName">Mission Name <span>*</span></label>
+        <input type="text" id="missionName" class="form-input"
+          placeholder="e.g. AETHER Development, Hardware Store Growth, Financial Recovery"
+          maxlength="60" autocomplete="off"/>
+        <span class="form-error" id="err-name">Mission name is required.</span>
+      </div>
+
+      <!-- Tagline -->
+      <div class="form-group" id="fg-tagline">
+        <label class="form-label" for="missionTagline">Tagline <span>*</span></label>
+        <input type="text" id="missionTagline" class="form-input"
+          placeholder="One short line — what this mission is really about"
+          maxlength="80" autocomplete="off"/>
+        <span class="form-error" id="err-tagline">Tagline is required.</span>
+      </div>
+
+      <!-- Objective -->
+      <div class="form-group" id="fg-objective">
+        <label class="form-label" for="missionObjective">Objective <span>*</span></label>
+        <textarea id="missionObjective" class="form-textarea"
+          placeholder="What does success look like? Be specific. Not feelings — outcomes."
+          maxlength="300"></textarea>
+        <span class="form-error" id="err-objective">Objective is required.</span>
+      </div>
+
+
+      <!-- ── Campaign DNA ── -->
+      <div style="margin-top:4px;padding:14px 16px;background:rgba(74,168,255,0.04);border:1px solid rgba(74,168,255,0.1);border-radius:10px;">
+        <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.16em;color:var(--text-faint);text-transform:uppercase;margin-bottom:14px;">Campaign DNA — Why This Matters</div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Purpose — Why are you doing this?</label>
+          <textarea id="missionPurpose" class="form-textarea" maxlength="200"
+            placeholder="The deeper reason. Not what you'll do — why it matters to your life." style="min-height:56px;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">Definition of Done — What does completion look like?</label>
+          <textarea id="missionDefinitionOfDone" class="form-textarea" maxlength="200"
+            placeholder="Specific, measurable. 'I will know I'm done when...'" style="min-height:56px;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Lessons Learned (fill after completion)</label>
+          <textarea id="missionLessons" class="form-textarea" maxlength="300"
+            placeholder="What did this campaign teach you? Fill this when you reach the summit." style="min-height:56px;"></textarea>
+        </div>
+      </div>
+
+      <!-- Forecast + Icon row -->
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="missionForecast">Estimated Timeline</label>
+          <select id="missionForecast" class="form-select">
+            <option value="2 Weeks">2 Weeks</option>
+            <option value="3 Weeks">3 Weeks</option>
+            <option value="4 Weeks">4 Weeks</option>
+            <option value="6 Weeks" selected>6 Weeks</option>
+            <option value="8 Weeks">8 Weeks</option>
+            <option value="10 Weeks">10 Weeks</option>
+            <option value="12 Weeks">12 Weeks</option>
+            <option value="16 Weeks">16 Weeks</option>
+            <option value="6 Months">6 Months</option>
+            <option value="Ongoing">Ongoing</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mission Icon</label>
+          <div class="icon-picker" id="iconPicker">
+            <div class="icon-option selected" data-icon="mountain" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+            </div>
+            <div class="icon-option" data-icon="rocket" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09Z"/><path d="m3.5 11.5 5 5M12 2 2 12l6.5 6.5c3 3 6.5 2 10.5-2 4-4 5-7.5 2-10.5L12 2Z"/></svg>
+            </div>
+            <div class="icon-option" data-icon="heart" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            </div>
+            <div class="icon-option" data-icon="hexagon" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/></svg>
+            </div>
+            <div class="icon-option" data-icon="shield" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+            </div>
+            <div class="icon-option" data-icon="star" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div class="icon-option" data-icon="book" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            </div>
+            <div class="icon-option" data-icon="target" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+            </div>
+            <div class="icon-option" data-icon="leaf" onclick="selectIcon(this)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mountain style picker + live preview -->
+      <div class="form-group">
+        <label class="form-label">Mountain Style <span style="color:var(--text-faint);font-weight:400;">(the look of this mission's mountain)</span></label>
+        <div class="mtn-style-picker" id="mtnStylePicker"><!-- JS fills swatches --></div>
+        <div class="mtn-style-preview" id="mtnStylePreview"><!-- JS live mountain --></div>
+      </div>
+
+      <!-- Domain tags -->
+      <div class="form-group">
+        <label class="form-label">Domains Affected <span style="color:var(--text-faint);font-weight:400;">(select all that apply)</span></label>
+        <div class="domain-picker" id="domainPicker">
+          <button type="button" class="domain-pill" data-domain="Health" onclick="toggleDomain(this)">Health</button>
+          <button type="button" class="domain-pill" data-domain="Finance" onclick="toggleDomain(this)">Finance</button>
+          <button type="button" class="domain-pill" data-domain="Business" onclick="toggleDomain(this)">Business</button>
+          <button type="button" class="domain-pill" data-domain="Relationships" onclick="toggleDomain(this)">Relationships</button>
+          <button type="button" class="domain-pill" data-domain="Learning" onclick="toggleDomain(this)">Learning</button>
+          <button type="button" class="domain-pill" data-domain="Skills & Mastery" onclick="toggleDomain(this)">Skills & Mastery</button>
+          <button type="button" class="domain-pill" data-domain="Character & Discipline" onclick="toggleDomain(this)">Character & Discipline</button>
+          <button type="button" class="domain-pill" data-domain="Spiritual Life" onclick="toggleDomain(this)">Spiritual Life</button>
+          <button type="button" class="domain-pill" data-domain="Purpose & Mission" onclick="toggleDomain(this)">Purpose & Mission</button>
+          <button type="button" class="domain-pill" data-domain="Environment & Lifestyle" onclick="toggleDomain(this)">Environment & Lifestyle</button>
+        </div>
+      </div><!-- /modal-body -->
+
+    <!-- Success state (shown after save) -->
+    <div class="modal-success" id="missionSuccessState">
+      <div class="modal-success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+      </div>
+      <div class="modal-success-title" id="successMissionName">Mission Created</div>
+      <div class="modal-success-sub">Your mission has been added to the campaign. Now build a blueprint to define how you'll climb it.</div>
+      <div style="display:flex; gap:10px; margin-top:4px;">
+        <button class="btn btn-primary" onclick="goToBlueprints()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+          Add Blueprint
+        </button>
+        <button class="btn btn-ghost" onclick="createAnotherMission()">Create Another Mission</button>
+        <button class="btn btn-ghost" onclick="closeNewMissionModal()">Done</button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer" id="missionFormFooter">
+      <span class="modal-footer-note">Saved to local storage. No server required.</span>
+      <div class="modal-footer-actions">
+        <button class="btn btn-ghost" onclick="closeNewMissionModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNewMission()" id="saveMissionBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+          Create Mission
+        </button>
+      </div>
+    </div><!-- /modal-footer -->
+  </div><!-- /modal-box -->
+</div><!-- /modal-overlay -->
+</div><!-- /modal-overlay-outer -->
+
+<script>
+(function(){
+  /* ---- State ---- */
+  var selectedIcon     = 'mountain';
+  var selectedDomains  = [];
+  var selectedStyle    = 'alpine';
+  var styleManuallyChosen = false; /* true once the user explicitly clicks a style swatch */
+  var lastSavedMission = null;
+  var editingMissionKey = null; /* null = creating a new mission; a key = editing that existing one */
+
+  /* Suggests a mountain style based on the first domain picked, so the
+     mountain's look has some real connection to what the mission is
+     about instead of always defaulting to Alpine. Purely a starting
+     suggestion — selectMtnStyle() always wins once the user picks
+     one themselves. 10 domains share 8 styles, so a couple pairs
+     intentionally overlap where the mood genuinely fits both. */
+  var DOMAIN_STYLE_SUGGESTION = {
+    'Health': 'snow',
+    'Finance': 'emerald',
+    'Business': 'obsidian',
+    'Relationships': 'crimson',
+    'Learning': 'twilight',
+    'Skills & Mastery': 'alpine',
+    'Character & Discipline': 'volcanic',
+    'Spiritual Life': 'desert',
+    'Purpose & Mission': 'twilight',
+    'Environment & Lifestyle': 'desert'
+  };
+
+  /* ---- Open / Close ---- */
+  window.openNewMissionModal = function(){
+    editingMissionKey = null;
+    resetMissionForm();
+    document.getElementById('modalTitle').textContent = 'Create New Mission';
+    document.getElementById('saveMissionBtn').lastChild.textContent = ' Create Mission';
+    document.getElementById('newMissionModal').classList.add('open');
+    buildStylePicker();
+    updateMountainPreview();
+    setTimeout(function(){ document.getElementById('missionName').focus(); }, 220);
+  };
+
+  /* Opens the same modal used to create a mission, but pre-filled with
+     an existing mission's real current data — including its domains —
+     so editing (like assigning a domain after the fact) actually works.
+     This was previously a dead link; it now genuinely edits. */
+  window.openEditMissionModal = function(missionKey){
+    var mission = (AetherStore.getAllMissions ? AetherStore.getAllMissions() : AetherStore.getMissions())
+      .find(function(m){ return m.key === missionKey; });
+    if(!mission) return;
+
+    editingMissionKey = missionKey;
+    resetMissionForm();
+
+    document.getElementById('missionName').value = mission.name || '';
+    document.getElementById('missionTagline').value = mission.tagline || '';
+    document.getElementById('missionObjective').value = mission.objective || '';
+    document.getElementById('missionPurpose').value = mission.purpose || '';
+    document.getElementById('missionDefinitionOfDone').value = mission.definitionOfDone || '';
+    document.getElementById('missionLessons').value = mission.lessonsLearned || '';
+    document.getElementById('missionForecast').value = mission.forecast || '6 Weeks';
+
+    selectedIcon = mission.icon || 'mountain';
+    document.querySelectorAll('.icon-option').forEach(function(o){
+      o.classList.toggle('selected', o.getAttribute('data-icon') === selectedIcon);
+    });
+
+    selectedStyle = mission.mountainStyle || 'alpine';
+    styleManuallyChosen = true; /* editing an existing mission — never auto-override its established look */
+
+    selectedDomains = (mission.domains || []).slice();
+    document.querySelectorAll('.domain-pill').forEach(function(p){
+      p.classList.toggle('selected', selectedDomains.indexOf(p.getAttribute('data-domain')) !== -1);
+    });
+
+    document.getElementById('modalTitle').textContent = 'Edit Mission';
+    document.getElementById('saveMissionBtn').lastChild.textContent = ' Save Changes';
+    document.getElementById('newMissionModal').classList.add('open');
+    buildStylePicker();
+    updateMountainPreview();
+  };
+
+  /* ---- Mountain style picker + live preview ---- */
+  function buildStylePicker(){
+    var picker = document.getElementById('mtnStylePicker');
+    if(!picker || typeof MissionMountain === 'undefined') return;
+    picker.innerHTML = MissionMountain.STYLES.map(function(s){
+      /* tiny chip preview of each style */
+      var chip = MissionMountain.render({ name:'Preview', domain:'', steps:6, pct:55, style:s.id, variant:'card' });
+      return '<div class="mtn-style-swatch'+(s.id===selectedStyle?' selected':'')+'" data-style="'+s.id+'" onclick="selectMtnStyle(this)">'+
+        '<div class="chip">'+chip.svg+'</div><span class="lab">'+s.label+'</span></div>';
+    }).join('');
+  }
+  window.selectMtnStyle = function(el){
+    document.querySelectorAll('.mtn-style-swatch').forEach(function(o){ o.classList.remove('selected'); });
+    el.classList.add('selected');
+    selectedStyle = el.getAttribute('data-style');
+    styleManuallyChosen = true; /* user made an explicit choice — domain selection should no longer override it */
+    updateMountainPreview();
+  };
+  function updateMountainPreview(){
+    var box = document.getElementById('mtnStylePreview');
+    if(!box || typeof MissionMountain === 'undefined') return;
+    var nm = (document.getElementById('missionName').value || 'New Mission').trim();
+    var dom = selectedDomains[0] || '';
+    /* preview uses a default step count of 6 until checkpoints exist */
+    var out = MissionMountain.render({ name:nm, domain:dom, steps:6, pct:0, style:selectedStyle, variant:'detail' });
+    box.innerHTML = out.svg + out.labelsHtml;
+  }
+  /* live-update preview as the name is typed */
+  document.addEventListener('input', function(e){
+    if(e.target && e.target.id === 'missionName') updateMountainPreview();
+  });
+
+  window.closeNewMissionModal = function(){
+    editingMissionKey = null;
+    document.getElementById('newMissionModal').classList.remove('open');
+  };
+
+  /* Close on backdrop click */
+  document.getElementById('newMissionModal').addEventListener('click', function(e){
+    if(e.target === this) window.closeNewMissionModal();
+  });
+
+  /* Close on Escape */
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') window.closeNewMissionModal();
+  });
+
+  /* ---- Icon picker ---- */
+  window.selectIcon = function(el){
+    document.querySelectorAll('.icon-option').forEach(function(o){ o.classList.remove('selected'); });
+    el.classList.add('selected');
+    selectedIcon = el.getAttribute('data-icon');
+  };
+
+  /* ---- Domain picker ---- */
+  window.toggleDomain = function(el){
+    var domain = el.getAttribute('data-domain');
+    el.classList.toggle('selected');
+    if(selectedDomains.indexOf(domain) === -1){
+      selectedDomains.push(domain);
+    } else {
+      selectedDomains = selectedDomains.filter(function(d){ return d !== domain; });
+    }
+
+    /* Suggest a style matching the first selected domain — but only
+       if the user hasn't already made their own choice. Re-runs on
+       every toggle so removing the first domain and picking a
+       different one first still suggests correctly. */
+    if(!styleManuallyChosen){
+      var suggestion = selectedDomains.length ? DOMAIN_STYLE_SUGGESTION[selectedDomains[0]] : null;
+      if(suggestion && suggestion !== selectedStyle){
+        selectedStyle = suggestion;
+        var swatch = document.querySelector('.mtn-style-swatch[data-style="'+suggestion+'"]');
+        if(swatch){
+          document.querySelectorAll('.mtn-style-swatch').forEach(function(o){ o.classList.remove('selected'); });
+          swatch.classList.add('selected');
+        }
+      }
+    }
+
+    updateMountainPreview();
+  };
+
+  /* ---- Validation ---- */
+  function validateField(groupId, inputId, errorId){
+    var val = (document.getElementById(inputId).value || '').trim();
+    var group = document.getElementById(groupId);
+    if(!val){
+      group.classList.add('has-error');
+      return false;
+    }
+    group.classList.remove('has-error');
+    return true;
+  }
+
+  /* ============================================================
+     BULK PASTE — fills the whole mission form (and, if a Steps
+     section is included, stages a companion blueprint + checkpoints
+     to be created automatically right after the mission saves).
+     ============================================================ */
+  var pendingBulkSteps = [];
+
+  window.toggleBulkMissionPaste = function(){
+    var box = document.getElementById('bulkMissionBox');
+    var open = box.style.display === 'flex';
+    box.style.display = open ? 'none' : 'flex';
+    document.getElementById('bulkMissionToggleBtn').textContent = open ? 'Paste the whole mission instead' : 'Hide bulk paste';
+    if(!open) document.getElementById('bulkMissionInput').focus();
+  };
+
+  window.toggleRodTemplateBox = function(){
+    var box = document.getElementById('rodTemplateBox');
+    var open = box.style.display === 'flex';
+    box.style.display = open ? 'none' : 'flex';
+    document.getElementById('rodTemplateToggleBtn').textContent = open ? 'Get ROD prompt template' : 'Hide template';
+  };
+
+  window.copyRodTemplate = function(){
+    var text = document.getElementById('rodTemplateText').value;
+    var btn = document.getElementById('copyRodTemplateBtn');
+    function showCopied(){
+      var original = 'Copy Template';
+      btn.textContent = 'Copied ✓';
+      setTimeout(function(){ btn.textContent = original; }, 1600);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(showCopied, function(){
+        var ta = document.getElementById('rodTemplateText');
+        ta.focus(); ta.select();
+        try{ document.execCommand('copy'); showCopied(); }catch(e){}
+      });
+    } else {
+      var ta = document.getElementById('rodTemplateText');
+      ta.focus(); ta.select();
+      try{ document.execCommand('copy'); showCopied(); }catch(e){}
+    }
+  };
+
+  /* Recognized field labels map to their input IDs. Matching is
+     case-insensitive and tolerant of minor label variations. Each
+     value continues across multiple lines until the next recognized
+     label or the Steps/Checklist marker begins. */
+  var MISSION_FIELD_MAP = [
+    { input: 'missionName', patterns: ['mission name', 'name'] },
+    { input: 'missionTagline', patterns: ['tagline'] },
+    { input: 'missionObjective', patterns: ['objective'] },
+    { input: 'missionPurpose', patterns: ['purpose'] },
+    { input: 'missionDefinitionOfDone', patterns: ['definition of done', 'done when', 'definition'] }
+  ];
+
+  function parseChecklistLines(raw){
+    var lines = raw.split('\n');
+    var results = [];
+    lines.forEach(function(line){
+      var t = line.trim();
+      if(!t) return;
+      if(/^\|?[\s:|-]+\|?$/.test(t)) return;
+      var name = t, conf = null;
+      if(t.charAt(0) === '|'){
+        var cells = t.split('|').map(function(c){ return c.trim(); }).filter(function(c){ return c !== ''; });
+        var isHeaderRow = cells.some(function(c){ return /^(#|step|checkpoint|name|points?|pts?)$/i.test(c); });
+        if(isHeaderRow) return;
+        if(cells.length >= 2){
+          var last = cells[cells.length - 1];
+          if(/^\d+$/.test(last)){ conf = parseInt(last, 10); cells.pop(); }
+          if(cells.length > 1 && /^\d+$/.test(cells[0])) cells.shift();
+          name = cells.join(' ').trim();
+        }
+      } else {
+        name = name.replace(/^\s*(\d+[\.\)]|[-*•])\s*/, '');
+        var m = name.match(/[\(\-—]\s*\+?(\d+)\s*(pts?|points?)?\s*\)?\s*$/i);
+        if(m){ conf = parseInt(m[1], 10); name = name.slice(0, m.index).trim(); }
+      }
+      name = name.replace(/\s{2,}/g, ' ').trim();
+      if(!name) return;
+      results.push({ name: name, confidenceValue: (conf && conf > 0 && conf <= 20) ? conf : 3 });
+    });
+    return results;
+  }
+
+  function parseMissionBulkText(raw){
+    var stepsMarker = raw.match(/^\s*(steps|checklist)\s*:?\s*$/im);
+    var headerText = raw, stepsText = '';
+    if(stepsMarker){
+      headerText = raw.slice(0, stepsMarker.index);
+      stepsText = raw.slice(stepsMarker.index + stepsMarker[0].length);
+    }
+
+    var fields = {};
+    var lines = headerText.split('\n');
+    var currentField = null;
+    lines.forEach(function(line){
+      var matched = null;
+      for(var i=0;i<MISSION_FIELD_MAP.length;i++){
+        var f = MISSION_FIELD_MAP[i];
+        for(var j=0;j<f.patterns.length;j++){
+          var re = new RegExp('^\\s*'+f.patterns[j]+'\\s*:\\s*(.*)$', 'i');
+          var m = line.match(re);
+          if(m){ matched = { input: f.input, rest: m[1] }; break; }
+        }
+        if(matched) break;
+      }
+      if(matched){
+        currentField = matched.input;
+        fields[currentField] = (fields[currentField] ? fields[currentField] + ' ' : '') + matched.rest.trim();
+      } else if(currentField && line.trim()){
+        fields[currentField] += ' ' + line.trim();
+      }
+    });
+
+    var steps = stepsText.trim() ? parseChecklistLines(stepsText) : [];
+    return { fields: fields, steps: steps };
+  }
+
+  window.fillMissionFromBulkText = function(){
+    var raw = document.getElementById('bulkMissionInput').value || '';
+    if(!raw.trim()) return;
+    var parsed = parseMissionBulkText(raw);
+
+    MISSION_FIELD_MAP.forEach(function(f){
+      if(parsed.fields[f.input]) document.getElementById(f.input).value = parsed.fields[f.input];
+    });
+    pendingBulkSteps = parsed.steps;
+
+    var noteEl = document.getElementById('bulkMissionFillNote');
+    if(!noteEl){
+      noteEl = document.createElement('div');
+      noteEl.id = 'bulkMissionFillNote';
+      noteEl.style.cssText = 'font-family:var(--font-mono);font-size:10.5px;color:var(--success);margin-top:8px;';
+      document.getElementById('bulkMissionBox').appendChild(noteEl);
+    }
+    noteEl.textContent = pendingBulkSteps.length
+      ? 'Form filled — ' + pendingBulkSteps.length + ' step(s) will also create a blueprint automatically once you save.'
+      : 'Form filled. No steps section found — just the mission fields.';
+
+    toggleBulkMissionPaste();
+    document.getElementById('missionName').scrollIntoView({behavior:'smooth', block:'start'});
+  };
+
+  /* ---- Submit ---- */
+  window.submitNewMission = function(){
+    var nameOk      = validateField('fg-name',      'missionName',      'err-name');
+    var taglineOk   = validateField('fg-tagline',   'missionTagline',   'err-tagline');
+    var objectiveOk = validateField('fg-objective', 'missionObjective', 'err-objective');
+    if(!nameOk || !taglineOk || !objectiveOk) return;
+
+    var data = {
+      name:      document.getElementById('missionName').value.trim(),
+      tagline:   document.getElementById('missionTagline').value.trim(),
+      objective:        document.getElementById('missionObjective').value.trim(),
+      purpose:          (document.getElementById('missionPurpose').value||'').trim(),
+      definitionOfDone: (document.getElementById('missionDefinitionOfDone').value||'').trim(),
+      lessonsLearned:   (document.getElementById('missionLessons').value||'').trim(),
+      forecast:         document.getElementById('missionForecast').value,
+      icon:      selectedIcon,
+      domains:   selectedDomains.slice(),
+      mountainStyle: selectedStyle
+    };
+
+    var btn = document.getElementById('saveMissionBtn');
+
+    if(editingMissionKey){
+      /* Edit mode — update the existing mission in place (this is what
+         actually lets you assign/change domains after a mission was
+         already created) and just close, no "mission created" success
+         screen or blueprint-creation prompt since nothing new exists. */
+      btn.disabled = true;
+      AetherStore.updateMission(editingMissionKey, data);
+      editingMissionKey = null;
+      window.closeNewMissionModal();
+      /* Full reload so every widget on the page (mission cards, Domain
+         Impact dots, stat strip) reflects the change immediately —
+         no artificial delay since there's no success screen to view first. */
+      window.location.reload();
+      return;
+    }
+
+    btn.disabled = true;
+    btn.lastChild.textContent = ' Saving…';
+
+    var saved = AetherStore.saveMission(data);
+    lastSavedMission = saved;
+
+    /* If a Steps section was pasted, automatically create a companion
+       blueprint carrying those steps, so one paste sets up the whole
+       mission end to end. */
+    var createdBlueprint = null;
+    if(pendingBulkSteps.length > 0){
+      createdBlueprint = AetherStore.saveBlueprint({
+        name: saved.name + ' Foundation',
+        missionKey: saved.key,
+        missionName: saved.name,
+        objective: saved.objective
+      });
+      pendingBulkSteps.forEach(function(s){
+        AetherStore.saveCheckpoint({
+          name: s.name,
+          blueprintKey: createdBlueprint.key,
+          confidenceValue: s.confidenceValue
+        });
+      });
+    }
+
+    /* Show success state */
+    document.getElementById('missionFormBody').style.display  = 'none';
+    document.getElementById('missionFormFooter').style.display = 'none';
+    document.getElementById('successMissionName').textContent = saved.name + ' — Mission Created' +
+      (createdBlueprint ? ' (+ Blueprint with ' + pendingBulkSteps.length + ' step(s))' : '');
+    document.getElementById('missionSuccessState').classList.add('show');
+
+    pendingBulkSteps = [];
+
+    /* Reload mission cards so the new one appears */
+    if(typeof window.reloadMissions === 'function') window.reloadMissions();
+  };
+
+  /* ---- Post-save actions ---- */
+  window.goToBlueprints = function(){
+    if(lastSavedMission){
+      /* Pass mission key so blueprints.html can pre-select it */
+      sessionStorage.setItem('aether_new_bp_mission', lastSavedMission.key);
+    }
+    window.location.href = 'blueprints.html';
+  };
+
+  window.createAnotherMission = function(){
+    document.getElementById('missionFormBody').style.display  = '';
+    document.getElementById('missionFormFooter').style.display = '';
+    document.getElementById('missionSuccessState').classList.remove('show');
+    resetMissionForm();
+    document.getElementById('missionName').focus();
+  };
+
+  function resetMissionForm(){
+    styleManuallyChosen = false;
+    document.getElementById('missionName').value      = '';
+    document.getElementById('missionTagline').value   = '';
+    document.getElementById('missionObjective').value = '';
+    document.getElementById('missionPurpose').value = '';
+    document.getElementById('missionDefinitionOfDone').value = '';
+    document.getElementById('missionLessons').value = '';
+    document.getElementById('missionForecast').value  = '6 Weeks';
+    pendingBulkSteps = [];
+    var bulkInput = document.getElementById('bulkMissionInput');
+    if(bulkInput) bulkInput.value = '';
+    var fillNote = document.getElementById('bulkMissionFillNote');
+    if(fillNote) fillNote.textContent = '';
+    var bulkBox = document.getElementById('bulkMissionBox');
+    if(bulkBox && bulkBox.style.display === 'flex') window.toggleBulkMissionPaste();
+    var templateBox = document.getElementById('rodTemplateBox');
+    if(templateBox && templateBox.style.display === 'flex') window.toggleRodTemplateBox();
+    /* Reset icon */
+    document.querySelectorAll('.icon-option').forEach(function(o){ o.classList.remove('selected'); });
+    var mountainOpt = document.querySelector('.icon-option[data-icon="mountain"]');
+    if(mountainOpt) mountainOpt.classList.add('selected');
+    selectedIcon = 'mountain';
+    /* Reset domains */
+    selectedDomains = [];
+    document.querySelectorAll('.domain-pill').forEach(function(p){ p.classList.remove('selected'); });
+    /* Reset mountain style */
+    selectedStyle = 'alpine';
+    /* Reset errors */
+    document.querySelectorAll('.form-group.has-error').forEach(function(g){ g.classList.remove('has-error'); });
+    /* Reset success state */
+    document.getElementById('missionFormBody').style.display   = '';
+    document.getElementById('missionFormFooter').style.display = '';
+    document.getElementById('missionSuccessState').classList.remove('show');
+    var btn = document.getElementById('saveMissionBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg> Create Mission';
+  }
+
+  /* ---- Expose reloadMissions for post-save refresh ---- */
+  /* The main page script builds the mission grid; we hook into it
+     by re-running the page init. Simple: just reload the page. */
+  window.reloadMissions = function(){
+    /* Re-build the mission cards from the now-updated store */
+    /* We refresh the card grid without a full page reload */
+    setTimeout(function(){
+      /* Trigger a full re-init — easiest reliable method for the
+         existing complex page script that has many interdependencies */
+      window.location.reload();
+    }, 1200);
+  };
+
+})();
+</script>
+<script>
+/* ---- Lightweight single-item confirm modal (reusable) ---- */
+function openMiniConfirm(bodyHtml, onConfirm){
+  document.getElementById('miniConfirmBody').innerHTML = bodyHtml;
+  var overlay = document.getElementById('miniConfirmOverlay');
+  overlay.classList.add('open');
+  var btn = document.getElementById('miniConfirmBtn');
+  btn.onclick = function(){ onConfirm(); closeMiniConfirm(); };
+}
+function closeMiniConfirm(){
+  document.getElementById('miniConfirmOverlay').classList.remove('open');
+}
+document.getElementById('miniConfirmOverlay').addEventListener('click', function(e){
+  if(e.target === this) closeMiniConfirm();
+});
+
+/* ---- Delete a single mission (cascades to its blueprints + checkpoints) ---- */
+function confirmDeleteMission(key, name){
+  openMiniConfirm(
+    'Deletes <strong>"' + name + '"</strong> permanently — along with every blueprint and step under it. This can\'t be undone.',
+    function(){
+      AetherStore.deleteMission(key);
+      window.location.reload();
+    }
+  );
+}
+</script>
+<script>
+/* Sync the sidebar blocker badge to the real open-blocker count */
+(function syncBlockerBadge(){
+  var badge = document.getElementById('navBlockerBadge');
+  if(!badge) return;
+  var bk = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  badge.textContent = bk.filter(function(b){ return b.status === 'open'; }).length;
+})();
+</script>
+<script src="aether-quotes.js"></script>
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script src="aether-nav.js"></script>
+
+<script>
+/* Deep-link support: ?highlight=<missionKey> from Command Deck's
+   Threats/Opportunities panels scrolls to and highlights that mission. */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var key = params.get('highlight');
+  if(!key) return;
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      var card = document.querySelector('[data-mission="'+CSS.escape(key)+'"]');
+      if(!card) return;
+      card.scrollIntoView({behavior:'smooth', block:'center'});
+      card.classList.add('deep-highlight');
+    }, 200);
+  });
+})();
+</script>
+</body>

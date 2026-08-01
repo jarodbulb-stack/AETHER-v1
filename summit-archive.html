@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Summit Archive</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<script src="intelligenceEngine.js"></script>
+<style>
+/* Summit Archive specific styles */
+
+.archive-search{
+  display:flex;gap:10px;align-items:center;
+  background:var(--bg-panel-alt);border:1px solid var(--border-strong);
+  border-radius:10px;padding:10px 16px;margin-bottom:0;
+}
+.archive-search-input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--text-primary);font-family:var(--font-body);font-size:14px;
+}
+.archive-search-input::placeholder{color:var(--text-faint);}
+.archive-search-results{
+  display:flex;flex-direction:column;gap:8px;
+}
+.archive-result-card{
+  padding:14px 16px;background:var(--bg-panel);
+  border:1px solid var(--border-subtle);border-radius:10px;
+  cursor:pointer;transition:.15s;
+}
+.archive-result-card:hover{border-color:rgba(74,168,255,0.3);}
+.archive-result-type{font-family:var(--font-mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-faint);margin-bottom:3px;}
+.archive-result-title{font-size:14px;font-weight:600;color:var(--text-primary);}
+.archive-result-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+.archive-result-highlight{color:var(--accent);}
+
+.archive-hero{
+  text-align:center;padding:40px 0 32px;
+  border-bottom:1px solid var(--border-subtle);
+  margin-bottom:28px;
+}
+.archive-hero-count{
+  font-family:var(--font-display);font-size:64px;font-weight:700;
+  color:var(--gold);line-height:1;margin-bottom:8px;
+  text-shadow:0 0 40px rgba(255,209,102,0.4);
+}
+.archive-hero-label{
+  font-family:var(--font-mono);font-size:12px;letter-spacing:0.2em;
+  color:var(--text-dim);text-transform:uppercase;margin-bottom:24px;
+}
+.archive-lifetime-strip{
+  display:flex;gap:32px;justify-content:center;flex-wrap:wrap;
+}
+.archive-stat{display:flex;flex-direction:column;gap:4px;align-items:center;}
+.archive-stat-value{font-family:var(--font-display);font-size:24px;font-weight:700;}
+.archive-stat-label{font-family:var(--font-mono);font-size:9px;letter-spacing:0.14em;color:var(--text-faint);text-transform:uppercase;}
+
+/* Mountain scroll */
+.summit-scroll{
+  display:flex;gap:20px;overflow-x:auto;padding:4px 2px 16px;
+  scrollbar-width:thin;
+}
+.summit-scroll::-webkit-scrollbar{height:6px;}
+.summit-scroll::-webkit-scrollbar-thumb{background:rgba(74,168,255,0.2);border-radius:99px;}
+
+.summit-card{
+  flex-shrink:0;width:220px;
+  background:var(--bg-panel);border:1px solid var(--border-subtle);
+  border-radius:14px;overflow:hidden;cursor:pointer;
+  transition:.2s;
+}
+.summit-card:hover{border-color:rgba(255,209,102,0.4);transform:translateY(-2px);}
+.summit-card.active-campaign{border-color:rgba(74,168,255,0.3);}
+.summit-mountain{height:140px;background:linear-gradient(160deg,#060a14,#0a1628);position:relative;}
+.summit-mountain-svg{width:100%;height:100%;}
+.summit-conquered-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(6,10,20,0.9) 0%,transparent 50%);
+  display:flex;align-items:flex-end;padding:10px 12px;
+}
+.summit-flag{font-size:20px;}
+.summit-card-body{padding:12px 14px;}
+.summit-card-name{font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.summit-card-domain{font-family:var(--font-mono);font-size:10px;color:var(--text-faint);margin-bottom:8px;}
+.summit-card-meta{display:flex;justify-content:space-between;align-items:center;}
+.summit-card-date{font-size:11px;color:var(--text-dim);}
+.summit-card-steps{font-family:var(--font-mono);font-size:10px;color:var(--success);}
+.summit-card-progress{height:3px;border-radius:99px;background:rgba(255,255,255,0.06);margin-top:8px;overflow:hidden;}
+.summit-card-fill{height:100%;border-radius:99px;background:var(--gold);}
+
+/* Detail panel */
+.summit-detail{
+  background:var(--bg-panel);border:1px solid var(--border-subtle);
+  border-radius:var(--radius-lg);padding:0;overflow:hidden;
+  display:none;
+}
+.summit-detail.show{display:block;}
+.summit-detail-header{
+  padding:20px 24px;border-bottom:1px solid var(--border-subtle);
+  display:flex;align-items:center;gap:16px;
+}
+.summit-detail-icon{font-size:32px;}
+.summit-detail-name{font-family:var(--font-display);font-size:20px;font-weight:600;color:var(--text-primary);}
+.summit-detail-sub{font-size:12px;color:var(--text-dim);margin-top:2px;}
+.summit-detail-body{padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
+.summit-section-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px;}
+.summit-cp-list{display:flex;flex-direction:column;gap:16px;}
+.summit-cp-group{display:flex;flex-direction:column;gap:6px;}
+.summit-cp-group-label{font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);margin-bottom:2px;}
+.summit-cp-item{display:flex;align-items:center;gap:10px;font-size:13px;}
+.summit-cp-check{width:16px;height:16px;border-radius:4px;background:var(--success);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:#fff;}
+.summit-cp-name{color:var(--text-secondary);}
+.summit-cp-date{font-size:11px;color:var(--text-faint);margin-left:auto;}
+
+/* Empty state */
+.archive-empty{
+  text-align:center;padding:60px 20px;
+  font-family:var(--font-mono);color:var(--text-faint);
+}
+.archive-empty-icon{font-size:48px;margin-bottom:16px;}
+.archive-empty-title{font-size:14px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;}
+.archive-empty-sub{font-size:12px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="gs" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="gss" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <circle cx="50" cy="50" r="42" stroke="#1a4a6a" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.7"/>
+          <circle cx="50" cy="50" r="34" stroke="#1a3a5a" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.5"/>
+          <circle cx="50" cy="8" r="2.5" fill="#00c8ff" filter="url(#gss)" opacity="0.9"/>
+          <circle cx="88" cy="62" r="1.8" fill="#4aa8ff" filter="url(#gss)" opacity="0.7"/>
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="5" stroke-linejoin="round" fill="none" opacity="0.15" filter="url(#gs)"/>
+          <path d="M50 30 L76 70 H24 Z" stroke="#00ff88" stroke-width="1.2" fill="none" opacity="0.5"/>
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="2.5" stroke-linejoin="round" fill="none" filter="url(#gs)"/>
+          <circle cx="50" cy="60" r="3.5" fill="#00c8ff" filter="url(#gs)"/>
+          <circle cx="50" cy="60" r="1.5" fill="white" opacity="0.9"/>
+          <circle cx="50" cy="22" r="2" fill="#00c8ff" filter="url(#gss)"/>
+          <circle cx="82" cy="74" r="2" fill="#00c8ff" filter="url(#gss)"/>
+          <circle cx="18" cy="74" r="2" fill="#00c8ff" filter="url(#gss)"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">
+        <div class="sidebar-logo-wordmark">ETHER</div>
+        <div class="sidebar-logo-tagline">Mission Command System</div>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item" href="dashboard.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span class="nav-item-label">Command Deck</span></a>
+      <a class="nav-item" href="life-advancement.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l6-6 4 4 8-8"/></svg></span><span class="nav-item-label">Life Advancement</span></a>
+      <a class="nav-item" href="missions.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1"/></svg></span><span class="nav-item-label">Missions</span></a>
+      <a class="nav-item" href="blueprints.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span><span class="nav-item-label">Blueprints</span></a>
+      <a class="nav-item" href="problems-blockers.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20Z"/></svg></span><span class="nav-item-label">Problems / Blockers</span><span class="badge" id="navBlockerBadge">0</span></a>
+      <a class="nav-item" href="evidence-vault.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></span><span class="nav-item-label">Evidence Vault</span></a>
+      <a class="nav-item" href="timeline.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span><span class="nav-item-label">Timeline</span></a>
+      <a class="nav-item" href="debrief.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span><span class="nav-item-label">Debrief</span></a>
+      <a class="nav-item active" href="summit-archive.html"><span class="nav-item-icon">🏔️</span><span class="nav-item-label">Summit Archive</span></a>
+      
+      <a class="nav-item" href="knowledge-library.html"><span class="nav-item-icon">📚</span><span class="nav-item-label">Knowledge Library</span></a>
+      <a class="nav-item" href="command-center.html"><span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8l2.8-2.8M17 7l2.8-2.8"/></svg></span><span class="nav-item-label">Command Center</span></a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="profile-header">
+        <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+        <div class="profile-info">
+          <div class="profile-name" id="opName">ROD ENTERA</div>
+          <div class="profile-rank" id="opSub">Operator</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:4px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--teal);" id="sidebarDaysClimbing">14</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Days Climbing</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--gold);" id="sidebarSummits">0</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Summits</span>
+        </div>
+      </div>
+      <div class="profile-quote">"The mission is progress. The evidence is proof. The mountain is the journey."</div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>SUMMIT ARCHIVE</h1>
+        <div class="topbar-subtitle">Every meaningful campaign you have ever completed.</div>
+      </div>
+      <div class="topbar-meta">
+        <a href="portfolio.html" class="btn btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px; margin-right:14px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Generate Portfolio
+        </a>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--success);">● OPERATOR: AETHER PRIME</span>
+      </div>
+    </header>
+
+    <div class="content">
+
+
+      <!-- Expedition Search -->
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:12px;">🔍 SEARCH EXPEDITIONS</div>
+        <div class="archive-search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+          <input class="archive-search-input" id="archiveSearch" 
+            placeholder='Search campaigns, evidence, debriefs... e.g. "Firebase" or "Health" or "June 2026"'
+            oninput="searchExpeditions()"/>
+        </div>
+        <div class="archive-search-results" id="archiveResults" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- Hero stats -->
+      <div class="archive-hero panel">
+        <div class="archive-hero-count" id="archiveSummitCount">0</div>
+        <div class="archive-hero-label">Summits Reached</div>
+        <div class="archive-lifetime-strip">
+          <div class="archive-stat"><div class="archive-stat-value" id="archiveSteps" style="color:var(--success);">0</div><div class="archive-stat-label">Steps Verified</div></div>
+          <div class="archive-stat"><div class="archive-stat-value" id="archiveEvidence" style="color:var(--purple);">0</div><div class="archive-stat-label">Evidence Captured</div></div>
+          <div class="archive-stat"><div class="archive-stat-value" id="archiveDays" style="color:var(--teal);">0</div><div class="archive-stat-label">Days Climbing</div></div>
+          <div class="archive-stat"><div class="archive-stat-value" id="archiveActive" style="color:var(--accent);">0</div><div class="archive-stat-label">Active Campaigns</div></div>
+        </div>
+
+      </div>
+
+      <!-- Conquered mountains horizontal scroll -->
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:14px;">🏔️ CONQUERED MOUNTAINS</div>
+        <div class="summit-scroll" id="summitScroll"></div>
+      </div>
+
+      <!-- Active campaigns (not yet summited) -->
+      <div class="panel">
+        <div class="panel-label" style="margin-bottom:14px;">⛰️ ACTIVE EXPEDITIONS</div>
+        <div class="summit-scroll" id="activeScroll"></div>
+      </div>
+
+      <!-- Campaign detail panel -->
+      <div class="summit-detail panel" id="summitDetail">
+        <div class="summit-detail-header">
+          <div class="summit-detail-icon" id="detailIcon">🏔️</div>
+          <div>
+            <div class="summit-detail-name" id="detailName">—</div>
+            <div class="summit-detail-sub" id="detailSub">—</div>
+          </div>
+        </div>
+
+        <div class="summit-detail-body">
+          <div>
+            <div class="summit-section-label" id="summitSectionLabel">Checkpoints</div>
+            <div class="summit-cp-list" id="detailCpList"></div>
+          </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes aether-pulse {
+  0%,100%{filter:drop-shadow(0 0 8px rgba(0,200,255,0.9)) drop-shadow(0 0 18px rgba(0,200,255,0.4));}
+  50%{filter:drop-shadow(0 0 18px rgba(0,200,255,1)) drop-shadow(0 0 35px rgba(0,200,255,0.7)) drop-shadow(0 0 6px #fff);}
+}
+.sidebar-logo-mark{animation:aether-pulse 2.8s ease-in-out infinite;}
+</style>
+
+<script src="mission-mountain.js"></script>
+<script>
+(function(){
+  var missions   = AetherStore.getAllMissions ? AetherStore.getAllMissions() : (AetherStore.getMissions ? AetherStore.getMissions() : []);
+  var evidence   = AetherStore.getEvidence ? AetherStore.getEvidence() : [];
+  var blueprints = AetherStore.getAllBlueprints ? AetherStore.getAllBlueprints() : (AetherStore.getBlueprints ? AetherStore.getBlueprints() : []);
+  var cps        = AetherStore.getAllCheckpoints ? AetherStore.getAllCheckpoints() : (AetherStore.getCheckpoints ? AetherStore.getCheckpoints() : []);
+
+  /* Resolve a checkpoint's REAL done/verified state. For live checkpoints,
+     `defaultDone`/`defaultVerified` on the checkpoint object itself never
+     change after creation -- the actual toggled state lives separately,
+     per blueprint, via getCheckpointStates(blueprintKey). Sample-mode
+     checkpoints have no such live state, so their defaultDone/Verified
+     fields ARE the real answer for them. This one helper is the single
+     source of truth other code below relies on, so the hero "Steps
+     Completed" stat and the per-mission checklist can never disagree. */
+  function resolveCpState(c){
+    if(c.isLive && AetherStore.getCheckpointStates){
+      var live = AetherStore.getCheckpointStates(c.blueprintKey);
+      var s = live[c.id];
+      return { done: !!s, verified: !!s && !!c.defaultVerified };
+    }
+    return { done: !!c.defaultDone, verified: !!c.defaultVerified };
+  }
+
+  /* All checkpoints belonging to a mission, found via the real chain:
+     mission -> its blueprint(s) -> each blueprint's checkpoints.
+     Grouped by blueprint so a mission with multiple blueprints shows
+     which phase/blueprint each step belonged to. */
+  function checkpointsForMission(m){
+    var missionBps = blueprints.filter(function(bp){
+      return bp.missionKey === m.key || bp.missionName === m.name;
+    });
+    return missionBps.map(function(bp){
+      var bpCps = cps
+        .filter(function(c){ return c.blueprintKey === bp.key; })
+        .sort(function(a,b){ return (a.sortOrder||0) - (b.sortOrder||0); })
+        .map(function(c){
+          var state = resolveCpState(c);
+          return {
+            name: c.name,
+            evidenceRequired: c.evidenceRequired,
+            completedDate: c.completedDate,
+            done: state.done,
+            verified: state.verified
+          };
+        });
+      return { blueprintName: bp.name, checkpoints: bpCps };
+    }).filter(function(group){ return group.checkpoints.length > 0; });
+  }
+
+  var summited = missions.filter(function(m){ return m.pct >= 100 || m.status === 'verified'; });
+  var active = missions.filter(function(m){ return m.pct < 100 && m.status !== 'verified'; });
+  var verifiedEvidence = evidence.filter(function(e){ return e.defaultStatus === 'verified'; });
+  var doneCps = cps.filter(function(c){ return resolveCpState(c).done; });
+
+  // Hero stats
+  document.getElementById('archiveSummitCount').textContent = summited.length;
+  document.getElementById('archiveSteps').textContent = doneCps.length;
+  document.getElementById('archiveEvidence').textContent = verifiedEvidence.length;
+  document.getElementById('archiveDays').textContent = 14; // placeholder
+  document.getElementById('archiveActive').textContent = active.length;
+
+  function makeMountainCard(m, conquered){
+    var opts = window.MissionMountain ? window.MissionMountain.fromMission(m) : {name:m.name,domain:'',steps:8,pct:m.pct||0,style:'alpine'};
+    opts.variant = 'card';
+    var mResult = window.MissionMountain ? window.MissionMountain.render(opts) : {svg:''};
+    
+    var card = document.createElement('div');
+    card.className = 'summit-card' + (conquered ? '' : ' active-campaign');
+    card.innerHTML = 
+      '<div class="summit-mountain">' +
+        '<div style="position:absolute;inset:0;opacity:'+(conquered?'0.9':'0.6')+';">'+mResult.svg+'</div>' +
+        '<div class="summit-conquered-overlay">' +
+          '<span class="summit-flag">'+(conquered?'🏁':'⛰️')+'</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="summit-card-body">' +
+        '<div class="summit-card-name">'+m.name+'</div>' +
+        '<div class="summit-card-domain">'+(m.domains&&m.domains[0] ? m.domains[0].toUpperCase() : 'EXPEDITION')+'</div>' +
+        '<div class="summit-card-meta">' +
+          '<span class="summit-card-date">'+(conquered?'Summited':'Camp '+(m.camp||'I'))+'</span>' +
+          '<span class="summit-card-steps">'+(m.pct||0)+'% climbed</span>' +
+        '</div>' +
+        '<div class="summit-card-progress"><div class="summit-card-fill" style="width:'+(m.pct||0)+'%;background:'+(conquered?'var(--gold)':'var(--accent)')+'"></div></div>' +
+      '</div>';
+    
+    card.addEventListener('click', function(){ showDetail(m, conquered); });
+    return card;
+  }
+
+  function showDetail(m, conquered){
+    document.getElementById('detailIcon').textContent = conquered ? '🏔️' : '⛰️';
+    document.getElementById('detailName').textContent = m.name;
+    document.getElementById('detailSub').textContent = (m.domains&&m.domains[0]?m.domains[0]+' · ':'') + (conquered ? 'Summit reached' : (m.pct||0)+'% complete');
+
+    var groups = checkpointsForMission(m);
+    var totalCps = groups.reduce(function(n,g){ return n + g.checkpoints.length; }, 0);
+    document.getElementById('summitSectionLabel').textContent =
+      conquered ? 'How This Was Climbed — ' + totalCps + ' Step' + (totalCps===1?'':'s') : 'Checkpoints';
+
+    document.getElementById('detailCpList').innerHTML = groups.length ?
+      groups.map(function(g){
+        var rows = g.checkpoints.map(function(c){
+          return '<div class="summit-cp-item">' +
+            '<div class="summit-cp-check" style="background:'+(c.verified?'var(--gold)':c.done?'var(--success)':'rgba(255,255,255,0.1)')+';">'+(c.verified?'★':c.done?'✓':'')+'</div>' +
+            '<span class="summit-cp-name">'+c.name+'</span>' +
+            '<span class="summit-cp-date">'+(c.completedDate||'')+'</span>' +
+            '</div>';
+        }).join('');
+        return '<div class="summit-cp-group">' +
+          (groups.length > 1 ? '<div class="summit-cp-group-label">'+g.blueprintName+'</div>' : '') +
+          rows +
+          '</div>';
+      }).join('') :
+      '<div style="font-size:12px;color:var(--text-faint);">No checkpoints recorded for this campaign. Steps completed under a blueprint will appear here automatically.</div>';
+
+    document.getElementById('summitDetail').classList.add('show');
+    document.getElementById('summitDetail').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+
+  // Render conquered
+  var conqueredScroll = document.getElementById('summitScroll');
+  if(summited.length){
+    summited.forEach(function(m){ conqueredScroll.appendChild(makeMountainCard(m, true)); });
+  } else {
+    conqueredScroll.innerHTML = '<div class="archive-empty"><div class="archive-empty-icon">🏔️</div><div class="archive-empty-title">No Summits Yet</div><div class="archive-empty-sub">Complete your first campaign to see it preserved here forever.<br>Every summit you reach will be recorded here.</div></div>';
+  }
+
+  // Render active
+  var activeScroll = document.getElementById('activeScroll');
+  if(active.length){
+    active.forEach(function(m){ activeScroll.appendChild(makeMountainCard(m, false)); });
+  } else {
+    activeScroll.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:20px 0;">No active expeditions. Start a new campaign from the Missions page.</div>';
+  }
+})();
+</script>
+
+<script>
+window.searchExpeditions = function(){
+  var q = (document.getElementById('archiveSearch').value || '').toLowerCase().trim();
+  var results = document.getElementById('archiveResults');
+  if(!q){ results.innerHTML=''; return; }
+
+  var missions = AetherStore.getMissions ? AetherStore.getMissions() : [];
+  var evidence = AetherStore.getEvidence ? AetherStore.getEvidence() : [];
+  var blockers = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  var debriefs = AetherStore.getAllDebriefs ? AetherStore.getAllDebriefs() : AetherStore.getPastDebriefs ? AetherStore.getPastDebriefs() : [];
+
+  var hits = [];
+
+  // Search missions
+  missions.forEach(function(m){
+    var text = [m.name, m.objective, m.purpose, m.definitionOfDone, m.lessonsLearned].join(' ').toLowerCase();
+    if(text.includes(q)){
+      hits.push({type:'Campaign', title:m.name, sub:m.objective||'', icon:'⛰️'});
+    }
+  });
+
+  // Search evidence
+  evidence.forEach(function(e){
+    var text = [e.name, e.notes, e.mission, e.checkpoint, e.type].join(' ').toLowerCase();
+    if(text.includes(q)){
+      hits.push({type:'Evidence', title:e.name, sub:e.mission+' · '+e.checkpoint, icon:'📎'});
+    }
+  });
+
+  // Search blockers/knowledge
+  blockers.forEach(function(b){
+    var text = [b.name, b.recovery, b.solution, b.mission, b.checkpoint].join(' ').toLowerCase();
+    if(text.includes(q)){
+      hits.push({type:b.status==='resolved'?'Solved Problem':'Open Blocker', title:b.name, sub:b.mission+(b.solution?' · Solution: '+b.solution:''), icon:b.status==='resolved'?'✓':'⚠️'});
+    }
+  });
+
+  // Search debriefs
+  debriefs.forEach(function(d){
+    var text = [d.worked, d.failed, d.changed, d.notes, d.date].join(' ').toLowerCase();
+    if(text.includes(q)){
+      hits.push({type:'Debrief', title:d.date||d.day||'Debrief Entry', sub:(d.worked||d.notes||'').substring(0,80), icon:'📋'});
+    }
+  });
+
+  if(!hits.length){
+    results.innerHTML = '<div style="font-size:12px;color:var(--text-faint);padding:12px 0;">No results found for "'+q+'". Try different keywords.</div>';
+    return;
+  }
+
+  results.innerHTML = hits.slice(0,10).map(function(h){
+    return '<div class="archive-result-card">' +
+      '<div class="archive-result-type">'+h.icon+' '+h.type+'</div>' +
+      '<div class="archive-result-title">'+h.title+'</div>' +
+      (h.sub ? '<div class="archive-result-sub">'+h.sub+'</div>' : '') +
+      '</div>';
+  }).join('') + (hits.length > 10 ? '<div style="font-size:11px;color:var(--text-faint);padding:8px 0;">...and '+(hits.length-10)+' more results</div>' : '');
+};
+</script>
+
+<script>
+/* Sync the sidebar blocker badge to the real open-blocker count */
+(function syncBlockerBadge(){
+  var badge = document.getElementById('navBlockerBadge');
+  if(!badge) return;
+  var bk = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  badge.textContent = bk.filter(function(b){ return b.status === 'open'; }).length;
+})();
+</script>
+<script src="aether-quotes.js"></script>
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script src="aether-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Daily Command</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<script src="intelligenceEngine.js"></script>
+<script src="daily-command.js"></script>
+<style>
+
+/* ============================================================
+   DAILY COMMAND PAGE
+   This is the morning gate. Operator opens AETHER and
+   immediately knows what to do today. No browsing. No menus.
+   One command. One decision.
+   ============================================================ */
+
+/* Full-page layout — no sidebar, pure focus */
+html, body { height:100%; margin:0; padding:0; overflow:hidden; }
+
+.dc-shell {
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+  background:var(--bg-void);
+  position:relative;
+}
+
+/* Subtle mountain atmosphere background */
+.dc-bg {
+  position:fixed; inset:0; z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(74,168,255,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 20% 80%, rgba(176,125,255,0.04) 0%, transparent 60%);
+  pointer-events:none;
+}
+
+/* Grid texture already on body via aether-theme, this adds a
+   subtle mountain silhouette at bottom */
+.dc-mountain-line {
+  position:fixed; bottom:0; left:0; right:0; z-index:0;
+  height:180px;
+  background:linear-gradient(180deg, transparent 0%, rgba(74,168,255,0.025) 100%);
+  clip-path:polygon(0% 100%, 8% 60%, 18% 80%, 28% 30%, 38% 65%, 48% 10%, 58% 55%, 68% 35%, 78% 70%, 88% 45%, 100% 75%, 100% 100%);
+  pointer-events:none;
+}
+
+/* ---- Top bar ---- */
+.dc-topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 32px;
+  border-bottom:1px solid var(--border-subtle);
+  flex-shrink:0;
+  position:relative; z-index:2;
+}
+.dc-logo {
+  display:flex; align-items:center; gap:10px;
+}
+.dc-logo-mark {
+  width:28px; height:28px;
+  filter:drop-shadow(0 0 6px rgba(74,168,255,0.55));
+}
+.dc-logo-wordmark {
+  font-family:var(--font-display); font-size:15px; font-weight:600;
+  letter-spacing:0.32em; color:var(--text-primary);
+}
+.dc-logo-sub {
+  font-family:var(--font-mono); font-size:8px; letter-spacing:0.2em;
+  text-transform:uppercase; color:var(--accent); opacity:0.65; margin-top:1px;
+}
+.dc-topbar-right {
+  display:flex; align-items:center; gap:20px;
+}
+.dc-date {
+  font-family:var(--font-mono); font-size:11px;
+  letter-spacing:0.08em; color:var(--text-dim);
+  text-transform:uppercase;
+}
+.dc-nav-link {
+  font-family:var(--font-mono); font-size:10px;
+  letter-spacing:0.1em; text-transform:uppercase;
+  color:var(--text-dim); display:flex; align-items:center; gap:5px;
+  transition:var(--transition);
+}
+.dc-nav-link:hover { color:var(--accent); }
+.dc-nav-link svg { width:11px; height:11px; }
+
+/* ---- Main content area ---- */
+.dc-main {
+  flex:1; overflow-y:auto;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:40px 24px 60px;
+  position:relative; z-index:2;
+}
+
+.dc-card {
+  width:min(680px, 100%);
+  display:flex; flex-direction:column; gap:0;
+}
+
+/* ---- Commander header ---- */
+.dc-commander-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:32px;
+}
+.dc-greeting {
+  display:flex; flex-direction:column; gap:4px;
+}
+.dc-greeting-line {
+  font-family:var(--font-body); font-size:13px;
+  color:var(--text-dim); letter-spacing:0.04em;
+}
+.dc-greeting-name {
+  font-family:var(--font-display); font-size:22px; font-weight:600;
+  letter-spacing:0.1em; color:var(--text-primary);
+}
+.dc-stats-strip {
+  display:flex; gap:24px;
+}
+.dc-stat {
+  display:flex; flex-direction:column; align-items:flex-end; gap:2px;
+}
+.dc-stat-value {
+  font-family:var(--font-display); font-size:20px; font-weight:600;
+  color:var(--text-primary); line-height:1;
+}
+.dc-stat-value.good  { color:var(--success); }
+.dc-stat-value.warn  { color:var(--warning); }
+.dc-stat-value.accent{ color:var(--accent); }
+.dc-stat-label {
+  font-family:var(--font-mono); font-size:9px;
+  letter-spacing:0.14em; text-transform:uppercase; color:var(--text-faint);
+}
+
+/* ---- Today's Command panel — the dominant element ---- */
+.dc-command-panel {
+  background:var(--bg-panel);
+  border:1px solid var(--border-accent);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--glow-accent), var(--shadow-panel);
+  overflow:hidden;
+  margin-bottom:20px;
+}
+
+.dc-command-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 22px;
+  background:rgba(74,168,255,0.06);
+  border-bottom:1px solid var(--border-accent);
+}
+.dc-command-label {
+  display:flex; align-items:center; gap:8px;
+}
+.dc-command-label svg { width:14px; height:14px; color:var(--accent); flex-shrink:0; }
+.dc-command-label-text {
+  font-family:var(--font-mono); font-size:9.5px;
+  letter-spacing:0.18em; text-transform:uppercase; color:var(--accent);
+}
+.dc-command-type-tag {
+  font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em;
+  text-transform:uppercase; padding:3px 10px; border-radius:var(--radius-pill);
+  border:1px solid var(--border-accent); color:var(--accent);
+  background:rgba(74,168,255,0.08);
+}
+
+.dc-command-body {
+  padding:26px 24px 22px;
+}
+
+/* The command title — biggest text on the page */
+.dc-command-title {
+  font-family:var(--font-display); font-size:clamp(20px,3vw,28px);
+  font-weight:700; letter-spacing:0.05em; color:var(--text-primary);
+  line-height:1.25; margin-bottom:8px;
+}
+
+.dc-command-mission {
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:16px;
+  display:flex; align-items:center; gap:8px;
+}
+.dc-command-mission::before {
+  content:'';
+  display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:var(--accent); box-shadow:0 0 8px var(--accent); flex-shrink:0;
+}
+
+.dc-command-why {
+  font-family:var(--font-body); font-size:13px; color:var(--text-secondary);
+  line-height:1.65; padding:14px 16px;
+  background:var(--bg-panel-alt);
+  border-radius:var(--radius-md);
+  border-left:3px solid var(--border-accent);
+  margin-bottom:18px;
+}
+
+.dc-command-meta {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+}
+.dc-meta-cell {
+  display:flex; flex-direction:column; gap:4px;
+  padding:12px 14px;
+  background:var(--bg-panel-alt);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md);
+}
+.dc-meta-label {
+  font-family:var(--font-mono); font-size:9px;
+  letter-spacing:0.12em; text-transform:uppercase; color:var(--text-faint);
+}
+.dc-meta-value {
+  font-family:var(--font-body); font-size:13px; font-weight:500;
+  color:var(--text-primary);
+}
+.dc-meta-value.gain { color:var(--success); font-family:var(--font-display); }
+.dc-meta-value.time { color:var(--accent); }
+
+/* ---- Action buttons ---- */
+.dc-actions {
+  padding:18px 24px;
+  border-top:1px solid var(--border-subtle);
+  display:flex; align-items:center; gap:12px;
+}
+.dc-btn-accept {
+  flex:1;
+  padding:16px 24px;
+  background:var(--accent);
+  color:#04101f;
+  border:none; border-radius:var(--radius-md);
+  font-family:var(--font-display); font-size:14px; font-weight:700;
+  letter-spacing:0.14em; text-transform:uppercase;
+  cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:9px;
+  transition:var(--transition);
+  box-shadow:0 0 20px rgba(74,168,255,0.3);
+}
+.dc-btn-accept:hover {
+  background:var(--accent-glow);
+  box-shadow:0 0 32px rgba(74,168,255,0.55);
+  transform:translateY(-1px);
+}
+.dc-btn-accept svg { width:16px; height:16px; }
+
+.dc-btn-modify, .dc-btn-defer {
+  padding:14px 18px;
+  background:transparent;
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-md);
+  font-family:var(--font-body); font-size:12px; font-weight:500;
+  letter-spacing:0.04em; color:var(--text-secondary);
+  cursor:pointer;
+  display:flex; align-items:center; gap:7px;
+  transition:var(--transition);
+  white-space:nowrap;
+}
+.dc-btn-modify:hover { border-color:var(--warning); color:var(--warning); }
+.dc-btn-defer:hover  { border-color:var(--danger);  color:var(--danger);  }
+.dc-btn-modify svg, .dc-btn-defer svg { width:13px; height:13px; }
+
+/* ---- Already accepted state ---- */
+.dc-accepted-banner {
+  display:none;
+  align-items:center; gap:14px;
+  padding:16px 20px;
+  background:rgba(61,220,132,0.08);
+  border:1px solid rgba(61,220,132,0.25);
+  border-radius:var(--radius-md);
+  margin-bottom:20px;
+}
+.dc-accepted-banner.show { display:flex; }
+.dc-accepted-icon {
+  width:36px; height:36px; border-radius:50%; flex-shrink:0;
+  background:rgba(61,220,132,0.12); border:1px solid rgba(61,220,132,0.3);
+  display:flex; align-items:center; justify-content:center;
+  color:var(--success);
+}
+.dc-accepted-icon svg { width:18px; height:18px; }
+.dc-accepted-text { display:flex; flex-direction:column; gap:3px; flex:1; }
+.dc-accepted-title {
+  font-family:var(--font-display); font-size:12px; font-weight:600;
+  letter-spacing:0.08em; text-transform:uppercase; color:var(--success);
+}
+.dc-accepted-sub {
+  font-family:var(--font-body); font-size:12px; color:var(--text-secondary);
+}
+.dc-accepted-time {
+  font-family:var(--font-mono); font-size:10px; color:var(--text-faint);
+  flex-shrink:0;
+}
+.dc-go-btn {
+  padding:10px 18px;
+  background:var(--success);
+  color:#04240f;
+  border:none; border-radius:var(--radius-md);
+  font-family:var(--font-body); font-size:12px; font-weight:600;
+  cursor:pointer; transition:var(--transition); white-space:nowrap;
+  display:flex; align-items:center; gap:6px; flex-shrink:0;
+}
+.dc-go-btn:hover { filter:brightness(1.12); }
+.dc-go-btn svg { width:13px; height:13px; }
+
+/* ---- Modify input ---- */
+.dc-modify-area {
+  display:none;
+  padding:18px 24px;
+  border-top:1px solid var(--border-subtle);
+  flex-direction:column; gap:10px;
+}
+.dc-modify-area.show { display:flex; }
+.dc-modify-label {
+  font-family:var(--font-mono); font-size:10px;
+  letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);
+}
+.dc-modify-input {
+  background:var(--bg-panel-alt);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-md);
+  color:var(--text-primary);
+  font-family:var(--font-body); font-size:14px;
+  padding:12px 16px; width:100%;
+  transition:var(--transition);
+}
+.dc-modify-input:focus {
+  outline:none; border-color:var(--accent);
+  box-shadow:0 0 0 2px rgba(74,168,255,0.15);
+}
+.dc-modify-actions { display:flex; gap:10px; }
+.dc-btn-confirm-modify {
+  padding:10px 20px;
+  background:var(--warning);
+  color:#2a1a00;
+  border:none; border-radius:var(--radius-md);
+  font-family:var(--font-body); font-size:12px; font-weight:600;
+  cursor:pointer; transition:var(--transition);
+}
+.dc-btn-cancel-modify {
+  padding:10px 16px;
+  background:transparent; border:1px solid var(--border-strong);
+  border-radius:var(--radius-md); color:var(--text-secondary);
+  font-family:var(--font-body); font-size:12px; cursor:pointer;
+  transition:var(--transition);
+}
+.dc-btn-cancel-modify:hover { border-color:var(--danger); color:var(--danger); }
+
+/* ---- Below-the-fold: situation summary ---- */
+.dc-situation {
+  display:grid; grid-template-columns:1fr 1fr; gap:16px;
+}
+@media(max-width:600px){
+  .dc-situation { grid-template-columns:1fr; }
+  .dc-command-meta { grid-template-columns:1fr 1fr; }
+  .dc-stats-strip { gap:16px; }
+}
+
+.dc-sit-panel {
+  background:var(--bg-panel);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--radius-lg);
+  padding:16px 18px;
+  display:flex; flex-direction:column; gap:12px;
+}
+.dc-sit-title {
+  font-family:var(--font-display); font-size:11px;
+  letter-spacing:0.1em; text-transform:uppercase;
+  color:var(--text-primary); font-weight:600;
+  display:flex; align-items:center; gap:8px;
+}
+.dc-sit-title svg { width:13px; height:13px; color:var(--text-dim); }
+
+.dc-sit-row {
+  display:flex; align-items:flex-start; gap:8px;
+  padding:7px 0;
+  border-bottom:1px solid var(--border-subtle);
+  font-size:12px;
+}
+.dc-sit-row:last-child { border-bottom:none; padding-bottom:0; }
+.dc-sit-dot {
+  width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:3px;
+}
+.dc-sit-dot.threat { background:var(--danger); box-shadow:0 0 6px var(--danger); }
+.dc-sit-dot.good   { background:var(--success); box-shadow:0 0 6px var(--success); }
+.dc-sit-dot.accent { background:var(--accent); }
+.dc-sit-name { font-family:var(--font-body); color:var(--text-primary); flex:1; }
+.dc-sit-sub  { font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); margin-top:1px; }
+.dc-sit-value { font-family:var(--font-mono); font-size:10px; color:var(--success); flex-shrink:0; font-weight:700; }
+
+/* ---- Empty state ---- */
+.dc-empty {
+  display:none;
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:18px; padding:60px 24px; text-align:center;
+}
+.dc-empty.show { display:flex; }
+.dc-empty-icon {
+  width:64px; height:64px; border-radius:50%;
+  background:rgba(74,168,255,0.08); border:1px solid var(--border-accent);
+  display:flex; align-items:center; justify-content:center; color:var(--accent);
+}
+.dc-empty-icon svg { width:28px; height:28px; }
+.dc-empty-title {
+  font-family:var(--font-display); font-size:18px; font-weight:600;
+  letter-spacing:0.1em; color:var(--text-secondary);
+}
+.dc-empty-sub {
+  font-family:var(--font-body); font-size:13px; color:var(--text-dim);
+  max-width:380px; line-height:1.65;
+}
+
+/* ---- Past records strip ---- */
+.dc-history {
+  margin-top:8px;
+  display:flex; flex-direction:column; gap:6px;
+}
+.dc-history-title {
+  font-family:var(--font-mono); font-size:9px; letter-spacing:0.18em;
+  text-transform:uppercase; color:var(--text-faint); margin-bottom:4px;
+}
+.dc-history-row {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px;
+  background:var(--bg-panel);
+  border:1px solid var(--border-subtle);
+  border-radius:var(--radius-md); font-size:12px;
+}
+.dc-hist-date {
+  font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint);
+  width:70px; flex-shrink:0;
+}
+.dc-hist-title { font-family:var(--font-body); color:var(--text-secondary); flex:1; }
+.dc-hist-status {
+  font-family:var(--font-mono); font-size:9px; letter-spacing:0.08em;
+  text-transform:uppercase; padding:2px 8px; border-radius:var(--radius-pill);
+  flex-shrink:0;
+}
+.dc-hist-status.completed { color:var(--success); background:rgba(61,220,132,0.1); border:1px solid rgba(61,220,132,0.25); }
+.dc-hist-status.accepted  { color:var(--accent);  background:rgba(74,168,255,0.1); border:1px solid rgba(74,168,255,0.25); }
+.dc-hist-status.failed    { color:var(--danger);  background:rgba(255,92,108,0.1); border:1px solid rgba(255,92,108,0.25); }
+.dc-hist-status.deferred  { color:var(--warning); background:rgba(255,184,77,0.1);  border:1px solid rgba(255,184,77,0.25); }
+.dc-hist-status.modified  { color:var(--warning); background:rgba(255,184,77,0.08); border:1px solid rgba(255,184,77,0.2); }
+
+</style>
+</head>
+<body>
+<div class="dc-bg"></div>
+<div class="dc-mountain-line"></div>
+
+<div class="dc-shell">
+
+  <!-- Top bar -->
+  <header class="dc-topbar">
+    <div class="dc-logo">
+      <!-- AETHER triangle mark -->
+      <svg class="dc-logo-mark" viewBox="0 0 32 32" fill="none">
+        <polygon points="16,3 30,27 2,27" fill="none" stroke="rgba(74,168,255,0.9)" stroke-width="1.5"/>
+        <polygon points="16,8 26,24 6,24" fill="rgba(74,168,255,0.12)"/>
+        <line x1="16" y1="12" x2="16" y2="20" stroke="rgba(74,168,255,0.6)" stroke-width="1.5"/>
+        <circle cx="16" cy="22" r="1.2" fill="rgba(74,168,255,0.8)"/>
+      </svg>
+      <div>
+        <div class="dc-logo-wordmark">AETHER</div>
+        <div class="dc-logo-sub">Daily Command</div>
+      </div>
+    </div>
+    <div class="dc-topbar-right">
+      <span class="dc-date" id="dcDate"></span>
+      <a class="dc-nav-link" href="dashboard.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Command Deck
+      </a>
+      <a class="dc-nav-link" href="missions.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+        Missions
+      </a>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="dc-main">
+    <div class="dc-card">
+
+      <!-- Commander header -->
+      <div class="dc-commander-header">
+        <div class="dc-greeting">
+          <span class="dc-greeting-line" id="dcGreeting">Good morning,</span>
+          <span class="dc-greeting-name">Commander.</span>
+        </div>
+        <div class="dc-stats-strip">
+          <div class="dc-stat">
+            <span class="dc-stat-value accent" id="dcConfidencePct">—</span>
+            <span class="dc-stat-label">Confidence</span>
+          </div>
+          <div class="dc-stat">
+            <span class="dc-stat-value" id="dcCamp">—</span>
+            <span class="dc-stat-label">Current Camp</span>
+          </div>
+          <div class="dc-stat">
+            <span class="dc-stat-value" id="dcMissionsActive">—</span>
+            <span class="dc-stat-label">Active Missions</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Already accepted banner (shown when command is committed) -->
+      <div class="dc-accepted-banner" id="dcAcceptedBanner">
+        <div class="dc-accepted-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <div class="dc-accepted-text">
+          <span class="dc-accepted-title" id="dcAcceptedTitle">Command Accepted</span>
+          <span class="dc-accepted-sub" id="dcAcceptedSub">You are committed to today's command. Execute.</span>
+        </div>
+        <span class="dc-accepted-time" id="dcAcceptedTime"></span>
+        <button class="dc-go-btn" onclick="window.location.href='dashboard.html'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          Go Execute
+        </button>
+      </div>
+
+      <!-- Today's Command panel -->
+      <div class="dc-command-panel" id="dcCommandPanel">
+        <div class="dc-command-header">
+          <div class="dc-command-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span class="dc-command-label-text">Today's Command</span>
+          </div>
+          <span class="dc-command-type-tag" id="dcCommandTag">—</span>
+        </div>
+
+        <div class="dc-command-body">
+          <div class="dc-command-title" id="dcCommandTitle">Loading…</div>
+          <div class="dc-command-mission" id="dcCommandMission"></div>
+          <div class="dc-command-why" id="dcCommandWhy"></div>
+          <div class="dc-command-meta">
+            <div class="dc-meta-cell">
+              <span class="dc-meta-label">Mission</span>
+              <span class="dc-meta-value" id="dcMetaMission">—</span>
+            </div>
+            <div class="dc-meta-cell">
+              <span class="dc-meta-label">Est. Time</span>
+              <span class="dc-meta-value time" id="dcMetaTime">—</span>
+            </div>
+            <div class="dc-meta-cell">
+              <span class="dc-meta-label">Confidence Gain</span>
+              <span class="dc-meta-value gain" id="dcMetaGain">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modify input (hidden by default) -->
+        <div class="dc-modify-area" id="dcModifyArea">
+          <span class="dc-modify-label">Edit command — what will you actually do today?</span>
+          <input type="text" id="dcModifyInput" class="dc-modify-input"
+            placeholder="Describe your actual command for today…" maxlength="200" autocomplete="off"/>
+          <div class="dc-modify-actions">
+            <button class="dc-btn-confirm-modify" onclick="confirmModify()">Commit Modified Command</button>
+            <button class="dc-btn-cancel-modify" onclick="cancelModify()">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="dc-actions" id="dcActions">
+          <button class="dc-btn-accept" id="dcBtnAccept" onclick="handleAccept()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            Accept Command
+          </button>
+          <button class="dc-btn-modify" id="dcBtnModify" onclick="handleModify()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"/></svg>
+            Modify
+          </button>
+          <button class="dc-btn-defer" id="dcBtnDefer" onclick="handleDefer()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            Defer
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty state (no missions yet) -->
+      <div class="dc-empty" id="dcEmpty">
+        <div class="dc-empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg>
+        </div>
+        <div class="dc-empty-title">No Active Missions</div>
+        <div class="dc-empty-sub">
+          AETHER has no missions to derive a command from.
+          Create your first real mission to activate Daily Command.
+        </div>
+        <a href="missions.html" class="btn btn-primary" style="margin-top:8px;">
+          Create First Mission
+        </a>
+      </div>
+
+      <!-- Situation summary -->
+      <div class="dc-situation" id="dcSituation">
+        <!-- Threats -->
+        <div class="dc-sit-panel">
+          <div class="dc-sit-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+            Threats
+          </div>
+          <div id="dcThreats">
+            <div class="dc-sit-row"><span class="dc-sit-dot accent"></span><span class="dc-sit-name" style="color:var(--text-dim);">Computing…</span></div>
+          </div>
+        </div>
+        <!-- Opportunities -->
+        <div class="dc-sit-panel">
+          <div class="dc-sit-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Top Opportunities
+          </div>
+          <div id="dcOpportunities">
+            <div class="dc-sit-row"><span class="dc-sit-dot accent"></span><span class="dc-sit-name" style="color:var(--text-dim);">Computing…</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Past command history -->
+      <div class="dc-history" id="dcHistory" style="display:none;">
+        <div class="dc-history-title">Recent Commands</div>
+        <div id="dcHistoryRows"></div>
+      </div>
+
+    </div><!-- /dc-card -->
+  </main>
+
+</div><!-- /dc-shell -->
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- State ---------- */
+  var currentCommand = null;
+  var isDeferring    = false;
+
+  /* ---------- Greeting ---------- */
+  function greetingLine(){
+    var h = new Date().getHours();
+    if(h < 12) return 'Good morning,';
+    if(h < 17) return 'Good afternoon,';
+    return 'Good evening,';
+  }
+
+  /* ---------- Format time ---------- */
+  function formatMinutes(m){
+    if(!m) return '—';
+    if(m < 60) return m + ' min';
+    var h = Math.floor(m/60), rem = m%60;
+    return h + 'h' + (rem ? ' ' + rem + 'm' : '');
+  }
+
+  function formatAcceptedTime(isoStr){
+    if(!isoStr) return '';
+    try{
+      var d = new Date(isoStr);
+      return 'Accepted at ' +
+        d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }catch(e){ return ''; }
+  }
+
+  /* ---------- Render command tag ---------- */
+  var TAG_LABELS = {
+    blocker:              'Blocker Priority',
+    milestone:            'Milestone',
+    checkpoint:           'Checkpoint',
+    behavior_pattern:     'Behavior Pattern',
+    recurring_blocker:    'Aging Blocker',
+    standard_recommendation: 'Recommended',
+    manual:               'Modified',
+    'all-complete':       'Campaign Complete'
+  };
+
+  /* ---------- Render committed state ---------- */
+  function renderCommitted(record){
+    var cmd = record.command;
+    document.getElementById('dcCommandPanel').style.display = '';
+    /* Fill in the command details (read-only) */
+    renderCommandPanel(cmd);
+    /* Disable buttons */
+    document.getElementById('dcBtnAccept').disabled = true;
+    document.getElementById('dcBtnModify').disabled = true;
+    document.getElementById('dcBtnDefer').disabled  = true;
+    document.getElementById('dcBtnAccept').style.opacity = '0.5';
+    document.getElementById('dcBtnModify').style.opacity = '0.5';
+    document.getElementById('dcBtnDefer').style.opacity  = '0.5';
+    /* Show committed banner */
+    var statusLabel = record.status === 'modified' ? 'Command Modified & Committed' : 'Command Accepted';
+    document.getElementById('dcAcceptedTitle').textContent = statusLabel;
+    document.getElementById('dcAcceptedSub').textContent =
+      '"' + cmd.title + '"';
+    document.getElementById('dcAcceptedTime').textContent =
+      formatAcceptedTime(record.acceptedAt);
+    document.getElementById('dcAcceptedBanner').classList.add('show');
+  }
+
+  /* ---------- Render command panel ---------- */
+  function renderCommandPanel(cmd){
+    document.getElementById('dcCommandTitle').textContent = cmd.title;
+    document.getElementById('dcCommandMission').textContent =
+      (cmd.missionName || '') + (cmd.missionName && cmd.camp ? ' · ' + cmd.camp : '');
+    document.getElementById('dcCommandWhy').textContent = cmd.whyItMatters;
+    document.getElementById('dcMetaMission').textContent = cmd.missionName || '—';
+    document.getElementById('dcMetaTime').textContent = formatMinutes(cmd.estimatedMinutes);
+    document.getElementById('dcMetaGain').textContent =
+      cmd.confidenceGain ? '+' + cmd.confidenceGain + ' Confidence' : '—';
+    document.getElementById('dcCommandTag').textContent =
+      TAG_LABELS[cmd.type] || cmd.type;
+  }
+
+  /* ---------- Situation panels ---------- */
+  function renderSituation(){
+    var threats = AetherIntelligence.computeThreats();
+    var opps    = AetherIntelligence.computeOpportunities();
+
+    document.getElementById('dcThreats').innerHTML = threats.length === 0
+      ? '<div class="dc-sit-row"><span class="dc-sit-dot good"></span><span class="dc-sit-name" style="color:var(--success);">No active threats.</span></div>'
+      : threats.slice(0,4).map(function(t){
+          return '<div class="dc-sit-row">' +
+            '<span class="dc-sit-dot threat"></span>' +
+            '<div style="flex:1;"><div class="dc-sit-name">' + t.name + '</div>' +
+            '<div class="dc-sit-sub">' + t.sub + '</div></div>' +
+            '</div>';
+        }).join('');
+
+    document.getElementById('dcOpportunities').innerHTML = opps.length === 0
+      ? '<div class="dc-sit-row"><span class="dc-sit-dot accent"></span><span class="dc-sit-name" style="color:var(--text-dim);">No opportunities computed.</span></div>'
+      : opps.map(function(o){
+          return '<div class="dc-sit-row">' +
+            '<span class="dc-sit-dot good"></span>' +
+            '<span class="dc-sit-name">' + o.name + '</span>' +
+            '<span class="dc-sit-value">' + o.gain + '</span>' +
+            '</div>';
+        }).join('');
+  }
+
+  /* ---------- History strip ---------- */
+  function renderHistory(){
+    var records = DailyCommand.getRecentRecords(5);
+    if(records.length === 0) return;
+    document.getElementById('dcHistory').style.display = '';
+    document.getElementById('dcHistoryRows').innerHTML = records.map(function(r){
+      var d = new Date(r.dateKey);
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var label = months[d.getMonth()] + ' ' + d.getDate();
+      return '<div class="dc-history-row">' +
+        '<span class="dc-hist-date">' + label + '</span>' +
+        '<span class="dc-hist-title">' + (r.command ? r.command.title : '—') + '</span>' +
+        '<span class="dc-hist-status ' + r.status + '">' + r.status + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  /* ---------- Main init ---------- */
+  function init(){
+    /* Set date + greeting */
+    document.getElementById('dcDate').textContent = DailyCommand.getTodayLabel();
+    document.getElementById('dcGreeting').textContent = greetingLine();
+
+    /* Stats */
+    var conf     = AetherIntelligence.computeCommanderConfidence();
+    var camp     = AetherIntelligence.computeCurrentCamp();
+    var missions = AetherStore.getAllMissions
+      ? AetherStore.getAllMissions()
+      : AetherStore.getMissions();
+    var active   = missions.filter(function(m){ return m.pct < 100; }).length;
+
+    document.getElementById('dcConfidencePct').textContent = conf.pct + '%';
+    document.getElementById('dcCamp').textContent          = camp;
+    document.getElementById('dcMissionsActive').textContent = active;
+
+    /* Color-code confidence */
+    var confEl = document.getElementById('dcConfidencePct');
+    confEl.className = 'dc-stat-value ' +
+      (conf.pct >= 70 ? 'good' : conf.pct >= 40 ? 'accent' : 'warn');
+
+    /* Compute command */
+    var result = DailyCommand.computeForToday();
+
+    if(result.source === 'committed'){
+      /* Already accepted today — show read-only */
+      renderCommitted(result.record);
+      renderSituation();
+      renderHistory();
+      return;
+    }
+
+    if(result.source === 'empty' || !result.command){
+      document.getElementById('dcCommandPanel').style.display = 'none';
+      document.getElementById('dcEmpty').classList.add('show');
+      return;
+    }
+
+    currentCommand = result.command;
+    renderCommandPanel(currentCommand);
+    renderSituation();
+    renderHistory();
+  }
+
+  /* ---------- Accept ---------- */
+  window.handleAccept = function(){
+    if(!currentCommand) return;
+    var btn = document.getElementById('dcBtnAccept');
+    btn.disabled = true;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;"><path d="M20 6 9 17l-5-5"/></svg> Accepted';
+
+    var record = DailyCommand.accept(currentCommand);
+    setTimeout(function(){ renderCommitted(record); }, 300);
+  };
+
+  /* ---------- Modify ---------- */
+  window.handleModify = function(){
+    document.getElementById('dcModifyArea').classList.add('show');
+    document.getElementById('dcActions').style.display = 'none';
+    var input = document.getElementById('dcModifyInput');
+    input.value = currentCommand.title;
+    input.focus();
+    input.select();
+  };
+
+  window.confirmModify = function(){
+    var text = document.getElementById('dcModifyInput').value.trim();
+    if(!text) return;
+    var record = DailyCommand.modify(currentCommand, text);
+    document.getElementById('dcModifyArea').classList.remove('show');
+    document.getElementById('dcActions').style.display = '';
+    renderCommitted(record);
+  };
+
+  window.cancelModify = function(){
+    document.getElementById('dcModifyArea').classList.remove('show');
+    document.getElementById('dcActions').style.display = '';
+  };
+
+  /* ---------- Defer ---------- */
+  window.handleDefer = function(){
+    if(!currentCommand || isDeferring) return;
+    isDeferring = true;
+    var result  = DailyCommand.defer(currentCommand);
+
+    if(!result.nextCommand){
+      /* Nothing else to recommend */
+      document.getElementById('dcCommandTitle').textContent   = 'No further recommendations.';
+      document.getElementById('dcCommandWhy').textContent     = 'All available commands have been deferred. Return tomorrow.';
+      document.getElementById('dcBtnAccept').disabled = true;
+      document.getElementById('dcBtnModify').disabled = true;
+      document.getElementById('dcBtnDefer').disabled  = true;
+      return;
+    }
+
+    /* Show next best command */
+    currentCommand = result.nextCommand;
+    currentCommand.estimatedMinutes = currentCommand.estimatedMinutes ||
+      (currentCommand.confidenceGain ? currentCommand.confidenceGain * 20 : 60);
+    renderCommandPanel(currentCommand);
+
+    /* Visual flash to show it changed */
+    var panel = document.getElementById('dcCommandPanel');
+    panel.style.transition = 'opacity 200ms';
+    panel.style.opacity    = '0.4';
+    setTimeout(function(){ panel.style.opacity = '1'; isDeferring = false; }, 220);
+  };
+
+  /* Run */
+  init();
+
+})();
+</script>
+</body>
+</html>

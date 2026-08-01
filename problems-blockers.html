@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Problems / Blockers</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<script src="intelligenceEngine.js"></script>
+<style>
+.bk-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+@media(max-width:1000px){ .bk-strip{ grid-template-columns:repeat(2,1fr); } }
+.bk-stat{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:6px; }
+.bk-stat-label{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:7px; }
+.bk-stat-label svg{ width:14px; height:14px; }
+.bk-stat-value{ font-family:var(--font-display); font-size:30px; font-weight:600; line-height:1; }
+.bk-stat-sub{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); }
+.sec-title{ font-family:var(--font-display); font-size:13px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; display:flex; align-items:center; gap:9px; margin-bottom:2px; }
+.sec-title svg{ width:16px; height:16px; color:var(--accent); }
+.bk-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.bk-filters{ display:flex; gap:8px; }
+.bk-filter{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; padding:6px 13px; border-radius:var(--radius-pill); border:1px solid var(--border-strong); background:transparent; color:var(--text-secondary); cursor:pointer; transition:var(--transition); }
+.bk-filter:hover{ border-color:var(--accent); color:var(--accent-glow); }
+.bk-filter.active{ background:rgba(74,168,255,0.15); border-color:var(--accent); color:var(--accent-glow); }
+.bk-list{ display:flex; flex-direction:column; gap:12px; }
+.bk-card{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:18px 20px; display:flex; flex-direction:column; gap:14px; border-left-width:3px; }
+.data-tag{
+  display:inline-block; font-family:var(--font-mono); font-size:8.5px; font-weight:700; letter-spacing:0.1em;
+  padding:2px 7px; border-radius:99px; text-transform:uppercase; vertical-align:middle; margin-right:2px;
+}
+.sample-tag{ background:rgba(255,184,77,0.14); color:var(--warning); border:1px solid rgba(255,184,77,0.35); }
+.mini-confirm-overlay{
+  position:fixed; inset:0; z-index:9500; background:rgba(2,8,20,0.82); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center;
+}
+.mini-confirm-overlay.open{ display:flex; }
+.mini-confirm-box{
+  width:100%; max-width:380px; background:var(--bg-panel); border:1px solid rgba(255,92,108,0.3);
+  border-radius:var(--radius-lg); padding:22px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.mini-confirm-title{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.mini-confirm-title svg{ width:17px; height:17px; color:var(--danger); }
+.mini-confirm-body{ font-family:var(--font-body); font-size:12.5px; color:var(--text-secondary); line-height:1.55; margin-bottom:18px; }
+.mini-confirm-body strong{ color:var(--text-primary); }
+.mini-confirm-actions{ display:flex; gap:10px; justify-content:flex-end; }
+.bk-card.deep-highlight{ animation:bkCardHighlightPulse 1.8s ease-out 2; }
+@keyframes bkCardHighlightPulse{
+  0%{ box-shadow:0 0 0 2px var(--accent), 0 0 30px rgba(74,168,255,0.5); }
+  100%{ box-shadow:none; }
+}
+.bk-card.sev-High{ border-left-color:var(--danger); }
+.bk-card.sev-Medium{ border-left-color:var(--warning); }
+.bk-card.sev-Low{ border-left-color:var(--text-dim); }
+.bk-card.resolved{ opacity:0.55; }
+.bk-card-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+.bk-card-name{ font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:0.02em; color:var(--text-primary); }
+.bk-card-mission{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); margin-top:4px; }
+.bk-tags{ display:flex; gap:7px; align-items:center; flex-shrink:0; }
+.bk-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+@media(max-width:760px){ .bk-grid{ grid-template-columns:repeat(2,1fr); } }
+.bk-field{ display:flex; flex-direction:column; gap:3px; }
+.bk-field-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-faint); }
+.bk-field-value{ font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); }
+.bk-field-value.danger{ color:var(--danger); font-family:var(--font-display); font-weight:600; }
+.bk-recovery{ background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:12px 14px; }
+.bk-recovery-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-faint); margin-bottom:5px; display:flex; align-items:center; gap:6px; }
+.bk-recovery-label svg{ width:11px; height:11px; color:var(--success); }
+.bk-recovery-text{ font-family:var(--font-body); font-size:12.5px; color:var(--text-secondary); line-height:1.55; }
+.bk-card-actions{ display:flex; gap:8px; justify-content:flex-end; }
+.bk-empty{ padding:50px 24px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:14px; }
+.bk-empty svg{ width:46px; height:46px; color:var(--success); }
+.bk-empty-title{ font-family:var(--font-display); font-size:16px; color:var(--success); letter-spacing:0.06em; }
+.bk-empty-sub{ font-family:var(--font-body); font-size:13px; color:var(--text-dim); max-width:340px; line-height:1.6; }
+</style>
+<style>
+@keyframes aether-pulse {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(0,200,255,0.9)) drop-shadow(0 0 18px rgba(0,200,255,0.4)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(0,200,255,1)) drop-shadow(0 0 35px rgba(0,200,255,0.7)) drop-shadow(0 0 6px #fff); }
+}
+.sidebar-logo-mark { animation: aether-pulse 2.8s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow-strong" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow-soft" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Outer dashed orbit circle -->
+          <circle cx="50" cy="50" r="42" stroke="#1a4a6a" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.7"/>
+          <!-- Inner dashed circle -->
+          <circle cx="50" cy="50" r="34" stroke="#1a3a5a" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.5"/>
+          <!-- Orbit dots -->
+          <circle cx="50" cy="8" r="2.5" fill="#00c8ff" filter="url(#glow-soft)" opacity="0.9"/>
+          <circle cx="88" cy="62" r="1.8" fill="#4aa8ff" filter="url(#glow-soft)" opacity="0.7"/>
+          <circle cx="14" cy="38" r="1.5" fill="#4aa8ff" opacity="0.5"/>
+          <!-- Triangle glow layer -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="5" stroke-linejoin="round" fill="none" opacity="0.15" filter="url(#glow-strong)"/>
+          <!-- Inner green triangle -->
+          <path d="M50 30 L76 70 H24 Z" stroke="#00ff88" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.5"/>
+          <!-- Main neon triangle -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="2.5" stroke-linejoin="round" fill="none" filter="url(#glow-strong)"/>
+          <!-- Center dot -->
+          <circle cx="50" cy="60" r="3.5" fill="#00c8ff" filter="url(#glow-strong)"/>
+          <circle cx="50" cy="60" r="1.5" fill="white" opacity="0.9"/>
+          <!-- Corner accent dots -->
+          <circle cx="50" cy="22" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="82" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="18" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-wordmark">ETHER</span>
+        <span class="sidebar-logo-tagline">Mission Command System</span>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg></span>
+        <span class="nav-item-label">Command Deck</span>
+      </a>
+      <a href="life-advancement.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 5l4 6 3-4 5 10"/></svg></span>
+        <span class="nav-item-label">Life Advancement</span>
+      </a>
+      <a href="missions.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span>
+        <span class="nav-item-label">Missions</span>
+      </a>
+      <a href="blueprints.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="nav-item-label">Blueprints</span>
+      </a>
+      <a href="problems-blockers.html" class="nav-item active">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg></span>
+        <span class="nav-item-label">Blockers</span>
+        <span class="badge" id="navBlockerBadge">4</span>
+      </a>
+      <a href="evidence-vault.html" class="nav-item ">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg></span>
+        <span class="nav-item-label">Evidence Vault</span>
+      </a>
+      <a href="timeline.html" class="nav-item ">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="nav-item-label">Timeline</span>
+      </a>
+      <a href="debrief.html" class="nav-item ">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V7a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 5v5h5"/></svg></span>
+        <span class="nav-item-label">Debrief</span>
+      </a>
+            <a href="summit-archive.html" class="nav-item">
+        <span class="nav-item-icon">🏔️</span>
+        <span class="nav-item-label">Summit Archive</span>
+      </a>
+      <a href="knowledge-library.html" class="nav-item">
+        <span class="nav-item-icon">📚</span>
+        <span class="nav-item-label">Knowledge Library</span>
+      </a>
+      <a href="command-center.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
+        <span class="nav-item-label">Command Center</span>
+      </a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="profile-header">
+        <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+        <div class="profile-info">
+          <span class="profile-name">ROD ENTERA</span>
+          <span class="profile-rank">Operator</span>
+        </div>
+      </div>
+            <div style="display:flex;gap:16px;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:4px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--teal);" id="sidebarDaysClimbing">14</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Days Climbing</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--gold);" id="sidebarSummits">0</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Summits</span>
+        </div>
+      </div>
+      <div class="profile-quote">"The mission is progress. The evidence is proof. The mountain is the journey."</div>
+      <div class="profile-focus-row">
+        <span class="focus-dot"></span>
+        <div class="focus-text">
+          <span class="focus-label">Focus Mode</span>
+          <span class="focus-value">High Performance</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>PROBLEMS / BLOCKERS</h1>
+        <span class="topbar-subtitle">Every obstacle on the trail. Owned, tracked, cleared.</span>
+      </div>
+      <div class="topbar-meta">
+        <button class="btn btn-primary" onclick="openNewBlocker()" style="gap:7px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14"/></svg>
+          New Blocker
+        </button>
+        <span class="pill behind" id="modeIndicator" style="display:flex; align-items:center; gap:6px;"></span>
+      </div>
+    </header>
+    <main class="content">
+
+      <div class="bk-strip" id="bkStrip"></div>
+
+      <div class="bk-toolbar" style="margin-top:6px;">
+        <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg> Active Obstacle Board</div>
+        <div class="bk-filters" id="bkFilters">
+          <button class="bk-filter active" data-filter="all" onclick="setFilter(this)">All</button>
+          <button class="bk-filter" data-filter="open" onclick="setFilter(this)">Open</button>
+          <button class="bk-filter" data-filter="progress" onclick="setFilter(this)">In Progress</button>
+          <button class="bk-filter" data-filter="resolved" onclick="setFilter(this)">Resolved</button>
+        </div>
+      </div>
+
+      <div class="bk-list" id="bkList"></div>
+
+    </main>
+  </div>
+</div>
+
+<!-- New Blocker Modal -->
+<!-- Lightweight single-item delete confirmation -->
+<div class="mini-confirm-overlay" id="miniConfirmOverlay">
+  <div class="mini-confirm-box">
+    <div class="mini-confirm-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+      Delete this?
+    </div>
+    <div class="mini-confirm-body" id="miniConfirmBody"></div>
+    <div class="mini-confirm-actions">
+      <button class="btn btn-ghost" onclick="closeMiniConfirm()">Cancel</button>
+      <button class="btn btn-danger-solid" id="miniConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Resolve-with-solution modal — this is what actually feeds Knowledge
+     Library. Resolving a blocker without capturing what fixed it would
+     leave the Knowledge Library permanently empty even with real
+     resolved blockers, since it reads each blocker's .solution field. -->
+<div class="mini-confirm-overlay" id="resolveModal">
+  <div class="mini-confirm-box">
+    <div class="mini-confirm-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      Mark Resolved — What fixed it?
+    </div>
+    <div class="mini-confirm-body">
+      <div style="font-family:var(--font-body); font-size:13px; color:var(--text-secondary); margin-bottom:10px;" id="resolveBlockerName"></div>
+      <textarea id="resolveSolutionInput" placeholder="What actually solved this? This becomes a permanent entry in your Knowledge Library."
+        style="width:100%; background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px; min-height:90px; resize:vertical; box-sizing:border-box;"></textarea>
+      <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-faint); margin-top:8px;">Optional, but skipping this means the lesson is lost — Knowledge Library only shows solutions that were actually recorded.</div>
+    </div>
+    <div class="mini-confirm-actions">
+      <button class="btn btn-ghost" onclick="closeResolveModal()">Cancel</button>
+      <button class="btn btn-success" id="resolveConfirmBtn">Mark Resolved</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="newBlockerModal" style="position:fixed; inset:0; z-index:200; background:rgba(2,8,20,0.88); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center;">
+  <div style="background:var(--bg-panel); border:1px solid var(--border-accent); border-radius:var(--radius-lg); width:min(560px,94vw); max-height:90vh; overflow-y:auto; box-shadow:0 0 60px rgba(74,168,255,0.15);">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px 16px; border-bottom:1px solid var(--border-subtle);">
+      <span style="font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">Declare New Blocker</span>
+      <button onclick="closeNewBlocker()" style="width:32px; height:32px; border-radius:50%; background:transparent; border:1px solid var(--border-strong); color:var(--text-secondary); cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:24px; display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Blocker Name *</label>
+        <input id="blkName" placeholder="What is blocking advancement?" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px;"/>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Severity</label>
+          <select id="blkSeverity" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px;">
+            <option value="High">High</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Low">Low</option>
+          </select>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Affected Mission</label>
+          <select id="blkMission" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px;"></select>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Linked Blueprint Step</label>
+          <select id="blkCheckpoint" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px;">
+            <option value="">None — general mission blocker</option>
+          </select>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Solution Found</label>
+          <input id="blkSolution" placeholder="How was this solved?" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px;"/>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Recovery Plan</label>
+        <textarea id="blkRecovery" placeholder="What is the plan to clear this obstacle?" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px; min-height:70px; resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div style="padding:16px 24px 20px; border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:10px;">
+      <button class="btn btn-ghost" onclick="closeNewBlocker()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitBlocker()">Declare Blocker</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var currentFilter = 'all';
+
+  function openMiniConfirm(bodyHtml, onConfirm){
+    document.getElementById('miniConfirmBody').innerHTML = bodyHtml;
+    document.getElementById('miniConfirmOverlay').classList.add('open');
+    document.getElementById('miniConfirmBtn').onclick = function(){ onConfirm(); closeMiniConfirm(); };
+  }
+  window.closeMiniConfirm = function(){
+    document.getElementById('miniConfirmOverlay').classList.remove('open');
+  };
+  document.getElementById('miniConfirmOverlay').addEventListener('click', function(e){
+    if(e.target === this) closeMiniConfirm();
+  });
+
+  function modeIndicator(){
+    var el = document.getElementById('modeIndicator');
+    var live = AetherStore.isLive();
+    el.textContent = live ? 'LIVE MODE' : 'SAMPLE MODE';
+    el.style.color = live ? 'var(--success)' : 'var(--warning)';
+  }
+
+  function getBlockers(){
+    return AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+  }
+
+  function renderStrip(){
+    var b = getBlockers();
+    var open = b.filter(function(x){ return x.status==='open'; }).length;
+    var high = b.filter(function(x){ return x.status!=='resolved' && x.severity==='High'; }).length;
+    var prog = b.filter(function(x){ return x.status==='progress'; }).length;
+    var resolved = b.filter(function(x){ return x.status==='resolved'; }).length;
+    document.getElementById('bkStrip').innerHTML =
+      stat('danger','Open Blockers', open, 'Actively blocking', '<path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/>') +
+      stat('danger','High Severity', high, 'Critical priority', '<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>') +
+      stat('warning','In Progress', prog, 'Being worked', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>') +
+      stat('success','Resolved', resolved, 'Cleared from trail', '<path d="M20 6 9 17l-5-5"/>');
+    // update nav badge
+    var badge = document.getElementById('navBlockerBadge');
+    if(badge) badge.textContent = open;
+  }
+
+  function stat(color,label,value,sub,svg){
+    var c = color==='danger'?'var(--danger)':color==='warning'?'var(--warning)':color==='success'?'var(--success)':'var(--accent)';
+    return '<div class="bk-stat">'+
+      '<span class="bk-stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="'+c+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+svg+'</svg>'+label+'</span>'+
+      '<span class="bk-stat-value" style="color:'+c+'">'+value+'</span>'+
+      '<span class="bk-stat-sub">'+sub+'</span></div>';
+  }
+
+  function renderList(){
+    var b = getBlockers();
+    if(currentFilter!=='all') b = b.filter(function(x){ return x.status===currentFilter; });
+    // sort: open high first, then by daysOpen
+    var sevRank = {High:0,Medium:1,Low:2};
+    b = b.slice().sort(function(a,c){
+      if(a.status==='resolved' && c.status!=='resolved') return 1;
+      if(c.status==='resolved' && a.status!=='resolved') return -1;
+      if(sevRank[a.severity]!==sevRank[c.severity]) return sevRank[a.severity]-sevRank[c.severity];
+      return (c.daysOpen||0)-(a.daysOpen||0);
+    });
+    var list = document.getElementById('bkList');
+    if(b.length===0){
+      list.innerHTML = '<div class="bk-card"><div class="bk-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div class="bk-empty-title">No Blockers Here</div><div class="bk-empty-sub">The trail is clear for this filter. Nothing is obstructing advancement.</div></div></div>';
+      return;
+    }
+    list.innerHTML = b.map(function(x){
+      var statusPill = x.status==='open' ? '<span class="pill behind">Open</span>'
+        : x.status==='progress' ? '<span class="pill at-risk">In Progress</span>'
+        : '<span class="pill on-track">Resolved</span>';
+      var sevPill = '<span class="pill '+(x.severity==='High'?'behind':x.severity==='Medium'?'at-risk':'')+'">'+x.severity+'</span>';
+      var resolveBtn = x.status!=='resolved' && x.isLive
+        ? '<button class="btn btn-success" style="font-size:11px; padding:7px 14px;" onclick="resolveBlk(\''+x.key+'\')">Mark Resolved</button>'
+        : '';
+      var deleteBtn = x.isLive
+        ? '<button class="btn btn-ghost" style="font-size:11px; padding:7px 14px; color:var(--danger); border-color:rgba(255,92,108,0.3);" onclick="confirmDeleteBlocker(\''+x.key+'\',\''+esc(x.name).replace(/\'/g,"\\\\'")+'\')">Delete</button>'
+        : '';
+      var sampleTag = !x.isLive ? '<span class="data-tag sample-tag">SAMPLE</span> ' : '';
+      var key = x.key || '';
+      return '<div class="bk-card sev-'+x.severity+(x.status==='resolved'?' resolved':'')+'" data-blocker="'+esc(key)+'">'+
+        '<div class="bk-card-head"><div><div class="bk-card-name">'+sampleTag+esc(x.name)+'</div>'+
+        '<div class="bk-card-mission">'+esc(x.affectedMission||'')+(x.affectedBlueprint?' · '+esc(x.affectedBlueprint):'')+'</div></div>'+
+        '<div class="bk-tags">'+sevPill+statusPill+'</div></div>'+
+        '<div class="bk-grid">'+
+          field('Owner', x.owner||'Rod Entera')+
+          field('Discovered', x.dateDiscovered||'—')+
+          fieldClass('Days Open', (x.daysOpen||0)+' day'+((x.daysOpen||0)!==1?'s':''), (x.daysOpen||0)>=3?'danger':'')+
+          field('Status', x.status)+
+        '</div>'+
+        (x.recoveryPlan ? '<div class="bk-recovery"><div class="bk-recovery-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Recovery Plan</div><div class="bk-recovery-text">'+esc(x.recoveryPlan)+'</div></div>' : '')+
+        (resolveBtn || deleteBtn ? '<div class="bk-card-actions">'+resolveBtn+deleteBtn+'</div>' : '')+
+      '</div>';
+    }).join('');
+  }
+
+  function field(label,val){ return '<div class="bk-field"><span class="bk-field-label">'+label+'</span><span class="bk-field-value">'+esc(String(val))+'</span></div>'; }
+  function fieldClass(label,val,cls){ return '<div class="bk-field"><span class="bk-field-label">'+label+'</span><span class="bk-field-value '+cls+'">'+esc(String(val))+'</span></div>'; }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  window.setFilter = function(el){
+    document.querySelectorAll('.bk-filter').forEach(function(f){ f.classList.remove('active'); });
+    el.classList.add('active');
+    currentFilter = el.getAttribute('data-filter');
+    renderList();
+  };
+
+  window.resolveBlk = function(key){
+    var blocker = (AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers())
+      .find(function(b){ return b.key === key; });
+    document.getElementById('resolveBlockerName').textContent = blocker ? blocker.name : '';
+    document.getElementById('resolveSolutionInput').value = '';
+    document.getElementById('resolveModal').classList.add('open');
+    document.getElementById('resolveConfirmBtn').onclick = function(){
+      var solution = document.getElementById('resolveSolutionInput').value;
+      AetherStore.resolveBlocker(key, solution);
+      closeResolveModal();
+      renderStrip(); renderList();
+    };
+    setTimeout(function(){ document.getElementById('resolveSolutionInput').focus(); }, 150);
+  };
+  window.closeResolveModal = function(){
+    document.getElementById('resolveModal').classList.remove('open');
+  };
+  document.getElementById('resolveModal').addEventListener('click', function(e){
+    if(e.target === this) closeResolveModal();
+  });
+
+  window.confirmDeleteBlocker = function(key, name){
+    openMiniConfirm(
+      'Deletes <strong>"' + name + '"</strong> permanently. This can\'t be undone.',
+      function(){ AetherStore.deleteBlocker(key); renderStrip(); renderList(); }
+    );
+  };
+
+  window.openNewBlocker = function(){
+    var sel = document.getElementById('blkMission');
+    var missions = AetherStore.getAllMissions ? AetherStore.getAllMissions() : AetherStore.getMissions();
+    sel.innerHTML = missions.map(function(m){ return '<option value="'+(m.key||m.name)+'" data-name="'+esc(m.name)+'">'+esc(m.name)+'</option>'; }).join('');
+    document.getElementById('newBlockerModal').style.display='flex';
+  };
+  window.closeNewBlocker = function(){ document.getElementById('newBlockerModal').style.display='none'; };
+  window.submitBlocker = function(){
+    var name = document.getElementById('blkName').value.trim();
+    if(!name) return;
+    var sel = document.getElementById('blkMission');
+    var missionName = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].getAttribute('data-name') : '';
+    AetherStore.saveBlocker({
+      name: name,
+      severity: document.getElementById('blkSeverity').value,
+      affectedMissionKey: sel.value,
+      affectedMissionName: missionName,
+      recoveryPlan: document.getElementById('blkRecovery').value.trim()
+    });
+    closeNewBlocker();
+    document.getElementById('blkName').value=''; document.getElementById('blkRecovery').value='';
+    renderStrip(); renderList();
+  };
+
+  modeIndicator(); renderStrip(); renderList();
+})();
+</script>
+<script src="aether-quotes.js"></script>
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script src="aether-nav.js"></script>
+
+<script>
+/* Deep-link support: ?highlight=<blockerKey> from Command Deck's
+   Threats panel scrolls to and highlights that blocker. */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var key = params.get('highlight');
+  if(!key) return;
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      var card = document.querySelector('[data-blocker="'+CSS.escape(key)+'"]');
+      if(!card) return;
+      card.scrollIntoView({behavior:'smooth', block:'center'});
+      card.classList.add('deep-highlight');
+    }, 200);
+  });
+})();
+</script>
+</body>
+</html>

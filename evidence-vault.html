@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Evidence Vault</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="stylesheet" href="aether-shell.css"/>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<script src="intelligenceEngine.js"></script>
+<script src="mission-mountain.js"></script>
+<style>
+.ev-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+@media(max-width:1000px){ .ev-strip{ grid-template-columns:repeat(2,1fr); } }
+.ev-stat{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px 18px; display:flex; flex-direction:column; gap:6px; }
+.ev-stat-label{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-dim); }
+.ev-stat-value{ font-family:var(--font-display); font-size:30px; font-weight:600; line-height:1; }
+.ev-stat-sub{ font-family:var(--font-body); font-size:11px; color:var(--text-dim); }
+.sec-title{ font-family:var(--font-display); font-size:13px; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; display:flex; align-items:center; gap:9px; }
+.sec-title svg{ width:16px; height:16px; color:var(--accent); }
+.ev-confidence-bar{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:18px 22px; display:flex; flex-direction:column; gap:12px; }
+.ev-conf-head{ display:flex; align-items:baseline; justify-content:space-between; }
+.ev-conf-num{ font-family:var(--font-display); font-size:34px; font-weight:700; color:var(--success); line-height:1; }
+.ev-conf-max{ font-family:var(--font-mono); font-size:12px; color:var(--text-dim); }
+.ev-filters{ display:flex; gap:8px; }
+.ev-filter{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; padding:6px 13px; border-radius:var(--radius-pill); border:1px solid var(--border-strong); background:transparent; color:var(--text-secondary); cursor:pointer; transition:var(--transition); }
+.ev-filter:hover{ border-color:var(--accent); color:var(--accent-glow); }
+.ev-filter.active{ background:rgba(74,168,255,0.15); border-color:var(--accent); color:var(--accent-glow); }
+.ev-list{ display:flex; flex-direction:column; gap:12px; }
+
+/* ---- Modal (standard pattern shared across the app) ---- */
+.modal-overlay{
+  position:fixed; inset:0; z-index:200;
+  background:rgba(2,8,20,0.88);
+  backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity 200ms ease;
+}
+.modal-overlay.open{ opacity:1; pointer-events:all; }
+.modal-box{
+  background:var(--bg-panel);
+  border:1px solid var(--border-accent);
+  border-radius:var(--radius-lg);
+  box-shadow:0 0 60px rgba(74,168,255,0.15), var(--shadow-panel);
+  width:min(560px, 94vw);
+  max-height:90vh;
+  overflow-y:auto;
+  display:flex; flex-direction:column;
+  transform:translateY(16px);
+  transition:transform 200ms ease;
+}
+.modal-overlay.open .modal-box{ transform:translateY(0); }
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px 24px 16px;
+  border-bottom:1px solid var(--border-subtle);
+  flex-shrink:0;
+}
+.modal-header-left{ display:flex; flex-direction:column; gap:3px; }
+.modal-title{
+  font-family:var(--font-display); font-size:15px; font-weight:600;
+  letter-spacing:0.1em; text-transform:uppercase; color:var(--text-primary);
+}
+.modal-sub{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--accent);
+}
+.modal-close{
+  width:32px; height:32px; border-radius:50%;
+  background:transparent; border:1px solid var(--border-strong);
+  color:var(--text-secondary); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:var(--transition);
+}
+.modal-close:hover{ border-color:var(--danger); color:var(--danger); }
+.modal-close svg{ width:14px; height:14px; }
+.modal-body{ padding:24px; display:flex; flex-direction:column; gap:16px; }
+.form-group{ display:flex; flex-direction:column; gap:6px; }
+.form-label{
+  font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--text-dim);
+}
+.form-label span{ color:var(--danger); margin-left:2px; }
+.form-input, .form-textarea, .form-select{
+  background:var(--bg-panel-alt);
+  border:1px solid var(--border-strong);
+  border-radius:var(--radius-md);
+  color:var(--text-primary);
+  font-family:var(--font-body); font-size:13px;
+  padding:10px 14px;
+  transition:var(--transition);
+  width:100%;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus{
+  outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(74,168,255,0.15);
+}
+.form-input::placeholder, .form-textarea::placeholder{ color:var(--text-faint); }
+.form-textarea{ resize:vertical; min-height:70px; line-height:1.6; }
+.form-select{ cursor:pointer; }
+.form-select option{ background:var(--bg-panel); color:var(--text-primary); }
+.form-row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-toggle-row{ display:flex; align-items:center; gap:10px; }
+.modal-footer{
+  padding:16px 24px 20px;
+  border-top:1px solid var(--border-subtle);
+  display:flex; align-items:center; justify-content:flex-end;
+  flex-shrink:0; gap:10px;
+}
+.form-group.has-error .form-input,
+.form-group.has-error .form-select{ border-color:var(--danger); }
+.data-tag{
+  display:inline-block; font-family:var(--font-mono); font-size:8.5px; font-weight:700; letter-spacing:0.1em;
+  padding:2px 7px; border-radius:99px; text-transform:uppercase; vertical-align:middle; margin-right:4px;
+}
+.sample-tag{ background:rgba(255,184,77,0.14); color:var(--warning); border:1px solid rgba(255,184,77,0.35); }
+/* ---- Lightweight single-item confirm modal ---- */
+.mini-confirm-overlay{
+  position:fixed; inset:0; z-index:9500; background:rgba(2,8,20,0.82); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center;
+}
+.mini-confirm-overlay.open{ display:flex; }
+.mini-confirm-box{
+  width:100%; max-width:380px; background:var(--bg-panel); border:1px solid rgba(255,92,108,0.3);
+  border-radius:var(--radius-lg); padding:22px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.mini-confirm-title{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text-primary); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.mini-confirm-title svg{ width:17px; height:17px; color:var(--danger); }
+.mini-confirm-body{ font-family:var(--font-body); font-size:12.5px; color:var(--text-secondary); line-height:1.55; margin-bottom:18px; }
+.mini-confirm-body strong{ color:var(--text-primary); }
+.mini-confirm-actions{ display:flex; gap:10px; justify-content:flex-end; }
+.ev-card{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px 20px; display:flex; align-items:center; gap:16px; border-left-width:3px; }
+.ev-card.verified{ border-left-color:var(--success); }
+.ev-card.pending{ border-left-color:var(--warning); }
+.ev-card.rejected{ border-left-color:var(--danger); opacity:0.6; }
+.ev-card-icon{ width:42px; height:42px; border-radius:var(--radius-md); flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--bg-panel-alt); border:1px solid var(--border-subtle); }
+.ev-card-icon svg{ width:20px; height:20px; color:var(--accent); }
+.ev-card-body{ flex:1; min-width:0; }
+.ev-card-name{ font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text-primary); }
+.ev-card-meta{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-dim); margin-top:4px; }
+.ev-card-notes{ font-family:var(--font-body); font-size:12px; color:var(--text-secondary); margin-top:6px; line-height:1.5; }
+.ev-card-right{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex-shrink:0; }
+.ev-conf-chip{ font-family:var(--font-display); font-size:13px; font-weight:600; color:var(--success); }
+.ev-actions{ display:flex; gap:6px; }
+.ev-mini-btn{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.06em; text-transform:uppercase; padding:5px 10px; border-radius:var(--radius-sm); border:1px solid var(--border-strong); background:transparent; cursor:pointer; transition:var(--transition); }
+.ev-mini-btn.verify{ color:var(--success); border-color:rgba(61,220,132,0.3); }
+.ev-mini-btn.verify:hover{ background:rgba(61,220,132,0.12); }
+.ev-mini-btn.reject{ color:var(--danger); border-color:rgba(255,92,108,0.3); }
+.ev-mini-btn.reject:hover{ background:rgba(255,92,108,0.12); }
+</style>
+<style>
+@keyframes aether-pulse {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(0,200,255,0.9)) drop-shadow(0 0 18px rgba(0,200,255,0.4)); }
+  50%      { filter: drop-shadow(0 0 18px rgba(0,200,255,1)) drop-shadow(0 0 35px rgba(0,200,255,0.7)) drop-shadow(0 0 6px #fff); }
+}
+.sidebar-logo-mark { animation: aether-pulse 2.8s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-mark">
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <filter id="glow-strong" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glow-soft" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Outer dashed orbit circle -->
+          <circle cx="50" cy="50" r="42" stroke="#1a4a6a" stroke-width="0.8" stroke-dasharray="3 4" opacity="0.7"/>
+          <!-- Inner dashed circle -->
+          <circle cx="50" cy="50" r="34" stroke="#1a3a5a" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.5"/>
+          <!-- Orbit dots -->
+          <circle cx="50" cy="8" r="2.5" fill="#00c8ff" filter="url(#glow-soft)" opacity="0.9"/>
+          <circle cx="88" cy="62" r="1.8" fill="#4aa8ff" filter="url(#glow-soft)" opacity="0.7"/>
+          <circle cx="14" cy="38" r="1.5" fill="#4aa8ff" opacity="0.5"/>
+          <!-- Triangle glow layer -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="5" stroke-linejoin="round" fill="none" opacity="0.15" filter="url(#glow-strong)"/>
+          <!-- Inner green triangle -->
+          <path d="M50 30 L76 70 H24 Z" stroke="#00ff88" stroke-width="1.2" stroke-linejoin="round" fill="none" opacity="0.5"/>
+          <!-- Main neon triangle -->
+          <path d="M50 22 L82 74 H18 Z" stroke="#00c8ff" stroke-width="2.5" stroke-linejoin="round" fill="none" filter="url(#glow-strong)"/>
+          <!-- Center dot -->
+          <circle cx="50" cy="60" r="3.5" fill="#00c8ff" filter="url(#glow-strong)"/>
+          <circle cx="50" cy="60" r="1.5" fill="white" opacity="0.9"/>
+          <!-- Corner accent dots -->
+          <circle cx="50" cy="22" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="82" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+          <circle cx="18" cy="74" r="2" fill="#00c8ff" filter="url(#glow-soft)"/>
+        </svg>
+      </div>
+      <div class="sidebar-logo-text">
+        <span class="sidebar-logo-wordmark">ETHER</span>
+        <span class="sidebar-logo-tagline">Mission Command System</span>
+      </div>
+      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="dashboard.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 19 9 7l3 5 2-3 7 10Z"/></svg></span>
+        <span class="nav-item-label">Command Deck</span>
+      </a>
+      <a href="life-advancement.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17 9 5l4 6 3-4 5 10"/></svg></span>
+        <span class="nav-item-label">Life Advancement</span>
+      </a>
+      <a href="missions.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg></span>
+        <span class="nav-item-label">Missions</span>
+      </a>
+      <a href="blueprints.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span>
+        <span class="nav-item-label">Blueprints</span>
+      </a>
+      <a href="problems-blockers.html" class="nav-item ">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg></span>
+        <span class="nav-item-label">Blockers</span>
+        <span class="badge" id="navBlockerBadge">4</span>
+      </a>
+      <a href="evidence-vault.html" class="nav-item active">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg></span>
+        <span class="nav-item-label">Evidence Vault</span>
+      </a>
+      <a href="timeline.html" class="nav-item ">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+        <span class="nav-item-label">Timeline</span>
+      </a>
+      <a href="debrief.html" class="nav-item ">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V7a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 5v5h5"/></svg></span>
+        <span class="nav-item-label">Debrief</span>
+      </a>
+      <a class="nav-item" href="knowledge-library.html"><span class="nav-item-icon">📚</span><span class="nav-item-label">Knowledge Library</span></a>
+      <a class="nav-item" href="summit-archive.html"><span class="nav-item-icon">🏔️</span><span class="nav-item-label">Summit Archive</span></a>
+      <a class="nav-item" href="command-center.html" class="nav-item">
+        <span class="nav-item-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span>
+        <span class="nav-item-label">Command Center</span>
+      </a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="profile-header">
+        <div class="profile-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>
+        <div class="profile-info">
+          <span class="profile-name">ROD ENTERA</span>
+          <span class="profile-rank">Operator</span>
+        </div>
+      </div>
+            <div style="display:flex;gap:16px;padding:8px 0;border-top:1px solid var(--border-subtle);margin-top:4px;">
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--teal);" id="sidebarDaysClimbing">14</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Days Climbing</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <span style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--gold);" id="sidebarSummits">0</span>
+          <span style="font-family:var(--font-mono);font-size:9px;letter-spacing:0.12em;color:var(--text-faint);text-transform:uppercase;">Summits</span>
+        </div>
+      </div>
+      <div class="profile-quote">"The mission is progress. The evidence is proof. The mountain is the journey."</div>
+      <div class="profile-focus-row">
+        <span class="focus-dot"></span>
+        <div class="focus-text">
+          <span class="focus-label">Focus Mode</span>
+          <span class="focus-value">High Performance</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>EVIDENCE VAULT</h1>
+        <span class="topbar-subtitle">Proof of work. Verified evidence is what moves confidence.</span>
+      </div>
+      <div class="topbar-meta">
+        <span class="pill" id="modeIndicator" style="display:flex; align-items:center; gap:6px;"></span>
+      </div>
+    </header>
+    <main class="content">
+
+      <div class="ev-strip" id="evStrip"></div>
+
+      <div class="ev-confidence-bar">
+        <div class="ev-conf-head">
+          <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 4 6v6c0 5 8 8 8 8s8-3 8-8V6Z"/></svg> Commander Confidence Engine</div>
+          <div><span class="ev-conf-num" id="evConfEarned">0</span><span class="ev-conf-max" id="evConfMax"> / 0 possible</span></div>
+        </div>
+        <div class="progress-track" style="height:8px;"><div class="progress-fill success" id="evConfFill" style="width:0%;"></div></div>
+        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim);">Verified evidence contributes full value. Pending contributes 40%. Open High-severity blockers each subtract 5 points.</div>
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:6px;">
+        <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg> Evidence Records</div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div class="ev-filters">
+            <button class="ev-filter active" data-filter="all" onclick="evFilter(this)">All</button>
+            <button class="ev-filter" data-filter="verified" onclick="evFilter(this)">Verified</button>
+            <button class="ev-filter" data-filter="pending" onclick="evFilter(this)">Pending</button>
+          </div>
+          <button class="btn btn-primary" style="gap:7px;" onclick="openEvidenceModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>
+            Add Evidence
+          </button>
+        </div>
+      </div>
+
+      <div class="ev-list" id="evList"></div>
+
+      <div id="evSummitSection" style="display:none; margin-top:8px;">
+        <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M17 3H7l5 8 5-8Z"/></svg> Mission Summits — Ultimate Proof</div>
+        <div id="evSummitGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:14px;"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Add Evidence Modal -->
+<div class="modal-overlay" id="evidenceModal">
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <span class="modal-title">Add Evidence</span>
+        <span class="modal-sub">Proof of work — attach it to a mission, blueprint, or step</span>
+      </div>
+      <button class="modal-close" onclick="closeEvidenceModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-group" style="margin-bottom:0;">
+        <button type="button" class="btn btn-ghost" id="bulkEvToggleBtn" onclick="toggleBulkEvidencePaste()" style="font-size:11px; padding:8px 14px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+          Paste multiple evidence items instead
+        </button>
+        <div id="bulkEvBox" style="display:none; flex-direction:column; gap:8px; margin-top:10px;">
+          <span style="font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); line-height:1.6;">
+            Pick Mission and Blueprint below first — every pasted item uses that pairing. Separate each evidence item with a blank line.
+          </span>
+          <textarea id="bulkEvInput" class="form-input" rows="12" style="font-family:var(--font-mono); font-size:11.5px; resize:vertical;"
+placeholder="Name: Dashboard deployment confirmed working
+Type: Screenshot
+Confidence: 3
+Step: Build all 11 core pages
+Attachment: dashboard.html
+Notes: Confirmed working in browser
+Status: verified
+
+Name: Next evidence item
+Type: Document
+Confidence: 5
+..."></textarea>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary" onclick="addEvidenceFromBulkText()" style="font-size:11px; padding:8px 14px;">Add All From List</button>
+            <span id="bulkEvNote" style="font-family:var(--font-mono); font-size:9.5px; color:var(--success);"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" id="evfg-name">
+        <label class="form-label">Evidence Name <span>*</span></label>
+        <input type="text" id="evName" class="form-input" placeholder="e.g. Dashboard deployment confirmed working" maxlength="140"/>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Type</label>
+          <select id="evType" class="form-select">
+            <option>Screenshot</option>
+            <option>Deployment URL</option>
+            <option>Git Commit</option>
+            <option>Document</option>
+            <option>Invoice</option>
+            <option>Testing Log</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confidence Value</label>
+          <select id="evConfidence" class="form-select">
+            <option value="1">+1 pts</option>
+            <option value="2" selected>+2 pts</option>
+            <option value="3">+3 pts</option>
+            <option value="4">+4 pts</option>
+            <option value="5">+5 pts</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Mission</label>
+          <select id="evMission" class="form-select" onchange="onEvMissionChange()">
+            <option value="">— None —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Blueprint</label>
+          <select id="evBlueprint" class="form-select" onchange="onEvBlueprintChange()">
+            <option value="">— None —</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Step it proves (optional)</label>
+        <select id="evCheckpoint" class="form-select">
+          <option value="">— Not tied to a specific step —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Attachment — a link or reference <span style="color:var(--text-faint); font-weight:400; text-transform:none;">(AETHER stores links/notes, not files)</span></label>
+        <input type="text" id="evAttachment" class="form-input" placeholder="e.g. a URL, filename, or commit hash"/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea id="evNotes" class="form-textarea" placeholder="What does this prove? Any context worth recording."></textarea>
+      </div>
+
+      <div class="form-toggle-row">
+        <input type="checkbox" id="evMarkVerified" style="width:16px;height:16px;accent-color:var(--success);"/>
+        <label for="evMarkVerified" style="font-family:var(--font-body); font-size:12.5px; color:var(--text-secondary); cursor:pointer;">Mark as verified now (otherwise it starts pending)</label>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeEvidenceModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveEvBtn" onclick="submitEvidence()">Save Evidence</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightweight single-item delete confirmation -->
+<div class="mini-confirm-overlay" id="miniConfirmOverlay">
+  <div class="mini-confirm-box">
+    <div class="mini-confirm-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20Z"/><path d="M12 9.5v4.5M12 16.7v.1"/></svg>
+      Delete this?
+    </div>
+    <div class="mini-confirm-body" id="miniConfirmBody"></div>
+    <div class="mini-confirm-actions">
+      <button class="btn btn-ghost" onclick="closeMiniConfirm()">Cancel</button>
+      <button class="btn btn-danger-solid" id="miniConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var currentFilter='all';
+  var EV_STATE_KEY='aether_evidence_states';
+
+  function getStates(){ try{ return JSON.parse(localStorage.getItem(EV_STATE_KEY)||'{}'); }catch(e){ return {}; } }
+  function setState(id,status){ var s=getStates(); s[id]=status; localStorage.setItem(EV_STATE_KEY,JSON.stringify(s)); }
+
+  function getEvidence(){
+    var ev = AetherStore.getEvidence();
+    var states = getStates();
+    return ev.map(function(e){
+      var status = states[e.id] !== undefined ? states[e.id] : (e.defaultStatus||'pending');
+      return Object.assign({}, e, { status: status });
+    });
+  }
+
+  function modeIndicator(){
+    var el=document.getElementById('modeIndicator');
+    var live=AetherStore.isLive();
+    el.textContent=live?'LIVE MODE':'SAMPLE MODE';
+    el.style.color=live?'var(--success)':'var(--warning)';
+  }
+
+  function computeConfidence(){
+    var ev=getEvidence();
+    var earned=0, max=0;
+    ev.forEach(function(e){
+      var v=e.confidenceValue||0; max+=v;
+      if(e.status==='verified') earned+=v;
+      else if(e.status==='pending') earned+=Math.round(v*0.4);
+    });
+    var blockers=AetherStore.getAllBlockers?AetherStore.getAllBlockers():AetherStore.getBlockers();
+    var penalty=blockers.filter(function(b){return b.status==='open'&&b.severity==='High';}).length*5;
+    return { earned:Math.max(0,earned), max:max, penalty:penalty, pct: max>0?Math.round(earned/max*100):0 };
+  }
+
+  function renderStrip(){
+    var ev=getEvidence();
+    var v=ev.filter(function(e){return e.status==='verified';}).length;
+    var p=ev.filter(function(e){return e.status==='pending';}).length;
+    document.getElementById('evStrip').innerHTML =
+      st('Total Evidence', ev.length, 'All records') +
+      st('Verified', v, 'Confirmed proof', 'var(--success)') +
+      st('Pending', p, 'Awaiting verification', 'var(--warning)') +
+      st('Evidence Types', new Set(ev.map(function(e){return e.type;})).size, 'Distinct categories');
+  }
+  function st(label,val,sub,color){
+    return '<div class="ev-stat"><span class="ev-stat-label">'+label+'</span><span class="ev-stat-value" style="color:'+(color||'var(--text-primary)')+'">'+val+'</span><span class="ev-stat-sub">'+sub+'</span></div>';
+  }
+
+  function renderConfidence(){
+    var c=computeConfidence();
+    document.getElementById('evConfEarned').textContent=c.earned;
+    document.getElementById('evConfMax').textContent=' / '+c.max+' possible';
+    document.getElementById('evConfFill').style.width=c.pct+'%';
+  }
+
+  var TYPE_ICON={
+    'Screenshot':'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 15-5-5L5 21"/>',
+    'Git Commit':'<circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6"/>',
+    'Deployment URL':'<circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>',
+    'Document':'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
+    'Invoice':'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M8 13h8M8 17h5"/>',
+    'Testing Log':'<path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/>'
+  };
+
+  function renderList(){
+    var ev=getEvidence();
+    if(currentFilter!=='all') ev=ev.filter(function(e){return e.status===currentFilter;});
+    document.getElementById('evList').innerHTML = ev.map(function(e){
+      var icon=TYPE_ICON[e.type]||'<rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/>';
+      var statusPill = e.status==='verified'?'<span class="pill on-track">Verified</span>':e.status==='pending'?'<span class="pill at-risk">Pending</span>':'<span class="pill behind">Rejected</span>';
+      var actions = e.status!=='verified' ? '<div class="ev-actions"><button class="ev-mini-btn verify" onclick="verifyEv(\''+e.id+'\')">Verify</button><button class="ev-mini-btn reject" onclick="rejectEv(\''+e.id+'\')">Reject</button></div>' : '<div class="ev-actions"><button class="ev-mini-btn reject" onclick="unverifyEv(\''+e.id+'\')">Unverify</button></div>';
+      var sampleTag = !e.isLive ? '<span class="data-tag sample-tag" style="position:static;">SAMPLE</span>' : '';
+      var deleteBtn = e.isLive ? '<button class="ev-mini-btn reject" title="Delete" onclick="confirmDeleteEvidence(\''+e.id+'\',\''+esc(e.name).replace(/\'/g,"\\\\'")+'\')" style="padding:5px 8px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>' : '';
+      return '<div class="ev-card '+e.status+'">'+
+        '<div class="ev-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+icon+'</svg></div>'+
+        '<div class="ev-card-body"><div class="ev-card-name">'+sampleTag+' '+esc(e.name)+'</div>'+
+        '<div class="ev-card-meta">'+esc(e.type)+' · '+esc(e.mission||'')+(e.checkpoint?' · '+esc(e.checkpoint):'')+' · '+esc(e.dateSubmitted||'')+'</div>'+
+        (e.notes?'<div class="ev-card-notes">'+esc(e.notes)+'</div>':'')+'</div>'+
+        '<div class="ev-card-right"><span class="ev-conf-chip">+'+(e.confidenceValue||0)+'</span>'+statusPill+actions+deleteBtn+'</div>'+
+      '</div>';
+    }).join('');
+  }
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  window.evFilter=function(el){
+    document.querySelectorAll('.ev-filter').forEach(function(f){f.classList.remove('active');});
+    el.classList.add('active'); currentFilter=el.getAttribute('data-filter'); renderList();
+  };
+  window.verifyEv=function(id){
+    var isLiveItem = AetherStore.getEvidence().find(function(e){ return e.id===id; });
+    if(isLiveItem && isLiveItem.isLive && AetherStore.updateEvidenceStatus) AetherStore.updateEvidenceStatus(id,'verified');
+    else setState(id,'verified');
+    refresh();
+  };
+  window.rejectEv=function(id){
+    var isLiveItem = AetherStore.getEvidence().find(function(e){ return e.id===id; });
+    if(isLiveItem && isLiveItem.isLive && AetherStore.updateEvidenceStatus) AetherStore.updateEvidenceStatus(id,'rejected');
+    else setState(id,'rejected');
+    refresh();
+  };
+  window.unverifyEv=function(id){
+    var isLiveItem = AetherStore.getEvidence().find(function(e){ return e.id===id; });
+    if(isLiveItem && isLiveItem.isLive && AetherStore.updateEvidenceStatus) AetherStore.updateEvidenceStatus(id,'pending');
+    else setState(id,'pending');
+    refresh();
+  };
+  function refresh(){ renderStrip(); renderConfidence(); renderList(); renderSummits(); }
+
+  function renderSummits(){
+    var section = document.getElementById('evSummitSection');
+    var grid = document.getElementById('evSummitGrid');
+    if(!section || !grid) return;
+
+    var missions = AetherStore.getMissions ? AetherStore.getMissions() : [];
+    var summited = missions.filter(function(m){ return m.pct >= 100 || m.status === 'verified'; });
+
+    if(!summited.length || typeof MissionMountain === 'undefined'){
+      section.style.display = 'none';
+      return;
+    }
+
+    grid.innerHTML = summited.map(function(m){
+      var opts = MissionMountain.fromMission(m);
+      opts.variant = 'detail';
+      var r = MissionMountain.render(opts);
+      return '<div style="border:1px solid rgba(255,209,102,0.3); border-radius:14px; overflow:hidden; background:rgba(255,209,102,0.03);">' +
+          '<div style="position:relative; width:100%; aspect-ratio:16/10;">' +
+            r.svg +
+            '<div style="position:absolute; inset:0;">' + r.labelsHtml + '</div>' +
+          '</div>' +
+          '<div style="padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px;">' +
+            '<div>' +
+              '<div style="font-family:var(--font-display); font-size:12.5px; letter-spacing:0.04em; color:#ffd166;">🏆 ' + m.name + '</div>' +
+              '<div style="font-size:10.5px; color:var(--text-faint); margin-top:2px;">Summit reached · ' + (m.pct||100) + '% climbed</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+    section.style.display = 'block';
+  }
+
+  modeIndicator(); refresh();
+
+  /* Sync sidebar blocker badge to real open-blocker count */
+  (function syncBlockerBadge(){
+    var badge = document.getElementById('navBlockerBadge');
+    if(!badge) return;
+    var bk = AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers();
+    badge.textContent = bk.filter(function(b){ return b.status === 'open'; }).length;
+  })();
+
+  /* ============================================================
+     ADD EVIDENCE — modal with chained Mission → Blueprint → Step
+     dropdowns, and single-item delete for real evidence.
+     ============================================================ */
+  function populateEvMissionDropdown(preselectMissionKey, preselectBpKey, preselectCpId){
+    var missions = AetherStore.getAllMissions ? AetherStore.getAllMissions() : AetherStore.getMissions();
+    var sel = document.getElementById('evMission');
+    sel.innerHTML = '<option value="">— None —</option>' +
+      missions.map(function(m){ return '<option value="'+m.key+'">'+esc(m.name)+'</option>'; }).join('');
+    if(preselectMissionKey){ sel.value = preselectMissionKey; }
+    populateEvBlueprintDropdown(sel.value, preselectBpKey, preselectCpId);
+  }
+
+  function populateEvBlueprintDropdown(missionKey, preselectBpKey, preselectCpId){
+    var allBps = AetherStore.getBlueprints ? AetherStore.getBlueprints() : [];
+    var bps = missionKey ? allBps.filter(function(b){ return b.missionKey === missionKey; }) : allBps;
+    var sel = document.getElementById('evBlueprint');
+    sel.innerHTML = '<option value="">— None —</option>' +
+      bps.map(function(b){ return '<option value="'+b.key+'">'+esc(b.name)+'</option>'; }).join('');
+    if(preselectBpKey){
+      sel.value = preselectBpKey;
+    } else if(bps.length > 0){
+      /* Most missions have one blueprint — auto-select it instead of
+         forcing an extra manual click every time. */
+      sel.value = bps[0].key;
+    }
+    populateEvCheckpointDropdown(sel.value, preselectCpId);
+  }
+
+  function populateEvCheckpointDropdown(blueprintKey, preselectCpId){
+    var sel = document.getElementById('evCheckpoint');
+    if(!blueprintKey){
+      sel.innerHTML = '<option value="">— Not tied to a specific step —</option>';
+      return;
+    }
+    var cps = AetherStore.getCheckpointsForBlueprint ? AetherStore.getCheckpointsForBlueprint(blueprintKey) : [];
+    sel.innerHTML = '<option value="">— Not tied to a specific step —</option>' +
+      cps.map(function(c){ return '<option value="'+c.id+'">'+esc(c.name)+'</option>'; }).join('');
+    if(preselectCpId){ sel.value = preselectCpId; }
+  }
+
+  window.onEvMissionChange = function(){ populateEvBlueprintDropdown(document.getElementById('evMission').value); };
+  window.onEvBlueprintChange = function(){ populateEvCheckpointDropdown(document.getElementById('evBlueprint').value); };
+
+  window.openEvidenceModal = function(prefill){
+    prefill = prefill || {};
+    populateEvMissionDropdown(prefill.missionKey, prefill.blueprintKey, prefill.checkpointId);
+    document.getElementById('evName').value = '';
+    document.getElementById('evAttachment').value = '';
+    document.getElementById('evNotes').value = '';
+    document.getElementById('evMarkVerified').checked = false;
+    document.getElementById('evfg-name').classList.remove('has-error');
+    document.getElementById('evidenceModal').classList.add('open');
+  };
+  window.closeEvidenceModal = function(){
+    document.getElementById('evidenceModal').classList.remove('open');
+  };
+  document.getElementById('evidenceModal').addEventListener('click', function(e){
+    if(e.target === this) closeEvidenceModal();
+  });
+
+  window.submitEvidence = function(){
+    var name = document.getElementById('evName').value.trim();
+    if(!name){ document.getElementById('evfg-name').classList.add('has-error'); return; }
+
+    var missionSel = document.getElementById('evMission');
+    var bpSel = document.getElementById('evBlueprint');
+    var cpSel = document.getElementById('evCheckpoint');
+
+    AetherStore.saveEvidence({
+      name: name,
+      type: document.getElementById('evType').value,
+      confidenceValue: document.getElementById('evConfidence').value,
+      missionKey: missionSel.value,
+      missionName: missionSel.value ? missionSel.options[missionSel.selectedIndex].textContent : '',
+      blueprintKey: bpSel.value,
+      blueprintName: bpSel.value ? bpSel.options[bpSel.selectedIndex].textContent : '',
+      checkpointId: cpSel.value,
+      checkpointName: cpSel.value ? cpSel.options[cpSel.selectedIndex].textContent : '',
+      attachment: document.getElementById('evAttachment').value,
+      notes: document.getElementById('evNotes').value,
+      status: document.getElementById('evMarkVerified').checked ? 'verified' : 'pending'
+    });
+
+    closeEvidenceModal();
+    refresh();
+    if(window.AetherVoice) window.AetherVoice.confirmAction('evidenceSaved');
+  };
+
+  /* ============================================================
+     BULK EVIDENCE PASTE — creates several evidence records from one
+     paste, all sharing the currently-selected Mission/Blueprint.
+     Each item is a labeled field-block, separated by a blank line.
+     ============================================================ */
+  window.toggleBulkEvidencePaste = function(){
+    var box = document.getElementById('bulkEvBox');
+    var open = box.style.display === 'flex';
+    box.style.display = open ? 'none' : 'flex';
+    document.getElementById('bulkEvToggleBtn').textContent = open ? 'Paste multiple evidence items instead' : 'Hide bulk paste';
+    if(!open) document.getElementById('bulkEvInput').focus();
+  };
+
+  var EV_FIELD_MAP = ['name', 'type', 'confidence', 'step', 'attachment', 'notes', 'status'];
+
+  function parseEvidenceBlock(block){
+    var fields = {};
+    var lines = block.split('\n');
+    var currentKey = null;
+    lines.forEach(function(line){
+      var matched = null;
+      for(var i=0;i<EV_FIELD_MAP.length;i++){
+        var key = EV_FIELD_MAP[i];
+        var re = new RegExp('^\\s*' + key + '\\s*:\\s*(.*)$', 'i');
+        var m = line.match(re);
+        if(m){ matched = { key: key, rest: m[1] }; break; }
+      }
+      if(matched){
+        currentKey = matched.key;
+        fields[currentKey] = (fields[currentKey] ? fields[currentKey] + ' ' : '') + matched.rest.trim();
+      } else if(currentKey && line.trim()){
+        fields[currentKey] += ' ' + line.trim();
+      }
+    });
+    return fields;
+  }
+
+  window.addEvidenceFromBulkText = function(){
+    var missionSel = document.getElementById('evMission');
+    var bpSel = document.getElementById('evBlueprint');
+    var note = document.getElementById('bulkEvNote');
+
+    if(!missionSel.value || !bpSel.value){
+      note.style.color = 'var(--danger)';
+      note.textContent = 'Pick a Mission and Blueprint above first — every pasted item uses that pairing.';
+      return;
+    }
+
+    var raw = document.getElementById('bulkEvInput').value || '';
+    var blocks = raw.split(/\n\s*\n/).map(function(b){ return b.trim(); }).filter(Boolean);
+    if(!blocks.length) return;
+
+    var checkpoints = AetherStore.getCheckpointsForBlueprint ? AetherStore.getCheckpointsForBlueprint(bpSel.value) : [];
+    var missionName = missionSel.options[missionSel.selectedIndex].textContent;
+    var blueprintName = bpSel.options[bpSel.selectedIndex].textContent;
+
+    var created = 0;
+    blocks.forEach(function(block){
+      var f = parseEvidenceBlock(block);
+      if(!f.name) return;
+
+      var matchedCp = null;
+      if(f.step){
+        var stepLower = f.step.toLowerCase();
+        matchedCp = checkpoints.find(function(c){ return c.name.toLowerCase() === stepLower; }) ||
+                    checkpoints.find(function(c){ return c.name.toLowerCase().indexOf(stepLower) !== -1 || stepLower.indexOf(c.name.toLowerCase()) !== -1; });
+      }
+
+      AetherStore.saveEvidence({
+        name: f.name,
+        type: f.type || 'Document',
+        confidenceValue: parseInt(f.confidence, 10) || 2,
+        missionKey: missionSel.value,
+        missionName: missionName,
+        blueprintKey: bpSel.value,
+        blueprintName: blueprintName,
+        checkpointId: matchedCp ? matchedCp.id : '',
+        checkpointName: matchedCp ? matchedCp.name : '',
+        attachment: f.attachment || '',
+        notes: f.notes || '',
+        status: (f.status || '').toLowerCase() === 'verified' ? 'verified' : 'pending'
+      });
+      created++;
+    });
+
+    note.style.color = 'var(--success)';
+    note.textContent = created + ' evidence item(s) created.';
+    document.getElementById('bulkEvInput').value = '';
+    refresh();
+    if(window.AetherVoice) window.AetherVoice.confirmAction('evidenceBulkAdded', created + ' item' + (created !== 1 ? 's' : '') + '.');
+    setTimeout(function(){ closeEvidenceModal(); }, 900);
+  };
+
+  /* ---- Lightweight single-item confirm modal ---- */
+  function openMiniConfirm(bodyHtml, onConfirm){
+    document.getElementById('miniConfirmBody').innerHTML = bodyHtml;
+    document.getElementById('miniConfirmOverlay').classList.add('open');
+    document.getElementById('miniConfirmBtn').onclick = function(){ onConfirm(); closeMiniConfirm(); };
+  }
+  window.closeMiniConfirm = function(){
+    document.getElementById('miniConfirmOverlay').classList.remove('open');
+  };
+  document.getElementById('miniConfirmOverlay').addEventListener('click', function(e){
+    if(e.target === this) closeMiniConfirm();
+  });
+
+  window.confirmDeleteEvidence = function(id, name){
+    openMiniConfirm(
+      'Deletes <strong>"' + name + '"</strong> permanently. This can\'t be undone.',
+      function(){ AetherStore.deleteEvidence(id); refresh(); }
+    );
+  };
+
+  /* Deep-link support: arriving from a "+ Evidence" link on a completed
+     step opens this modal pre-filled to that mission/blueprint/step. */
+  (function checkDeepLinkPrefill(){
+    var params = new URLSearchParams(window.location.search);
+    var mKey = params.get('missionKey'), bKey = params.get('blueprintKey'), cId = params.get('checkpointId');
+    if(mKey || bKey || cId){
+      setTimeout(function(){ window.openEvidenceModal({ missionKey: mKey, blueprintKey: bKey, checkpointId: cId }); }, 250);
+    }
+  })();
+})();
+</script>
+<script src="aether-quotes.js"></script>
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script src="aether-nav.js"></script>
+</body>
+</html>
