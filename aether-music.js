@@ -177,21 +177,34 @@
 
   function clearFadeTimer(){ if(fadeTimer){ clearInterval(fadeTimer); fadeTimer = null; } }
 
+  /* Smoothly glides an element's volume to a target over durationMs,
+     using requestAnimationFrame (syncs to the display refresh, so it
+     reads as a genuine fade rather than a handful of audible steps).
+     Replaces the old instant volume snap on duck/unduck -- THAT abrupt
+     jump between full volume and quiet is what read as "choppy." Also
+     used for the slow fade-outs (splash/dashboard intros ending). */
+  function rampVolume(el, targetVol, durationMs, onDone){
+    if(!el){ if(onDone) onDone(); return; }
+    if(el._aetherRampId){ cancelAnimationFrame(el._aetherRampId); el._aetherRampId = null; }
+    var startVol = el.volume;
+    var startTime = null;
+    function step(ts){
+      if(startTime === null) startTime = ts;
+      var t = Math.min(1, (ts - startTime) / durationMs);
+      el.volume = startVol + (targetVol - startVol) * t;
+      if(t < 1){
+        el._aetherRampId = requestAnimationFrame(step);
+      } else {
+        el._aetherRampId = null;
+        if(onDone) onDone();
+      }
+    }
+    el._aetherRampId = requestAnimationFrame(step);
+  }
+
   function fadeOutAndStop(el, durationMs){
     if(!el) return;
-    clearFadeTimer();
-    var steps = 20;
-    var stepMs = Math.max(30, durationMs / steps);
-    var startVol = el.volume;
-    var i = 0;
-    fadeTimer = setInterval(function(){
-      i++;
-      el.volume = Math.max(0, startVol * (1 - i / steps));
-      if(i >= steps){
-        clearFadeTimer();
-        try{ el.pause(); }catch(e){}
-      }
-    }, stepMs);
+    rampVolume(el, 0, durationMs, function(){ try{ el.pause(); }catch(e){} });
   }
 
   function stopAll(){
@@ -303,13 +316,17 @@
   }
 
   /* ---- Ducking: called from aether-voice.js so background music
-     doesn't fight with AETHER actually talking. ---- */
+     doesn't fight with AETHER actually talking. Ramped, not snapped --
+     an instant volume jump on every single spoken line is exactly what
+     made the music sound "choppy." 160ms down, 260ms back up (a touch
+     slower on the way back so it doesn't feel like it's rushing back
+     in before the sentence has really finished landing). ---- */
   function duck(){
     duckLevel = BASE_VOLUME;
-    [activeEl, loopEl].forEach(function(el){ if(el) el.volume = DUCK_VOLUME; });
+    [activeEl, loopEl].forEach(function(el){ if(el) rampVolume(el, DUCK_VOLUME, 160); });
   }
   function unduck(){
-    [activeEl, loopEl].forEach(function(el){ if(el) el.volume = duckLevel != null ? duckLevel : BASE_VOLUME; });
+    [activeEl, loopEl].forEach(function(el){ if(el) rampVolume(el, duckLevel != null ? duckLevel : BASE_VOLUME, 260); });
     duckLevel = null;
   }
 
