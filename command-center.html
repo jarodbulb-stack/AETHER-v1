@@ -1114,6 +1114,10 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
       return window.AetherMusic.getCustomTrackInfo(key).then(function(info){ return { key: key, info: info }; });
     })).then(function(results){
       container.innerHTML = '';
+      var allPreviewButtons = [];
+      function resetAllPreviewButtons(){
+        allPreviewButtons.forEach(function(btn){ btn.textContent = 'Preview'; });
+      }
       results.forEach(function(r){
         var row = document.createElement('div');
         row.className = 'stl-row';
@@ -1161,7 +1165,18 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
         previewBtn.type = 'button';
         previewBtn.className = 'stl-btn';
         previewBtn.textContent = 'Preview';
-        previewBtn.addEventListener('click', function(){ window.AetherMusic.previewTrack(r.key); });
+        previewBtn.addEventListener('click', function(){
+          if(previewBtn.textContent === 'Stop'){
+            window.AetherMusic.stopPreview();
+            return;
+          }
+          resetAllPreviewButtons();
+          previewBtn.textContent = '\u25a0 Stop';
+          window.AetherMusic.previewTrack(r.key, function(){
+            previewBtn.textContent = 'Preview';
+          });
+        });
+        allPreviewButtons.push(previewBtn);
 
         btns.appendChild(fileInput);
         btns.appendChild(uploadBtn);

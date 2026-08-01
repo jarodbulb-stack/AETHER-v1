@@ -42,7 +42,7 @@
      AetherMusic.setCustomTrack(key, file) -> Promise
      AetherMusic.removeCustomTrack(key)    -> Promise
      AetherMusic.getCustomTrackInfo(key)   -> Promise<{name,size,savedAt}|null>
-     AetherMusic.previewTrack(key)         -- plays it once, for testing
+     AetherMusic.previewTrack(key, onEnded?) -- plays it once, for testing
      AetherMusic.stopPreview()
      AetherMusic.TRACK_KEYS -- ['intro','dashboardIntro','celebrationLoop']
    ============================================================ */
@@ -171,6 +171,7 @@
   var activeEl = null;   // the currently playing intro/dashboard track (for ducking + fade control)
   var loopEl = null;     // the celebration loop, tracked separately since it can overlap
   var previewEl = null;  // Command Center's "test this track" playback
+  var previewEndedCb = null; // fires when preview stops, however it stops
   var fadeTimer = null;
   var duckLevel = null;  // remembers the pre-duck volume target while ducked
 
@@ -278,18 +279,27 @@
   }
 
   /* ---- Command Center preview: play a track once, at normal volume,
-     for testing an upload before committing to it. ---- */
-  function previewTrack(key){
+     for testing an upload before committing to it. onEnded (optional)
+     fires both when the track finishes naturally AND when stopPreview()
+     cuts it short -- lets the UI reset its "Stop" button back to
+     "Preview" either way, instead of only handling one case. ---- */
+  function previewTrack(key, onEnded){
     stopPreview();
     resolveTrackURL(key).then(function(url){
       var el = new Audio(url);
       el.volume = BASE_VOLUME;
+      if(onEnded) el.addEventListener('ended', onEnded);
       el.play().catch(function(){});
       previewEl = el;
+      previewEndedCb = onEnded || null;
     });
   }
   function stopPreview(){
-    if(previewEl){ try{ previewEl.pause(); }catch(e){} previewEl = null; }
+    if(previewEl){
+      try{ previewEl.pause(); }catch(e){}
+      previewEl = null;
+      if(previewEndedCb){ var cb = previewEndedCb; previewEndedCb = null; cb(); }
+    }
   }
 
   /* ---- Ducking: called from aether-voice.js so background music
