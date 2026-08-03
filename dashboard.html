@@ -5,6 +5,11 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AETHER — Command Deck</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#060a14"/>
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"/>
+<link rel="icon" href="assets/icons/icon-192.png"/>
+<script src="aether-pwa.js"></script>
 <link rel="stylesheet" href="aether-theme.css"/>
 <link rel="stylesheet" href="aether-shell.css"/>
 <script type="module" src="firebase-config.js"></script>
@@ -1296,11 +1301,9 @@ window.__toggleIntel = function(){
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
-
-  if(window.AetherMusic){
-    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', window.AetherMusic.playDashboardIntro);
-    else window.AetherMusic.playDashboardIntro();
-  }
+  /* Background music for this page is now handled centrally by
+     aether-nav.js's announcePageMusic(), same as every other page --
+     Command Deck isn't a special case for music anymore. */
 })();
 </script>
 

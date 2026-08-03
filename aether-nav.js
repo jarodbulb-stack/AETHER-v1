@@ -188,15 +188,26 @@
     window.AetherVoice.announcePageArrival(cur, quoteText);
   }
 
+  /* Background music: unlike voice, Command Deck is NOT a special case
+     here -- every page, including it, just plays whatever ambient loop
+     has been assigned to it (see Command Center's "Page Backgrounds"
+     panel), or stays silent if nothing has. */
+  function announcePageMusic(){
+    if(!window.AetherMusic) return;
+    window.AetherMusic.playPageLoop(currentFile());
+  }
+
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', build);
     document.addEventListener('DOMContentLoaded', syncSummitsCount);
     document.addEventListener('DOMContentLoaded', addSignOut);
     document.addEventListener('DOMContentLoaded', announcePageVoice);
+    document.addEventListener('DOMContentLoaded', announcePageMusic);
   } else {
     build();
     syncSummitsCount();
     addSignOut();
     announcePageVoice();
+    announcePageMusic();
   }
 })();

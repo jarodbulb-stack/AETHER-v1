@@ -5,6 +5,11 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AETHER — Command Center</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#060a14"/>
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"/>
+<link rel="icon" href="assets/icons/icon-192.png"/>
+<script src="aether-pwa.js"></script>
 <link rel="stylesheet" href="aether-theme.css"/>
 <link rel="stylesheet" href="aether-shell.css"/>
 <script type="module" src="firebase-config.js"></script>
@@ -144,6 +149,21 @@
 .stl-btn:hover{ background:var(--bg-elevated); border-color:var(--border-accent); }
 .stl-btn.stl-btn-danger:hover{ border-color:var(--danger); color:var(--danger); }
 .stl-file-input{ display:none; }
+
+.pwa-state{
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:10px; padding:14px 16px;
+}
+.pwa-state-text{ font-size:12.5px; color:var(--text-secondary); line-height:1.5; }
+.pwa-state-text strong{ color:var(--text-primary); }
+.pwa-install-btn{
+  display:inline-flex; align-items:center; gap:8px; cursor:pointer; white-space:nowrap;
+  font-family:var(--font-mono); font-size:12px; letter-spacing:0.04em; font-weight:600;
+  color:#06101c; background:linear-gradient(135deg,var(--gold),#ffb84d);
+  border:none; padding:10px 18px; border-radius:8px;
+  box-shadow:0 5px 16px rgba(255,209,102,0.22); transition:transform .12s ease, box-shadow .12s ease;
+}
+.pwa-install-btn:hover{ transform:translateY(-1px); box-shadow:0 7px 22px rgba(255,209,102,0.32); }
 .pf-toggle-label{ font-family:var(--font-body); font-size:12.5px; color:var(--text-primary); }
 .toggle-switch{ width:38px; height:21px; border-radius:var(--radius-pill); background:var(--border-strong); position:relative; cursor:pointer; transition:var(--transition); flex-shrink:0; }
 .toggle-switch.on{ background:var(--accent); }
@@ -296,7 +316,7 @@
 
     <header class="topbar">
       <div class="topbar-title">
-        <h1>COMMAND CENTER <span class="pill" id="buildVersionTag" style="color:#ffd166;border-color:rgba(255,209,102,0.4);background:rgba(255,209,102,0.1);vertical-align:middle;margin-left:8px;font-size:11px;">△ AETHER v1.0</span></h1>
+        <h1>COMMAND CENTER <span class="pill" id="buildVersionTag" style="color:#ffd166;border-color:rgba(255,209,102,0.4);background:rgba(255,209,102,0.1);vertical-align:middle;margin-left:8px;font-size:11px;">△ AETHER v2.0</span></h1>
         <span class="topbar-subtitle">System administration. This controls everything.</span>
       </div>
       <div class="topbar-meta">
@@ -312,14 +332,14 @@
         <span><strong>This is the system administration layer, not another page.</strong> Every action here affects all 9 other pages. Read each section before acting.</span>
       </div>
 
-      <!-- ═══ BUILD INFO — v1.0 marker (Step 19) ═══ -->
+      <!-- ═══ BUILD INFO — v2.0 marker ═══ -->
       <div class="panel" style="border:1px solid rgba(255,209,102,0.3); background:rgba(255,209,102,0.03);">
         <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
           <div style="display:flex; align-items:center; gap:12px;">
             <span style="font-size:22px; line-height:1;">△</span>
             <div>
-              <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:#ffd166; letter-spacing:0.02em;">AETHER v1.0</div>
-              <div style="font-family:var(--font-body); font-size:12px; color:var(--text-secondary); margin-top:2px;">First stable build. Running on real data — sample campaign fully replaced by your actual mission.</div>
+              <div style="font-family:var(--font-display); font-size:15px; font-weight:700; color:#ffd166; letter-spacing:0.02em;">AETHER v2.0</div>
+              <div style="font-family:var(--font-body); font-size:12px; color:var(--text-secondary); margin-top:2px;">Photoreal mountains, AETHER Voice, AETHER Music with per-page backgrounds, printable Portfolio, and app install support.</div>
             </div>
           </div>
           <span class="pill" style="color:var(--success); border-color:rgba(61,220,132,0.35); background:rgba(61,220,132,0.08);">● LIVE</span>
@@ -539,6 +559,28 @@
           </div>
         </div>
         <div id="soundtrackLibrary" style="margin-top:14px; display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            <span class="ttl">Page Backgrounds</span>
+            <span class="sub">A quiet looping track per page, on or off individually</span>
+          </div>
+        </div>
+        <div id="pageBackgroundLibrary" style="margin-top:14px; display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            <span class="ttl">Install AETHER</span>
+            <span class="sub">Run it like a real app — its own icon, its own window, works offline</span>
+          </div>
+        </div>
+        <div id="pwaInstallPanel" style="margin-top:14px;"></div>
       </div>
 
       <div class="manifesto-line">This is the layer that controls every other layer.</div>
@@ -1097,7 +1139,6 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
      file system, so there's nothing to manually place in a folder. */
   var STL_LABELS = {
     intro: 'Splash / Login Intro',
-    dashboardIntro: 'Command Deck Intro',
     celebrationLoop: 'Mission Completion Loop'
   };
   function formatBytes(n){
@@ -1204,14 +1245,193 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
     });
   }
 
+  /* ---- Page Backgrounds: one row per real content page, each with
+     its own assign/preview/remove AND its own on/off toggle -- so
+     "no music on Blueprints specifically" is a real, independent
+     choice rather than all-or-nothing. ---- */
+  var PAGE_LABELS = {
+    'dashboard.html': 'Command Deck',
+    'life-advancement.html': 'Life Advancement',
+    'missions.html': 'Missions',
+    'blueprints.html': 'Blueprints',
+    'problems-blockers.html': 'Problems / Blockers',
+    'evidence-vault.html': 'Evidence Vault',
+    'timeline.html': 'Timeline',
+    'debrief.html': 'Debrief',
+    'knowledge-library.html': 'Knowledge Library',
+    'summit-archive.html': 'Summit Archive',
+    'command-center.html': 'Command Center'
+  };
+  function renderPageBackgroundLibrary(){
+    var container = document.getElementById('pageBackgroundLibrary');
+    if(!container || !window.AetherMusic) return;
+
+    Promise.all(window.AetherMusic.PAGE_KEYS.map(function(pageKey){
+      var trackKey = window.AetherMusic.pageTrackKey(pageKey);
+      return window.AetherMusic.getCustomTrackInfo(trackKey).then(function(info){ return { pageKey: pageKey, trackKey: trackKey, info: info }; });
+    })).then(function(results){
+      container.innerHTML = '';
+      var allPreviewButtons = [];
+      function resetAllPreviewButtons(){ allPreviewButtons.forEach(function(btn){ btn.textContent = 'Preview'; }); }
+
+      results.forEach(function(r){
+        var row = document.createElement('div');
+        row.className = 'stl-row';
+
+        var left = document.createElement('div');
+        var label = document.createElement('div');
+        label.className = 'stl-label';
+        label.textContent = PAGE_LABELS[r.pageKey] || r.pageKey;
+        var status = document.createElement('div');
+        if(r.info){
+          status.className = 'stl-status has-custom';
+          status.textContent = 'Using: ' + r.info.name + ' (' + formatBytes(r.info.size) + ')';
+        } else {
+          status.className = 'stl-status';
+          status.textContent = 'No background assigned';
+        }
+        left.appendChild(label);
+        left.appendChild(status);
+        row.appendChild(left);
+
+        var btns = document.createElement('div');
+        btns.className = 'stl-btns';
+
+        /* Per-page on/off, independent of whether a track is assigned
+           yet -- lets the operator pre-decide "never play music here"
+           even before uploading anything. */
+        var toggle = document.createElement('div');
+        toggle.className = 'toggle-switch';
+        toggle.title = 'Play background music on this page';
+        toggle.classList.toggle('on', window.AetherMusic.isPageMusicEnabled(r.pageKey));
+        toggle.addEventListener('click', function(){
+          var next = !toggle.classList.contains('on');
+          window.AetherMusic.setPageMusicEnabled(r.pageKey, next);
+          toggle.classList.toggle('on', next);
+        });
+
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'audio/*';
+        fileInput.className = 'stl-file-input';
+        fileInput.addEventListener('change', function(){
+          var file = fileInput.files && fileInput.files[0];
+          if(!file) return;
+          window.AetherMusic.setCustomTrack(r.trackKey, file).then(function(){
+            renderPageBackgroundLibrary();
+            if(window.AetherVoice) window.AetherVoice.speak('Background updated.');
+          });
+        });
+
+        var uploadBtn = document.createElement('button');
+        uploadBtn.type = 'button';
+        uploadBtn.className = 'stl-btn';
+        uploadBtn.textContent = r.info ? 'Replace' : 'Upload';
+        uploadBtn.addEventListener('click', function(){ fileInput.click(); });
+
+        var previewBtn = document.createElement('button');
+        previewBtn.type = 'button';
+        previewBtn.className = 'stl-btn';
+        previewBtn.textContent = 'Preview';
+        var isPlayingThis = false;
+        previewBtn.addEventListener('click', function(){
+          if(!r.info) return; // nothing to preview
+          if(isPlayingThis){
+            window.AetherMusic.stopPreview();
+            isPlayingThis = false;
+            previewBtn.textContent = 'Preview';
+            return;
+          }
+          resetAllPreviewButtons();
+          isPlayingThis = true;
+          previewBtn.textContent = '\u25a0 Stop';
+          window.AetherMusic.previewTrack(r.trackKey, function(){
+            isPlayingThis = false;
+            previewBtn.textContent = 'Preview';
+          });
+        });
+        allPreviewButtons.push(previewBtn);
+
+        btns.appendChild(toggle);
+        btns.appendChild(fileInput);
+        btns.appendChild(uploadBtn);
+        btns.appendChild(previewBtn);
+
+        if(r.info){
+          var removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'stl-btn stl-btn-danger';
+          removeBtn.textContent = 'Remove';
+          removeBtn.addEventListener('click', function(){
+            window.AetherMusic.removeCustomTrack(r.trackKey).then(renderPageBackgroundLibrary);
+          });
+          btns.appendChild(removeBtn);
+        }
+
+        row.appendChild(btns);
+        container.appendChild(row);
+      });
+    });
+  }
+
+  /* ---- Install AETHER: shows the right thing depending on real
+     platform/browser state -- a working Install button where the
+     browser supports it, plain instructions on iOS (which never
+     offers a programmatic install prompt), or a "you're already
+     running it" message once installed. ---- */
+  function renderPwaInstallPanel(){
+    var el = document.getElementById('pwaInstallPanel');
+    if(!el || !window.AetherPWA) return;
+
+    if(window.AetherPWA.isStandalone()){
+      el.innerHTML = '<div class="pwa-state"><div class="pwa-state-text"><strong>AETHER is installed.</strong> You\u2019re already running it as its own app.</div></div>';
+      return;
+    }
+
+    if(window.AetherPWA.isIOS()){
+      el.innerHTML = '<div class="pwa-state"><div class="pwa-state-text">On iPhone/iPad: tap the <strong>Share</strong> icon in your browser, then <strong>"Add to Home Screen."</strong> Safari doesn\u2019t allow apps to trigger this automatically.</div></div>';
+      return;
+    }
+
+    if(window.AetherPWA.canPromptNow()){
+      el.innerHTML = '';
+      var row = document.createElement('div');
+      row.className = 'pwa-state';
+      var text = document.createElement('div');
+      text.className = 'pwa-state-text';
+      text.innerHTML = 'Adds AETHER to your home screen or app list with its own icon and window \u2014 no browser bar, works offline.';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'pwa-install-btn';
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg> Install AETHER';
+      btn.addEventListener('click', function(){
+        window.AetherPWA.promptInstall().then(function(accepted){
+          if(accepted) renderPwaInstallPanel();
+        });
+      });
+      row.appendChild(text);
+      row.appendChild(btn);
+      el.appendChild(row);
+      return;
+    }
+
+    el.innerHTML = '<div class="pwa-state"><div class="pwa-state-text">Not installable yet on this browser/visit. Try reloading this page, or check your browser\u2019s menu for an "Install app" option.</div></div>';
+  }
+  window.addEventListener('aether-install-available', renderPwaInstallPanel);
+  window.addEventListener('aether-install-completed', renderPwaInstallPanel);
+
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', syncCcVoiceToggle);
     document.addEventListener('DOMContentLoaded', syncCcMusicToggle);
     document.addEventListener('DOMContentLoaded', renderSoundtrackLibrary);
+    document.addEventListener('DOMContentLoaded', renderPageBackgroundLibrary);
+    document.addEventListener('DOMContentLoaded', renderPwaInstallPanel);
   } else {
     syncCcVoiceToggle();
     syncCcMusicToggle();
     renderSoundtrackLibrary();
+    renderPageBackgroundLibrary();
+    renderPwaInstallPanel();
   }
 })();
 </script>

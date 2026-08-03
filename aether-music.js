@@ -5,25 +5,34 @@
    music files the operator supplies.
 
    Two ways a track gets its source:
-   1. A file the operator uploaded through Command Center's
-      "Soundtrack Library" -- stored in IndexedDB (works on desktop
-      and mobile, no file-system access needed, no server). This is
-      checked first.
-   2. Falls back to the bundled default at assets/audio/*.mp3 if no
-      upload exists yet -- see assets/audio/READ_ME_AUDIO.txt.
+   1. A file the operator uploaded through Command Center -- either
+      "Soundtrack Library" (splash intro / mission-complete loop) or
+      "Page Backgrounds" (any content page's own ambient loop) --
+      stored in IndexedDB (works on desktop and mobile, no file-system
+      access needed, no server). This is checked first.
+   2. Falls back to the bundled default at assets/audio/*.mp3 if one
+      exists and nothing's been uploaded yet -- see
+      assets/audio/READ_ME_AUDIO.txt. Page backgrounds have no bundled
+      default at all (11 different tracks isn't something to ship) --
+      they're silent until the operator assigns one.
 
-   Three moments:
+   Three kinds of music:
    1. Splash intro  -- starts on the ENTER click (index.html), loops
       for as long as the operator stays on the splash/loading/login
       pages (this is a plain multi-page app, not a single-page app, so
       "continuing" across page loads is simulated by tracking a shared
       start time in sessionStorage and resuming each new page at the
-      correct elapsed position). Only fades out and stops once the
-      Command Deck's own intro actually takes over.
-   2. Command Deck intro -- a fresh, separate cue every time the
-      Command Deck itself loads. Plays briefly, fades, stops. Also
-      responsible for fading out the splash loop from #1 right before
-      it starts, so the two don't overlap awkwardly.
+      correct elapsed position). Only fades out once a page background
+      (below) actually takes over on arrival at a real content page.
+   2. Page backgrounds -- every real content page (Command Deck
+      included -- it's no longer a special case) can carry its own
+      quiet, looping ambient track, assigned per-page through Command
+      Center's "Page Backgrounds" panel, on/off per page independently
+      of the master Music toggle. aether-nav.js triggers this
+      centrally on every page's arrival, so nothing has to wire it in
+      one by one. Loops for as long as the operator stays on that
+      page; naturally stops when the browser tears the page down on
+      navigation -- no explicit "stop" needed between pages.
    3. Celebration loop -- starts right after the mission-complete
       chime, loops until the operator exits that screen.
 
@@ -34,12 +43,14 @@
    Usage (playback):
      AetherMusic.startSplashIntro()      -- index.html, on ENTER click
      AetherMusic.continueSplashIntro()   -- loading.html / login.html, on load
-     AetherMusic.playDashboardIntro()    -- dashboard.html, on load
+     AetherMusic.playPageLoop(pageKey)   -- any content page, on load (via aether-nav.js)
+     AetherMusic.stopPageLoop()
      AetherMusic.playCelebrationLoop()   -- aether-celebration.js, after the fanfare
      AetherMusic.stopLoop()              -- aether-celebration.js, on any exit
      AetherMusic.stopAll()               -- loading.html, on sign-out
      AetherMusic.duck() / unduck()       -- called automatically by aether-voice.js
-     AetherMusic.isEnabled() / setEnabled(bool)
+     AetherMusic.isEnabled() / setEnabled(bool)                 -- master toggle
+     AetherMusic.isPageMusicEnabled(pageKey) / setPageMusicEnabled(pageKey, bool) -- per-page toggle
 
    Usage (library, Command Center):
      AetherMusic.setCustomTrack(key, file) -> Promise
@@ -47,22 +58,33 @@
      AetherMusic.getCustomTrackInfo(key)   -> Promise<{name,size,savedAt}|null>
      AetherMusic.previewTrack(key, onEnded?) -- plays it once, for testing
      AetherMusic.stopPreview()
-     AetherMusic.TRACK_KEYS -- ['intro','dashboardIntro','celebrationLoop']
+     AetherMusic.pageTrackKey(pageKey)   -- turns 'blueprints.html' into the actual storage key
+     AetherMusic.TRACK_KEYS -- ['intro','celebrationLoop']  (the two fixed, non-page slots)
+     AetherMusic.PAGE_KEYS  -- the 11 real content pages, in nav order
    ============================================================ */
 (function(){
   'use strict';
 
   var TRACKS = {
     intro: 'assets/audio/intro.mp3',
-    dashboardIntro: 'assets/audio/dashboard-intro.mp3',
     celebrationLoop: 'assets/audio/celebration-loop.mp3'
   };
   var TRACK_KEYS = Object.keys(TRACKS);
 
+  /* Every real content page that can carry its own looping background
+     track. No bundled default files for these -- entirely dependent
+     on what's uploaded per-page through Command Center's "Page
+     Backgrounds" panel. Silent (not broken) until something's
+     assigned, same philosophy as everywhere else in this module. */
+  var PAGE_KEYS = [
+    'dashboard.html','life-advancement.html','missions.html','blueprints.html',
+    'problems-blockers.html','evidence-vault.html','timeline.html','debrief.html',
+    'knowledge-library.html','summit-archive.html','command-center.html'
+  ];
+
   /* Tune these to taste once the real files are in place. */
+  var PAGE_BG_VOLUME = 0.28; // deliberately quieter than BASE_VOLUME -- this is meant to sit under everything else, not compete with it
   var SPLASH_FADE_DURATION_SEC = 2; // how long the splash/login loop takes to fade once it's told to stop
-  var DASH_FADE_START_SEC = 6;     // Command Deck intro starts fading out at this mark
-  var DASH_FADE_DURATION_SEC = 2;
   var BASE_VOLUME = 0.55;
   var DUCK_VOLUME = 0.16;          // volume music drops to while AETHER is speaking
 
@@ -80,6 +102,29 @@
     try{ localStorage.setItem(STORAGE_KEY, on ? 'true' : 'false'); }catch(e){}
     if(!on){ stopAll(); }
   }
+
+  /* ---- Per-page music on/off. Layered under the master toggle above:
+     if AETHER Music is off globally, nothing plays regardless of these
+     settings; if it's on, this list lets specific pages opt out (e.g.
+     "no background music on Blueprints") without touching every other
+     page. Off by default for nobody -- everything's on until the
+     operator turns a specific page off. ---- */
+  var PAGE_MUSIC_DISABLED_KEY = 'aetherPageMusicDisabled';
+  function getDisabledPages(){
+    try{ return JSON.parse(localStorage.getItem(PAGE_MUSIC_DISABLED_KEY) || '[]'); }catch(e){ return []; }
+  }
+  function isPageMusicEnabled(pageKey){
+    if(!isEnabled()) return false;
+    return getDisabledPages().indexOf(pageKey) === -1;
+  }
+  function setPageMusicEnabled(pageKey, on){
+    var list = getDisabledPages();
+    var idx = list.indexOf(pageKey);
+    if(on && idx !== -1) list.splice(idx, 1);
+    if(!on && idx === -1) list.push(pageKey);
+    try{ localStorage.setItem(PAGE_MUSIC_DISABLED_KEY, JSON.stringify(list)); }catch(e){}
+  }
+  function pageTrackKey(pageKey){ return 'page:' + pageKey; }
 
   /* ---- Custom track library (IndexedDB) --------------------------------
      Stores the operator's own uploaded files as Blobs, keyed by track
@@ -126,7 +171,7 @@
   }
 
   function setCustomTrack(key, file){
-    if(TRACK_KEYS.indexOf(key) === -1) return Promise.reject(new Error('unknown track key'));
+    if(!key) return Promise.reject(new Error('missing track key'));
     return openDB().then(function(db){
       return new Promise(function(resolve, reject){
         var tx = db.transaction(STORE_NAME, 'readwrite');
@@ -157,7 +202,8 @@
 
   /* Resolves to whatever should actually be played for this key right
      now: the operator's uploaded file if one exists, otherwise the
-     bundled default path. */
+     bundled default path -- or null if there's neither (the normal
+     case for a page background nobody's assigned a track to yet). */
   function resolveTrackURL(key){
     if(objectUrlCache[key]) return Promise.resolve(objectUrlCache[key]);
     return getCustomTrackRecord(key).then(function(record){
@@ -166,16 +212,16 @@
         objectUrlCache[key] = url;
         return url;
       }
-      return TRACKS[key];
-    }).catch(function(){ return TRACKS[key]; });
+      return TRACKS[key] || null;
+    }).catch(function(){ return TRACKS[key] || null; });
   }
 
-  var activeEl = null;   // the currently playing intro/dashboard track (for ducking + fade control)
-  var loopEl = null;     // the celebration loop, tracked separately since it can overlap
-  var previewEl = null;  // Command Center's "test this track" playback
+  var activeEl = null;    // the currently playing intro track (for ducking + fade control)
+  var loopEl = null;      // the celebration loop, tracked separately since it can overlap
+  var pageLoopEl = null;  // the current page's ambient background loop
+  var previewEl = null;   // Command Center's "test this track" playback
   var previewEndedCb = null; // fires when preview stops, however it stops
   var fadeTimer = null;
-  var duckLevel = null;  // remembers the pre-duck volume target while ducked
 
   function clearFadeTimer(){ if(fadeTimer){ clearInterval(fadeTimer); fadeTimer = null; } }
 
@@ -213,6 +259,7 @@
     clearFadeTimer();
     if(activeEl){ try{ activeEl.pause(); }catch(e){} activeEl = null; }
     if(loopEl){ try{ loopEl.pause(); }catch(e){} loopEl = null; }
+    if(pageLoopEl){ try{ pageLoopEl.pause(); }catch(e){} pageLoopEl = null; }
     stopPreview();
     try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
   }
@@ -222,10 +269,11 @@
      anymore, since a track fading out after a few seconds regardless
      of whether the person is still reading/signing in felt premature.
      It keeps playing (looping) across the loading screen and login
-     page, and only fades out once playDashboardIntro() actually fires
-     on Command Deck arrival -- see stopSplashLoop() below. Position is
-     still tracked via elapsed real time across page loads so it feels
-     continuous rather than restarting from 0 on every page. ---- */
+     page, and only fades out once playPageLoop() actually fires on
+     arrival at a real content page -- see stopSplashLoop() below.
+     Position is still tracked via elapsed real time across page loads
+     so it feels continuous rather than restarting from 0 on every
+     page. ---- */
   function startSplashIntro(){
     if(!isEnabled()) return;
     try{ sessionStorage.setItem(SESSION_KEY, String(Date.now())); }catch(e){}
@@ -268,19 +316,31 @@
 
   /* ---- Command Deck intro: a fresh, independent cue. Fades the
      splash loop out first, so the two don't overlap awkwardly. ---- */
-  function playDashboardIntro(){
-    if(!isEnabled()) return;
+  /* ---- Page background loops: every real content page (Command Deck
+     included -- it's no longer a special case) can carry its own
+     looping ambient track, quieter than the splash intro, that plays
+     for as long as the operator stays on that page. No cross-page
+     continuity needed here (unlike the splash intro) -- each page just
+     starts its own assigned loop fresh, and it naturally stops when
+     the browser tears down the page on navigation. aether-nav.js calls
+     this centrally on every page so nothing has to wire it in one by
+     one. Fades in gently rather than starting at full volume. ---- */
+  function playPageLoop(pageKey){
     stopSplashLoop();
-    resolveTrackURL('dashboardIntro').then(function(url){
+    if(!isPageMusicEnabled(pageKey)) return;
+    resolveTrackURL(pageTrackKey(pageKey)).then(function(url){
+      if(!url) return; // nothing assigned to this page yet -- silence, not an error
       var el = new Audio(url);
-      el.volume = BASE_VOLUME;
-      el.play().catch(function(){});
-      activeEl = el;
-      clearFadeTimer();
-      fadeTimer = setTimeout(function(){
-        fadeOutAndStop(el, DASH_FADE_DURATION_SEC * 1000);
-      }, DASH_FADE_START_SEC * 1000);
+      el.loop = true;
+      el.volume = 0;
+      el.play().then(function(){
+        rampVolume(el, PAGE_BG_VOLUME, 700);
+      }).catch(function(){});
+      pageLoopEl = el;
     });
+  }
+  function stopPageLoop(){
+    if(pageLoopEl){ try{ pageLoopEl.pause(); }catch(e){} pageLoopEl = null; }
   }
 
   /* ---- Celebration loop ---- */
@@ -307,6 +367,7 @@
   function previewTrack(key, onEnded){
     stopPreview();
     resolveTrackURL(key).then(function(url){
+      if(!url){ if(onEnded) onEnded(); return; }
       var el = new Audio(url);
       el.volume = BASE_VOLUME;
       if(onEnded) el.addEventListener('ended', onEnded);
@@ -328,20 +389,32 @@
      an instant volume jump on every single spoken line is exactly what
      made the music sound "choppy." 160ms down, 260ms back up (a touch
      slower on the way back so it doesn't feel like it's rushing back
-     in before the sentence has really finished landing). ---- */
+     in before the sentence has really finished landing). Remembers
+     each element's own actual volume before ducking (not one shared
+     assumption) since a page loop sits quieter than the splash/
+     celebration tracks and restoring it to the louder level would
+     leave it wrong afterward. ---- */
   function duck(){
-    duckLevel = BASE_VOLUME;
-    [activeEl, loopEl].forEach(function(el){ if(el) rampVolume(el, DUCK_VOLUME, 160); });
+    [activeEl, loopEl, pageLoopEl].forEach(function(el){
+      if(!el) return;
+      if(el._aetherPreDuckVol === undefined) el._aetherPreDuckVol = el.volume;
+      rampVolume(el, DUCK_VOLUME, 160);
+    });
   }
   function unduck(){
-    [activeEl, loopEl].forEach(function(el){ if(el) rampVolume(el, duckLevel != null ? duckLevel : BASE_VOLUME, 260); });
-    duckLevel = null;
+    [activeEl, loopEl, pageLoopEl].forEach(function(el){
+      if(!el) return;
+      var restoreVol = el._aetherPreDuckVol !== undefined ? el._aetherPreDuckVol : BASE_VOLUME;
+      rampVolume(el, restoreVol, 260);
+      delete el._aetherPreDuckVol;
+    });
   }
 
   window.AetherMusic = {
     startSplashIntro: startSplashIntro,
     continueSplashIntro: continueSplashIntro,
-    playDashboardIntro: playDashboardIntro,
+    playPageLoop: playPageLoop,
+    stopPageLoop: stopPageLoop,
     playCelebrationLoop: playCelebrationLoop,
     stopLoop: stopLoop,
     stopAll: stopAll,
@@ -349,11 +422,15 @@
     unduck: unduck,
     isEnabled: isEnabled,
     setEnabled: setEnabled,
+    isPageMusicEnabled: isPageMusicEnabled,
+    setPageMusicEnabled: setPageMusicEnabled,
+    pageTrackKey: pageTrackKey,
     setCustomTrack: setCustomTrack,
     removeCustomTrack: removeCustomTrack,
     getCustomTrackInfo: getCustomTrackInfo,
     previewTrack: previewTrack,
     stopPreview: stopPreview,
-    TRACK_KEYS: TRACK_KEYS
+    TRACK_KEYS: TRACK_KEYS,
+    PAGE_KEYS: PAGE_KEYS
   };
 })();
