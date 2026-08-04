@@ -634,7 +634,7 @@
         <div class="panel" id="momentumPanel" style="display:none; background:rgba(255,209,102,0.05); border:1px solid rgba(255,209,102,0.25);">
           <div class="panel-label" style="margin-bottom:12px; color:var(--gold); display:flex; align-items:center; gap:8px;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-            ALMOST THERE — KEEP THE MOMENTUM
+            STRIKE WHILE THE IRON'S HOT
           </div>
           <div id="momentumList" style="display:flex; flex-direction:column; gap:10px;"></div>
         </div>
@@ -1308,7 +1308,26 @@ window.__toggleIntel = function(){
         }
       }
     }
-    window.AetherVoice.dashboardArrival(quoteText, hasPendingCommand, pendingTitle);
+
+    /* Real deadline math, same as the Momentum panel -- the single
+       most-overdue mission (if any) takes voice priority over the
+       generic pending-command reminder, since a missed deadline is
+       more specific and more urgent. */
+    var overdueMissionName = null;
+    if(typeof AetherStore !== 'undefined' && AetherStore.getAllMissions){
+      var today0 = new Date(); today0.setHours(0,0,0,0);
+      var worstOverdueDays = -1;
+      AetherStore.getAllMissions().forEach(function(m){
+        if((m.pct || 0) >= 100 || !m.deadline) return;
+        var target = new Date(m.deadline + 'T00:00:00');
+        if(isNaN(target.getTime())) return;
+        var daysOverdue = Math.round((today0 - target) / 86400000);
+        if(daysOverdue > worstOverdueDays){ worstOverdueDays = daysOverdue; overdueMissionName = m.name; }
+      });
+      if(worstOverdueDays < 0) overdueMissionName = null; /* not actually overdue, just has a future deadline */
+    }
+
+    window.AetherVoice.dashboardArrival(quoteText, hasPendingCommand, pendingTitle, overdueMissionName);
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
@@ -1319,42 +1338,94 @@ window.__toggleIntel = function(){
 </script>
 
 <script>
-/* ---- Momentum panel: missions sitting close to complete, nudged
-   toward the finish line rather than left to stall. Deliberately a
-   real threshold (60%+) rather than any progress at all, so this
-   stays meaningful -- a mission at 15% doesn't belong here, one at
-   85% very much does. Shows nothing at all when nothing qualifies,
-   rather than manufacturing urgency that isn't real. ---- */
+/* ---- Momentum panel: missions worth pushing to the finish, for one
+   of three real reasons -- overdue against their own deadline, due
+   soon, or just genuinely close to done (60%+). Deliberately no
+   dismiss/snooze control of any kind: it just reflects the real
+   current state fresh every visit, so an overdue mission keeps
+   showing up here every single time Command Deck loads until it's
+   actually finished -- "again and again," by construction, not by a
+   reminder counter that can be silenced. Shows nothing at all when
+   nothing qualifies, rather than manufacturing urgency that isn't
+   real. ---- */
 (function(){
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  /* Real date math -- deadlines are stored as plain ISO dates
+     (YYYY-MM-DD), unlike every other date in AETHER which is a
+     no-year display label, specifically so "N days overdue" means
+     something real. */
+  function daysUntil(isoDate){
+    if(!isoDate) return null;
+    var target = new Date(isoDate + 'T00:00:00');
+    if(isNaN(target.getTime())) return null;
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    return Math.round((target - today) / 86400000);
+  }
 
   function renderMomentumPanel(){
     var panel = document.getElementById('momentumPanel');
     var list = document.getElementById('momentumList');
     if(!panel || !list || typeof AetherStore === 'undefined' || !AetherStore.getAllMissions) return;
 
-    var missions = AetherStore.getAllMissions();
-    var close = missions
-      .filter(function(m){ return (m.pct || 0) >= 60 && (m.pct || 0) < 100; })
-      .sort(function(a,b){ return (b.pct || 0) - (a.pct || 0); })
-      .slice(0, 3);
+    var missions = AetherStore.getAllMissions().filter(function(m){ return (m.pct || 0) < 100; });
+    var used = {};
+    var rows = [];
 
-    if(!close.length){ panel.style.display = 'none'; return; }
+    /* Priority 1: overdue -- most urgent, always shown first */
+    missions.forEach(function(m){
+      var d = daysUntil(m.deadline);
+      if(d !== null && d < 0 && !used[m.key]){
+        rows.push({ mission:m, kind:'overdue', days: -d });
+        used[m.key] = true;
+      }
+    });
+    /* Priority 2: due within the next 7 days */
+    missions.forEach(function(m){
+      var d = daysUntil(m.deadline);
+      if(d !== null && d >= 0 && d <= 7 && !used[m.key]){
+        rows.push({ mission:m, kind:'soon', days: d });
+        used[m.key] = true;
+      }
+    });
+    /* Priority 3: no deadline pressure, but genuinely close to done */
+    missions
+      .filter(function(m){ return (m.pct || 0) >= 60 && !used[m.key]; })
+      .sort(function(a,b){ return (b.pct||0) - (a.pct||0); })
+      .forEach(function(m){ rows.push({ mission:m, kind:'close' }); used[m.key] = true; });
+
+    rows = rows.slice(0, 4);
+
+    if(!rows.length){ panel.style.display = 'none'; return; }
     panel.style.display = 'block';
     list.innerHTML = '';
 
-    close.forEach(function(m){
+    rows.forEach(function(r){
+      var m = r.mission;
       var pct = Math.round(m.pct || 0);
+      var badgeText, badgeColor, barColor;
+      if(r.kind === 'overdue'){
+        badgeText = r.days + ' day' + (r.days !== 1 ? 's' : '') + ' overdue'; badgeColor = 'var(--danger)'; barColor = 'linear-gradient(90deg,var(--danger),#ff6b6b)';
+      } else if(r.kind === 'soon'){
+        badgeText = r.days === 0 ? 'Due today' : ('Due in ' + r.days + ' day' + (r.days !== 1 ? 's' : '')); badgeColor = 'var(--warning)'; barColor = 'linear-gradient(90deg,var(--warning),#ffd166)';
+      } else {
+        badgeText = 'Almost there'; badgeColor = 'var(--gold)'; barColor = 'linear-gradient(90deg,var(--gold),#ffb84d)';
+      }
+
       var row = document.createElement('div');
       row.style.cssText = 'display:flex; align-items:center; gap:14px; background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:10px; padding:12px 16px;';
       row.innerHTML =
         '<div style="flex:1; min-width:0;">' +
-          '<div style="font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(m.name || '') + '</div>' +
+          '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
+            '<span style="font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(m.name || '') + '</span>' +
+            '<span style="font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:' + badgeColor + '; background:color-mix(in srgb, ' + badgeColor + ' 15%, transparent); border:1px solid ' + badgeColor + '; border-radius:99px; padding:2px 8px; white-space:nowrap;">' + badgeText + '</span>' +
+          '</div>' +
           '<div style="height:6px; background:var(--border-subtle); border-radius:99px; overflow:hidden;">' +
-            '<div style="height:100%; width:' + pct + '%; background:linear-gradient(90deg,var(--gold),#ffb84d); border-radius:99px;"></div>' +
+            '<div style="height:100%; width:' + pct + '%; background:' + barColor + '; border-radius:99px;"></div>' +
           '</div>' +
         '</div>' +
-        '<div style="font-family:var(--font-mono); font-size:18px; font-weight:700; color:var(--gold); min-width:48px; text-align:right; flex-shrink:0;">' + pct + '%</div>';
+        '<div style="font-family:var(--font-mono); font-size:18px; font-weight:700; color:' + badgeColor + '; min-width:48px; text-align:right; flex-shrink:0;">' + pct + '%</div>';
 
       var btn = document.createElement('button');
       btn.type = 'button';

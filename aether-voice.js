@@ -344,10 +344,29 @@
       speak(pick(RETURN_PROMPTS_PENDING));
     }
   }
-  function dashboardArrival(quoteText, hasPendingCommand, commandTitle){
+
+  /* Deliberately no "already said this" tracking here -- the whole
+     point is this keeps coming back every visit while a mission stays
+     overdue, not just once. It only ever stops because the mission
+     actually got finished (or its deadline got moved), never because
+     it was said before. */
+  var OVERDUE_LINES = [
+    'Sir, {mission} is overdue. Strike while the iron\u2019s hot \u2014 let\u2019s close it out.',
+    'Still waiting on {mission}, sir. That deadline\u2019s already passed \u2014 worth finishing today.',
+    '{mission} missed its date, sir. No reason it can\u2019t still be won.'
+  ];
+  function announceOverdueMission(missionName){
+    speak(pick(OVERDUE_LINES).replace('{mission}', missionName));
+  }
+
+  function dashboardArrival(quoteText, hasPendingCommand, commandTitle, overdueMissionName){
     if(!isEnabled()) return;
     if(quoteText && !quoteReadToday()){
       speakQuote(quoteText);
+      return;
+    }
+    if(overdueMissionName){
+      announceOverdueMission(overdueMissionName);
       return;
     }
     promptReturn(hasPendingCommand, commandTitle);

@@ -728,6 +728,9 @@
       icon:         data.icon || 'mountain',
       mountainStyle: data.mountainStyle || 'alpine',
       forecast:     data.forecast || 'Unknown',
+      deadline:     (data.deadline || '').trim(), /* ISO date (YYYY-MM-DD) from a real <input type="date">
+        -- unlike every other date in AETHER (todayLabel() strings with no year), this one needs real date
+        math for "overdue by N days" to mean anything, so it's stored unambiguously. */
       /* computed fields — start at zero, engine will update */
       pct:          0,
       camp:         'Base Camp',

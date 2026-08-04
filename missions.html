@@ -1019,6 +1019,15 @@ Steps:
         <span class="form-error" id="err-objective">Objective is required.</span>
       </div>
 
+      <!-- Deadline -->
+      <div class="form-group" id="fg-deadline">
+        <label class="form-label" for="missionDeadline">Target Completion Date</label>
+        <input type="date" id="missionDeadline" class="form-input"/>
+        <span style="font-family:var(--font-mono); font-size:10px; color:var(--text-faint); display:block; margin-top:6px;">
+          Optional, but recommended — strike while the iron's hot. AETHER will keep nudging you on Command Deck as this date approaches, and if it's missed, it keeps reminding you until the mission's actually done.
+        </span>
+      </div>
+
 
       <!-- ── Campaign DNA ── -->
       <div style="margin-top:4px;padding:14px 16px;background:rgba(74,168,255,0.04);border:1px solid rgba(74,168,255,0.1);border-radius:10px;">
@@ -1203,6 +1212,7 @@ Steps:
     document.getElementById('missionName').value = mission.name || '';
     document.getElementById('missionTagline').value = mission.tagline || '';
     document.getElementById('missionObjective').value = mission.objective || '';
+    document.getElementById('missionDeadline').value = mission.deadline || '';
     document.getElementById('missionPurpose').value = mission.purpose || '';
     document.getElementById('missionDefinitionOfDone').value = mission.definitionOfDone || '';
     document.getElementById('missionLessons').value = mission.lessonsLearned || '';
@@ -1478,6 +1488,7 @@ Steps:
       name:      document.getElementById('missionName').value.trim(),
       tagline:   document.getElementById('missionTagline').value.trim(),
       objective:        document.getElementById('missionObjective').value.trim(),
+      deadline:         (document.getElementById('missionDeadline').value || '').trim(),
       purpose:          (document.getElementById('missionPurpose').value||'').trim(),
       definitionOfDone: (document.getElementById('missionDefinitionOfDone').value||'').trim(),
       lessonsLearned:   (document.getElementById('missionLessons').value||'').trim(),
@@ -1566,6 +1577,7 @@ Steps:
     document.getElementById('missionName').value      = '';
     document.getElementById('missionTagline').value   = '';
     document.getElementById('missionObjective').value = '';
+    document.getElementById('missionDeadline').value = '';
     document.getElementById('missionPurpose').value = '';
     document.getElementById('missionDefinitionOfDone').value = '';
     document.getElementById('missionLessons').value = '';
