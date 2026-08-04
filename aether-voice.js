@@ -471,7 +471,8 @@
     stepsAdded:      ['Steps added.', 'Got those in, sir.', 'Added to the checklist.'],
     evidenceSaved:   ['Evidence logged.', 'Got it, sir. Filed as evidence.', 'Evidence saved.'],
     evidenceBulkAdded: ['Evidence added.', 'Those are all logged, sir.', 'Batch added to the vault.'],
-    portfolioReady:  ['Portfolio\u2019s ready, sir.', 'Your record\u2019s laid out and ready to print.', 'That\u2019s the whole climb, on paper.']
+    portfolioReady:  ['Portfolio\u2019s ready, sir.', 'Your record\u2019s laid out and ready to print.', 'That\u2019s the whole climb, on paper.'],
+    applicationSaved: ['Logged, sir.', 'Added to the list.', 'That one\u2019s on record now.']
   };
   function confirmAction(kind, extra){
     if(!isEnabled()) return;

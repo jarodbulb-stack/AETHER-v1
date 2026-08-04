@@ -1165,6 +1165,57 @@
   }
 
   /* ============================================================
+     APPLICATIONS BUILT
+     A registry of the actual software/apps the operator has built --
+     AETHER itself, PRISM, POS tools, games, anything -- so there's one
+     place that remembers all of them, shown alongside the "mountains
+     climbed" (mission/domain) record rather than scattered across
+     memory. Not job applications -- built applications.
+
+     "aether_" prefixed on purpose (unlike voice/music preferences) --
+     this is real campaign data and should sync across devices via
+     Firestore exactly like missions and evidence do.
+     ============================================================ */
+  var LIVE_APPLICATIONS_KEY = 'aether_live_applications';
+
+  function getApplications(){ return lsGet(LIVE_APPLICATIONS_KEY); }
+
+  /* Caller supplies: name, type, platform, status, dateStarted, url, description */
+  function saveApplication(data){
+    var apps = getApplications();
+    var now = todayLabel();
+    var app = {
+      key:          genId('app'),
+      name:         (data.name || '').trim(),
+      type:         (data.type || '').trim(),      /* e.g. Mobile App, Web App, POS System, Game, Automation Tool */
+      platform:     (data.platform || '').trim(),  /* e.g. Web, Android, Desktop, GitHub Pages */
+      status:       data.status || 'In Development', /* In Development | Launched | Maintained | Archived */
+      domain:       (data.domain || '').trim(),     /* matches a real domain name from getDomains(), or blank */
+      dateStarted:  (data.dateStarted || now).trim(),
+      url:          (data.url || '').trim(),
+      description:  (data.description || '').trim(),
+      createdAt:    now
+    };
+    apps.unshift(app);
+    lsSet(LIVE_APPLICATIONS_KEY, apps);
+    return app;
+  }
+
+  function updateApplication(key, changes){
+    var apps = getApplications();
+    var idx = apps.findIndex(function(a){ return a.key === key; });
+    if(idx === -1) return false;
+    apps[idx] = Object.assign({}, apps[idx], changes);
+    return lsSet(LIVE_APPLICATIONS_KEY, apps);
+  }
+
+  function deleteApplication(key){
+    var apps = getApplications().filter(function(a){ return a.key !== key; });
+    lsSet(LIVE_APPLICATIONS_KEY, apps);
+    return true;
+  }
+
+  /* ============================================================
      PHASE 4B — LIVE DEBRIEFS
      Real operator debrief entries. Each debrief records:
      - date, worked, failed, changed, commandCompleted, failReason
@@ -1496,6 +1547,11 @@
     resolveBlocker:     resolveBlocker,
     deleteBlocker:      deleteBlocker,
     ageLiveBlockers:    ageLiveBlockers,
+    /* Applications Built */
+    getApplications:     getApplications,
+    saveApplication:     saveApplication,
+    updateApplication:   updateApplication,
+    deleteApplication:   deleteApplication,
     /* Phase 4B — Live Debriefs */
     getLiveDebriefs:    getLiveDebriefs,
     getAllDebriefs:      getAllDebriefs,

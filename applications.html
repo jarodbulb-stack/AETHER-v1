@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html class="aether-auth-pending" lang="en">
+<head>
+<style>html.aether-auth-pending body{visibility:hidden}</style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AETHER — Applications Built</title>
+<link rel="stylesheet" href="aether-theme.css"/>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#060a14"/>
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"/>
+<link rel="icon" href="assets/icons/icon-192.png"/>
+<script src="aether-pwa.js"></script>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="auth-guard.js"></script>
+<script src="campaignStore.js"></script>
+<style>
+/* ============================================================
+   APPLICATIONS BUILT
+   A registry of the real software/apps/systems the operator has
+   built, so there's one place that remembers all of them -- shown
+   alongside a compact "mountains climbed" summary pulled from real
+   AETHER progress data. Not a printable document (unlike Portfolio)
+   -- this is a working personal record.
+   ============================================================ */
+html,body{ margin:0; background:var(--bg-void); }
+body{ font-family:var(--font-body); color:var(--text-primary); }
+
+.ab-toolbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:14px 24px; background:rgba(8,12,20,0.96); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border-subtle); flex-wrap:wrap;
+}
+.ab-toolbar-left{ display:flex; align-items:center; gap:14px; }
+.ab-back{
+  display:inline-flex; align-items:center; gap:6px; text-decoration:none;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:0.05em;
+  color:var(--text-secondary); border:1px solid var(--border-strong);
+  padding:8px 14px; border-radius:8px; transition:background .15s,border-color .15s;
+}
+.ab-back:hover{ background:var(--bg-panel-alt); border-color:var(--accent); }
+.ab-toolbar-title{ font-family:var(--font-display); font-size:14px; letter-spacing:0.1em; color:var(--text-primary); }
+.ab-toolbar-sub{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); letter-spacing:0.04em; margin-top:2px; }
+.ab-add-btn{
+  display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+  font-family:var(--font-mono); font-size:12px; letter-spacing:0.05em; font-weight:600;
+  color:#06101c; background:linear-gradient(135deg,var(--gold),#ffb84d);
+  border:none; padding:11px 20px; border-radius:9px;
+  box-shadow:0 6px 20px rgba(255,209,102,0.25); transition:transform .12s ease, box-shadow .12s ease;
+}
+.ab-add-btn:hover{ transform:translateY(-1px); box-shadow:0 8px 26px rgba(255,209,102,0.35); }
+
+.ab-page{ max-width:1100px; margin:0 auto; padding:28px 24px 80px; }
+
+/* ---- Mountains Climbed summary ---- */
+.ab-summary-panel{
+  background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:14px;
+  padding:22px 24px; margin-bottom:28px;
+}
+.ab-summary-head{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.ab-summary-head svg{ width:18px; height:18px; color:var(--accent); }
+.ab-summary-title{ font-family:var(--font-mono); font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-primary); font-weight:700; }
+.ab-stat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.ab-stat{ background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:10px; padding:14px 10px; text-align:center; }
+.ab-stat-num{ font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--text-primary); }
+.ab-stat-label{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.06em; color:var(--text-dim); text-transform:uppercase; margin-top:4px; }
+@media (max-width:700px){ .ab-stat-grid{ grid-template-columns:repeat(2,1fr); } }
+
+/* ---- Applications grid ---- */
+.ab-section-title{ font-family:var(--font-mono); font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-primary); font-weight:700; margin-bottom:14px; padding-bottom:8px; border-bottom:1px solid var(--border-subtle); }
+.ab-empty-note{ font-size:13px; color:var(--text-dim); font-style:italic; padding:20px 0; }
+.ab-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px; }
+.ab-card{ background:var(--bg-panel); border:1px solid var(--border-subtle); border-radius:12px; padding:18px; display:flex; flex-direction:column; gap:8px; transition:border-color .15s; }
+.ab-card:hover{ border-color:var(--border-strong); }
+.ab-card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.ab-card-name{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--text-primary); }
+.ab-status-badge{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:0.05em; font-weight:700; text-transform:uppercase; padding:3px 9px; border-radius:99px; white-space:nowrap; }
+.ab-status-launched{ color:var(--success); background:rgba(61,220,132,0.12); border:1px solid rgba(61,220,132,0.3); }
+.ab-status-development{ color:var(--warning); background:rgba(255,184,77,0.12); border:1px solid rgba(255,184,77,0.3); }
+.ab-status-maintained{ color:var(--accent); background:rgba(74,168,255,0.12); border:1px solid rgba(74,168,255,0.3); }
+.ab-status-archived{ color:var(--text-dim); background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); }
+.ab-card-meta{ font-family:var(--font-mono); font-size:10px; color:var(--text-dim); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.ab-card-meta span{ display:inline-flex; align-items:center; }
+.ab-domain-tag{ font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:0.03em; padding:2px 8px; border-radius:99px; border:1px solid currentColor; }
+.ab-card-desc{ font-size:12.5px; color:var(--text-secondary); line-height:1.5; }
+.ab-card-link{ font-size:11.5px; color:var(--accent); text-decoration:none; word-break:break-all; }
+.ab-card-link:hover{ text-decoration:underline; }
+.ab-card-btns{ display:flex; gap:8px; margin-top:auto; padding-top:10px; }
+.ab-mini-btn{
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.03em; cursor:pointer;
+  background:transparent; border:1px solid var(--border-strong); color:var(--text-secondary);
+  padding:6px 12px; border-radius:7px; transition:background .15s,border-color .15s;
+}
+.ab-mini-btn:hover{ background:var(--bg-panel-alt); border-color:var(--accent); }
+.ab-mini-btn.danger:hover{ border-color:var(--danger); color:var(--danger); }
+
+/* ---- Modal ---- */
+.ab-modal-overlay{ position:fixed; inset:0; background:rgba(4,7,14,0.75); backdrop-filter:blur(4px); z-index:100; display:none; align-items:flex-start; justify-content:center; overflow-y:auto; padding:40px 20px; }
+.ab-modal-overlay.open{ display:flex; }
+.ab-modal{ background:var(--bg-panel); border:1px solid var(--border-strong); border-radius:16px; width:100%; max-width:560px; padding:28px; }
+.ab-modal-title{ font-family:var(--font-display); font-size:18px; font-weight:700; margin-bottom:4px; }
+.ab-modal-sub{ font-family:var(--font-mono); font-size:10.5px; color:var(--accent); letter-spacing:0.04em; margin-bottom:20px; }
+.ab-field{ margin-bottom:16px; }
+.ab-field label{ display:block; font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-dim); margin-bottom:6px; }
+.ab-field input, .ab-field select, .ab-field textarea{
+  width:100%; box-sizing:border-box; background:var(--bg-panel-alt); border:1px solid var(--border-strong);
+  border-radius:8px; padding:11px 13px; color:var(--text-primary); font-family:var(--font-body); font-size:13.5px;
+}
+.ab-field textarea{ resize:vertical; min-height:70px; }
+.ab-field input:focus, .ab-field select:focus, .ab-field textarea:focus{ outline:none; border-color:var(--accent); }
+.ab-field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.ab-modal-footer{ display:flex; justify-content:flex-end; gap:10px; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<div class="ab-toolbar">
+  <div class="ab-toolbar-left">
+    <a href="summit-archive.html" class="ab-back">&larr; Back</a>
+    <div>
+      <div class="ab-toolbar-title">APPLICATIONS BUILT</div>
+      <div class="ab-toolbar-sub">Every app and system you've actually built, next to the mountains you climbed to get there</div>
+    </div>
+  </div>
+  <button type="button" class="ab-add-btn" id="abAddBtn">+ Add Application</button>
+</div>
+
+<div class="ab-page">
+
+  <div class="ab-summary-panel">
+    <div class="ab-summary-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h8M12 17v4M3 3h18l-2 9a7 7 0 0 1-14 0L3 3z"/></svg>
+      <span class="ab-summary-title">Mountains Climbed</span>
+    </div>
+    <div class="ab-stat-grid">
+      <div class="ab-stat"><div class="ab-stat-num" id="abMissionCount">0</div><div class="ab-stat-label">Missions Completed</div></div>
+      <div class="ab-stat"><div class="ab-stat-num" id="abDomainCount">0</div><div class="ab-stat-label">Domains Advancing</div></div>
+      <div class="ab-stat"><div class="ab-stat-num" id="abEvidenceCount">0</div><div class="ab-stat-label">Evidence Logged</div></div>
+      <div class="ab-stat"><div class="ab-stat-num" id="abAppCount">0</div><div class="ab-stat-label">Applications Built</div></div>
+    </div>
+  </div>
+
+  <div class="ab-section-title">Applications</div>
+  <div id="abGrid" class="ab-grid"></div>
+
+</div>
+
+<!-- Add/Edit modal -->
+<div class="ab-modal-overlay" id="abModalOverlay">
+  <div class="ab-modal">
+    <div class="ab-modal-title" id="abModalTitle">Add Application</div>
+    <div class="ab-modal-sub">A record for your own memory — not printed anywhere</div>
+
+    <div class="ab-field">
+      <label>Name *</label>
+      <input type="text" id="abName" placeholder="e.g. AETHER, PRISM, OMNIGRID Notes"/>
+    </div>
+    <div class="ab-field-row">
+      <div class="ab-field">
+        <label>Type</label>
+        <select id="abType">
+          <option value="">— Select —</option>
+          <option>Mobile App</option>
+          <option>Web App</option>
+          <option>POS System</option>
+          <option>Game</option>
+          <option>Automation Tool</option>
+          <option>Desktop App</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="ab-field">
+        <label>Platform</label>
+        <input type="text" id="abPlatform" placeholder="e.g. Web, Android, Desktop"/>
+      </div>
+    </div>
+    <div class="ab-field-row">
+      <div class="ab-field">
+        <label>Status</label>
+        <select id="abStatus">
+          <option>In Development</option>
+          <option>Launched</option>
+          <option>Maintained</option>
+          <option>Archived</option>
+        </select>
+      </div>
+      <div class="ab-field">
+        <label>Date Started</label>
+        <input type="text" id="abDateStarted" placeholder="e.g. Jul 15"/>
+      </div>
+    </div>
+    <div class="ab-field">
+      <label>Domain</label>
+      <select id="abDomain">
+        <option value="">— None —</option>
+      </select>
+    </div>
+    <div class="ab-field">
+      <label>Link (optional)</label>
+      <input type="text" id="abUrl" placeholder="https://..."/>
+    </div>
+    <div class="ab-field">
+      <label>Description</label>
+      <textarea id="abDescription" placeholder="What does it do?"></textarea>
+    </div>
+
+    <div class="ab-modal-footer">
+      <button type="button" class="ab-mini-btn" id="abCancelBtn">Cancel</button>
+      <button type="button" class="ab-add-btn" id="abSaveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="aether-music.js"></script>
+<script src="aether-voice.js"></script>
+<script>
+(function(){
+  var editingKey = null;
+
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function statusClass(status){
+    if(status === 'Launched') return 'ab-status-launched';
+    if(status === 'Maintained') return 'ab-status-maintained';
+    if(status === 'Archived') return 'ab-status-archived';
+    return 'ab-status-development';
+  }
+
+  function populateDomainOptions(){
+    var select = document.getElementById('abDomain');
+    var domains = (typeof AetherStore !== 'undefined' && AetherStore.getDomains) ? AetherStore.getDomains() : [];
+    domains.forEach(function(d){
+      var opt = document.createElement('option');
+      opt.value = d.name;
+      opt.textContent = d.name;
+      select.appendChild(opt);
+    });
+  }
+  function domainColor(domainName){
+    var domains = (typeof AetherStore !== 'undefined' && AetherStore.getDomains) ? AetherStore.getDomains() : [];
+    var d = domains.find(function(x){ return x.name === domainName; });
+    return d ? d.color : 'var(--text-dim)';
+  }
+
+  function renderSummary(){
+    var missions = (typeof AetherStore !== 'undefined' && AetherStore.getAllMissions) ? AetherStore.getAllMissions() : [];
+    var domains  = (typeof AetherStore !== 'undefined' && AetherStore.getDomains) ? AetherStore.getDomains() : [];
+    var evidence = (typeof AetherStore !== 'undefined' && AetherStore.getEvidence) ? AetherStore.getEvidence() : [];
+    var apps     = (typeof AetherStore !== 'undefined' && AetherStore.getApplications) ? AetherStore.getApplications() : [];
+
+    var completed = missions.filter(function(m){ return (m.pct || 0) >= 100; });
+    var advancing = domains.filter(function(d){ return (d.pct || 0) > 0; });
+
+    document.getElementById('abMissionCount').textContent = completed.length;
+    document.getElementById('abDomainCount').textContent = advancing.length;
+    document.getElementById('abEvidenceCount').textContent = evidence.length;
+    document.getElementById('abAppCount').textContent = apps.length;
+  }
+
+  function renderGrid(){
+    var grid = document.getElementById('abGrid');
+    var apps = (typeof AetherStore !== 'undefined' && AetherStore.getApplications) ? AetherStore.getApplications() : [];
+    grid.innerHTML = '';
+
+    if(!apps.length){
+      grid.innerHTML = '<div class="ab-empty-note">No applications logged yet. Click "+ Add Application" to start the list.</div>';
+      return;
+    }
+
+    apps.forEach(function(app){
+      var card = document.createElement('div');
+      card.className = 'ab-card';
+
+      var metaBits = [];
+      if(app.type) metaBits.push(esc(app.type));
+      if(app.platform) metaBits.push(esc(app.platform));
+      if(app.dateStarted) metaBits.push(esc(app.dateStarted));
+
+      card.innerHTML =
+        '<div class="ab-card-head">' +
+          '<div class="ab-card-name">' + esc(app.name) + '</div>' +
+          '<span class="ab-status-badge ' + statusClass(app.status) + '">' + esc(app.status) + '</span>' +
+        '</div>' +
+        (metaBits.length || app.domain ? '<div class="ab-card-meta">' +
+          (app.domain ? '<span class="ab-domain-tag" style="color:' + domainColor(app.domain) + ';">' + esc(app.domain) + '</span>' : '') +
+          (metaBits.length ? '<span>' + metaBits.join(' &middot; ') + '</span>' : '') +
+        '</div>' : '') +
+        (app.description ? '<div class="ab-card-desc">' + esc(app.description) + '</div>' : '') +
+        (app.url ? '<a class="ab-card-link" href="' + esc(app.url) + '" target="_blank" rel="noopener">' + esc(app.url) + '</a>' : '');
+
+      var btns = document.createElement('div');
+      btns.className = 'ab-card-btns';
+
+      var editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'ab-mini-btn';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', function(){ openModal(app); });
+
+      var delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'ab-mini-btn danger';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', function(){
+        if(!confirm('Remove "' + app.name + '" from your applications list?')) return;
+        AetherStore.deleteApplication(app.key);
+        renderGrid();
+        renderSummary();
+      });
+
+      btns.appendChild(editBtn);
+      btns.appendChild(delBtn);
+      card.appendChild(btns);
+      grid.appendChild(card);
+    });
+  }
+
+  function openModal(app){
+    editingKey = app ? app.key : null;
+    document.getElementById('abModalTitle').textContent = app ? 'Edit Application' : 'Add Application';
+    document.getElementById('abName').value = app ? app.name : '';
+    document.getElementById('abType').value = app ? (app.type || '') : '';
+    document.getElementById('abPlatform').value = app ? (app.platform || '') : '';
+    document.getElementById('abStatus').value = app ? app.status : 'In Development';
+    document.getElementById('abDateStarted').value = app ? (app.dateStarted || '') : '';
+    document.getElementById('abDomain').value = app ? (app.domain || '') : '';
+    document.getElementById('abUrl').value = app ? (app.url || '') : '';
+    document.getElementById('abDescription').value = app ? (app.description || '') : '';
+    document.getElementById('abModalOverlay').classList.add('open');
+    document.getElementById('abName').focus();
+  }
+  function closeModal(){
+    document.getElementById('abModalOverlay').classList.remove('open');
+    editingKey = null;
+  }
+
+  function saveApp(){
+    var name = document.getElementById('abName').value.trim();
+    if(!name){ document.getElementById('abName').focus(); return; }
+    var data = {
+      name: name,
+      type: document.getElementById('abType').value,
+      platform: document.getElementById('abPlatform').value.trim(),
+      status: document.getElementById('abStatus').value,
+      domain: document.getElementById('abDomain').value,
+      dateStarted: document.getElementById('abDateStarted').value.trim(),
+      url: document.getElementById('abUrl').value.trim(),
+      description: document.getElementById('abDescription').value.trim()
+    };
+    if(editingKey){
+      AetherStore.updateApplication(editingKey, data);
+      if(window.AetherVoice) window.AetherVoice.speak('Application updated.');
+    } else {
+      AetherStore.saveApplication(data);
+      if(window.AetherVoice) window.AetherVoice.confirmAction('applicationSaved');
+    }
+    closeModal();
+    renderGrid();
+    renderSummary();
+  }
+
+  document.getElementById('abAddBtn').addEventListener('click', function(){ openModal(null); });
+  document.getElementById('abCancelBtn').addEventListener('click', closeModal);
+  document.getElementById('abSaveBtn').addEventListener('click', saveApp);
+  document.getElementById('abModalOverlay').addEventListener('click', function(e){
+    if(e.target === this) closeModal();
+  });
+
+  /* One-time seed of the apps already known from prior conversations --
+     only runs if the list is genuinely empty, so it can never
+     duplicate or overwrite anything already entered by hand. */
+  function seedKnownApplicationsIfEmpty(){
+    if(!AetherStore.getApplications().length){
+      [
+        { name:'AETHER', type:'Web App', platform:'GitHub Pages / PWA', status:'Maintained', domain:'Skills & Mastery',
+          description:'Personal life-execution OS -- missions, blueprints, evidence, voice, music, and a printable portfolio, all built from scratch.' },
+        { name:'PRISM', type:'Web App', platform:'Web', status:'Maintained', domain:'Business',
+          description:'Property, rental, and credit management system -- payables, payroll, tenant/employee records, smart calendar, offline-first with cloud sync.' },
+        { name:'OMNIGRID Notes', type:'Desktop App', platform:'Electron / Android', status:'Launched', domain:'Skills & Mastery',
+          description:'Cyberpunk-styled note-taking app with a PIN-protected vault and 200 built-in motivational quotes.' },
+        { name:'Affiliate Forge', type:'Automation Tool', platform:'Web', status:'Archived', domain:'Business',
+          description:'Social media automation for Shopee/Lazada/Temu affiliate marketing -- AI captions, scheduled posting, bulk affiliate link import.' }
+      ].forEach(function(app){ AetherStore.saveApplication(app); });
+    }
+  }
+
+  function run(){
+    populateDomainOptions();
+    seedKnownApplicationsIfEmpty();
+    renderSummary();
+    renderGrid();
+    if(window.AetherMusic) window.AetherMusic.playPageLoop('applications.html');
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
+</script>
+
+</body>
+</html>

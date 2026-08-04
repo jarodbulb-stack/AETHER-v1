@@ -79,7 +79,7 @@
   var PAGE_KEYS = [
     'dashboard.html','life-advancement.html','missions.html','blueprints.html',
     'problems-blockers.html','evidence-vault.html','timeline.html','debrief.html',
-    'knowledge-library.html','summit-archive.html','command-center.html'
+    'knowledge-library.html','summit-archive.html','applications.html','command-center.html'
   ];
 
   /* Tune these to taste once the real files are in place. */
