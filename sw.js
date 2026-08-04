@@ -17,7 +17,7 @@
    Bump CACHE_NAME any time the core file list changes meaningfully;
    the activate step cleans up any old-named caches automatically.
    ============================================================ */
-var CACHE_NAME = 'aether-shell-v1';
+var CACHE_NAME = 'aether-shell-v2';
 
 var CORE_ASSETS = [
   './',
@@ -36,6 +36,7 @@ var CORE_ASSETS = [
   './summit-archive.html',
   './command-center.html',
   './portfolio.html',
+  './applications.html',
   './daily-command.html',
   './aether-theme.css',
   './aether-shell.css',

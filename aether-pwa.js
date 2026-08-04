@@ -35,6 +35,20 @@
            purely additive for offline/installability. */
       });
     });
+
+    /* Service workers deliberately don't yank content out from under
+       an already-open app -- an installed window left open across an
+       update would otherwise keep running whatever was cached the
+       moment it was installed, indefinitely, with no obvious sign
+       anything's stale. When a new service worker actually takes
+       over, reload once (guarded so this can never loop) so the app
+       genuinely catches up to the latest deployed version. */
+    var reloadedForUpdate = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if(reloadedForUpdate) return;
+      reloadedForUpdate = true;
+      window.location.reload();
+    });
   }
 
   var deferredPrompt = null;
@@ -51,7 +65,11 @@
   });
 
   function isStandalone(){
-    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    return (window.matchMedia && (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: window-controls-overlay)').matches ||
+        window.matchMedia('(display-mode: minimal-ui)').matches
+      )) ||
       window.navigator.standalone === true; /* iOS's own flag */
   }
 
