@@ -450,4 +450,30 @@
   }
   .content { padding: 16px; }
   .topbar { padding: 0 16px; }
+
+  /* The CSS above hides the sidebar off-screen on phones/tablets --
+     this is what actually brings it back. Without a button to trigger
+     .mobile-open, that hide-rule alone just makes the sidebar
+     disappear with no way to reach it, which is exactly what was
+     happening. */
+  .mobile-menu-btn { display: flex; }
 }
+
+/* Hamburger toggle: fixed position, only ever visible under the
+   900px breakpoint above -- on desktop this rule simply never
+   applies, so nothing changes there. */
+.mobile-menu-btn{
+  display:none; align-items:center; justify-content:center;
+  position:fixed; top:14px; left:14px; z-index:110;
+  width:40px; height:40px; border-radius:10px;
+  background:var(--bg-panel); border:1px solid var(--border-strong);
+  color:var(--text-primary); cursor:pointer; box-shadow:var(--shadow-panel);
+}
+.mobile-menu-btn:active{ background:var(--bg-elevated); }
+.mobile-menu-btn svg{ width:20px; height:20px; }
+
+.sidebar-backdrop{
+  display:none; position:fixed; inset:0; z-index:99;
+  background:rgba(4,7,14,0.65); backdrop-filter:blur(2px);
+}
+.sidebar-backdrop.open{ display:block; }

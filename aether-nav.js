@@ -197,17 +197,69 @@
     window.AetherMusic.playPageLoop(currentFile());
   }
 
+  /* Mobile menu: aether-shell.css already hid the sidebar off-screen
+     under 900px width, but nothing ever brought it back -- there was
+     no button anywhere to trigger the .mobile-open class that CSS was
+     waiting for. This builds that missing button once, here, so every
+     page that loads aether-nav.js gets it automatically. */
+  var HAMBURGER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
+  var CLOSE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+
+  function buildMobileMenu(){
+    var sidebar = document.getElementById('sidebar');
+    if(!sidebar || document.querySelector('.mobile-menu-btn')) return; // no sidebar on this page, or already built
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mobile-menu-btn';
+    btn.setAttribute('aria-label', 'Open menu');
+    btn.innerHTML = HAMBURGER_ICON;
+
+    var backdrop = document.createElement('div');
+    backdrop.className = 'sidebar-backdrop';
+
+    function closeMenu(){
+      sidebar.classList.remove('mobile-open');
+      backdrop.classList.remove('open');
+      btn.innerHTML = HAMBURGER_ICON;
+      btn.setAttribute('aria-label', 'Open menu');
+    }
+    function openMenu(){
+      sidebar.classList.add('mobile-open');
+      backdrop.classList.add('open');
+      btn.innerHTML = CLOSE_ICON;
+      btn.setAttribute('aria-label', 'Close menu');
+    }
+    btn.addEventListener('click', function(){
+      if(sidebar.classList.contains('mobile-open')) closeMenu(); else openMenu();
+    });
+    backdrop.addEventListener('click', closeMenu);
+
+    /* Tapping any actual nav link inside the sidebar should close the
+       drawer too -- without this, navigating on mobile briefly shows
+       the new page underneath a still-open sidebar until the next
+       page's own script re-runs this whole setup fresh. */
+    sidebar.addEventListener('click', function(e){
+      if(e.target.closest('a')) closeMenu();
+    });
+
+    document.body.appendChild(backdrop);
+    document.body.appendChild(btn);
+  }
+
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', build);
     document.addEventListener('DOMContentLoaded', syncSummitsCount);
     document.addEventListener('DOMContentLoaded', addSignOut);
     document.addEventListener('DOMContentLoaded', announcePageVoice);
     document.addEventListener('DOMContentLoaded', announcePageMusic);
+    document.addEventListener('DOMContentLoaded', buildMobileMenu);
   } else {
     build();
     syncSummitsCount();
     addSignOut();
     announcePageVoice();
     announcePageMusic();
+    buildMobileMenu();
   }
 })();
