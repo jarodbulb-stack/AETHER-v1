@@ -1033,6 +1033,8 @@ function exportCampaign(){
 function importCampaign(){
   var input = document.createElement('input');
   input.type = 'file';
+  input.id = 'importCampaignFile';
+  input.name = 'importCampaignFile';
   input.accept = 'application/json';
   input.onchange = function(){
     var file = input.files[0];
@@ -1187,6 +1189,7 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
         fileInput.accept = 'audio/*';
         fileInput.className = 'stl-file-input';
         fileInput.id = 'stlFile_' + r.key;
+        fileInput.name = 'stlFile_' + r.key;
         fileInput.addEventListener('change', function(){
           var file = fileInput.files && fileInput.files[0];
           if(!file) return;
@@ -1313,6 +1316,8 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
 
         var fileInput = document.createElement('input');
         fileInput.type = 'file';
+        fileInput.id = 'pbFile_' + r.pageKey;
+        fileInput.name = 'pbFile_' + r.pageKey;
         fileInput.accept = 'audio/*';
         fileInput.className = 'stl-file-input';
         fileInput.addEventListener('change', function(){
