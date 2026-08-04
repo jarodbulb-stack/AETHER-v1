@@ -71,6 +71,14 @@
       .as-btn-primary:hover{background:#ffdb85;}
       .as-btn-secondary{background:transparent;color:#cfe0ff;border:1px solid rgba(120,150,200,0.3);}
       .as-btn-secondary:hover{border-color:rgba(150,180,230,0.6);color:#fff;}
+      .as-app-prompt{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);
+        border-radius:12px;padding:14px 16px;margin-bottom:18px;}
+      .as-app-prompt-text{font-family:var(--font-body,inherit);font-size:12.5px;color:rgba(207,224,255,0.85);
+        margin-bottom:10px;}
+      .as-app-prompt-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+      .as-btn-mini{padding:8px 14px;font-size:11.5px;border-radius:8px;}
+      .as-app-prompt-done{font-family:var(--font-mono,monospace);font-size:11.5px;color:#7ee0a8;
+        letter-spacing:0.03em;}
       .as-mute{position:absolute;top:14px;right:16px;background:none;border:none;cursor:pointer;
         color:rgba(200,215,240,0.5);font-size:16px;padding:4px;z-index:3;}
       .as-mute:hover{color:#fff;}
@@ -314,6 +322,13 @@
         stat('as-evid', opts.evidenceCount, 'Evidence Logged') +
         stat('as-conf', opts.confidencePct, 'Confidence', '%') +
       '</div>' +
+      '<div class="as-app-prompt" id="asAppPrompt">' +
+        '<div class="as-app-prompt-text">Was this about building an app or system?</div>' +
+        '<div class="as-app-prompt-btns">' +
+          '<button class="as-btn as-btn-primary as-btn-mini" id="asAppYes">Yes \u2014 Add to Applications Built</button>' +
+          '<button class="as-btn as-btn-secondary as-btn-mini" id="asAppNo">No, skip</button>' +
+        '</div>' +
+      '</div>' +
       '<div class="as-btns">' +
         '<button class="as-btn as-btn-primary" id="asBtnNext">Next Mission, Sir?</button>' +
         '<button class="as-btn as-btn-secondary" id="asBtnArchive">View Summit Archive</button>' +
@@ -324,6 +339,34 @@
     document.body.appendChild(overlay);
 
     if(window.AetherVoice) window.AetherVoice.congratulateMission(opts.missionName || '');
+
+    /* Ask, right here at the moment of completion, whether this
+       mission was actually building an app/system -- rather than
+       guessing automatically (which risks false positives on missions
+       that have nothing to do with software) or making the operator
+       remember to go add it later somewhere else. */
+    var appYesBtn = document.getElementById('asAppYes');
+    var appNoBtn = document.getElementById('asAppNo');
+    var appPromptEl = document.getElementById('asAppPrompt');
+    if(appYesBtn){
+      appYesBtn.onclick = function(){
+        if(window.AetherStore && window.AetherStore.saveApplication){
+          window.AetherStore.saveApplication({
+            name: opts.missionName || '',
+            domain: (opts.domains && opts.domains.length) ? opts.domains[0] : '',
+            description: opts.objective || '',
+            status: 'Launched'
+          });
+          if(window.AetherVoice) window.AetherVoice.confirmAction('applicationSaved');
+        }
+        if(appPromptEl) appPromptEl.innerHTML = '<div class="as-app-prompt-done">Added to Applications Built \u2713 \u2014 edit details there any time.</div>';
+      };
+    }
+    if(appNoBtn){
+      appNoBtn.onclick = function(){
+        if(appPromptEl) appPromptEl.style.display = 'none';
+      };
+    }
 
     function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function stat(id, val, label, suffix){
