@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AETHER Mission Command System</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#060a14"/>
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"/>
+<link rel="icon" href="assets/icons/icon-192.png"/>
+<script src="aether-pwa.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{
@@ -195,9 +200,27 @@ animation-play-state:paused;
 <script src="aether-music.js"></script>
 <script>
   window.__aetherEnter = function(){
-    if(window.AetherMusic) window.AetherMusic.startSplashIntro();
+    if(window.AetherMusic) window.AetherMusic.ensureSplashIntroPlaying();
     window.location.href = 'loading.html?next=login.html&mode=init&label=INITIALIZING%20AETHER&sub=Loading%20mission%20systems%E2%80%A6';
   };
+
+  /* Try to start the music the instant this page loads, before any
+     click. Browsers block audio-with-sound with zero prior
+     interaction on a fresh visit, so this often won't audibly start
+     yet on a first-time visitor -- that's a browser security policy,
+     not something fixable from here. The fallback below catches the
+     very first interaction anywhere on the page (not just the ENTER
+     button) so it kicks in as early as physically possible rather
+     than waiting specifically for ENTER. */
+  if(window.AetherMusic) window.AetherMusic.ensureSplashIntroPlaying();
+
+  function retrySplashMusicOnce(){
+    if(window.AetherMusic) window.AetherMusic.ensureSplashIntroPlaying();
+    document.removeEventListener('pointerdown', retrySplashMusicOnce);
+    document.removeEventListener('keydown', retrySplashMusicOnce);
+  }
+  document.addEventListener('pointerdown', retrySplashMusicOnce);
+  document.addEventListener('keydown', retrySplashMusicOnce);
 </script>
 <script src="earth-flicker.js"></script>
 <script>

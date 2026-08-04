@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AETHER — Connecting</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#060a14"/>
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"/>
+<link rel="icon" href="assets/icons/icon-192.png"/>
+<script src="aether-pwa.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
@@ -206,7 +211,7 @@ body{
 
   if(window.AetherMusic){
     if(mode === 'signout') window.AetherMusic.stopAll();
-    else window.AetherMusic.continueSplashIntro();
+    else window.AetherMusic.ensureSplashIntroPlaying();
   }
 
   if(window.AetherVoice){

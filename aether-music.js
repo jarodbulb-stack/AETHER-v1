@@ -41,8 +41,7 @@
    nothing else in the app depends on it.
 
    Usage (playback):
-     AetherMusic.startSplashIntro()      -- index.html, on ENTER click
-     AetherMusic.continueSplashIntro()   -- loading.html / login.html, on load
+     AetherMusic.ensureSplashIntroPlaying() -- index.html (on load AND on ENTER), loading.html / login.html (on load)
      AetherMusic.playPageLoop(pageKey)   -- any content page, on load (via aether-nav.js)
      AetherMusic.stopPageLoop()
      AetherMusic.playCelebrationLoop()   -- aether-celebration.js, after the fanfare
@@ -273,27 +272,30 @@
      arrival at a real content page -- see stopSplashLoop() below.
      Position is still tracked via elapsed real time across page loads
      so it feels continuous rather than restarting from 0 on every
-     page. ---- */
-  function startSplashIntro(){
-    if(!isEnabled()) return;
-    try{ sessionStorage.setItem(SESSION_KEY, String(Date.now())); }catch(e){}
-    resolveTrackURL('intro').then(function(url){
-      var el = new Audio(url);
-      el.loop = true;
-      el.volume = BASE_VOLUME;
-      el.play().catch(function(){ /* autoplay blocked or file missing -- stay silent */ });
-      activeEl = el;
-    });
-  }
+     page.
 
-  function continueSplashIntro(){
+     One function, safe to call from anywhere, any number of times:
+     index.html calls it immediately on page load (so it starts the
+     instant the splash screen appears, if the browser allows it),
+     again on the ENTER click (a guaranteed real gesture, so if
+     autoplay was blocked this is what actually starts it), and
+     loading.html/login.html call it on their own load to keep it
+     going. It's a no-op if something's already actively playing, so
+     none of those calls step on each other or restart the track. ---- */
+  function ensureSplashIntroPlaying(){
     if(!isEnabled()) return;
+    if(activeEl && !activeEl.paused) return; // already going -- nothing to do
+
     var startTs;
-    try{ startTs = parseInt(sessionStorage.getItem(SESSION_KEY), 10); }catch(e){ return; }
-    if(!startTs || isNaN(startTs)) return;
-
+    try{ startTs = parseInt(sessionStorage.getItem(SESSION_KEY), 10); }catch(e){}
+    if(!startTs || isNaN(startTs)){
+      startTs = Date.now();
+      try{ sessionStorage.setItem(SESSION_KEY, String(startTs)); }catch(e){}
+    }
     var elapsedSec = (Date.now() - startTs) / 1000;
+
     resolveTrackURL('intro').then(function(url){
+      if(activeEl && !activeEl.paused) return; // a fallback call already won the race
       var el = new Audio(url);
       el.loop = true;
       el.volume = BASE_VOLUME;
@@ -301,7 +303,7 @@
         track's actual length (it's a loop, so that's expected once the
         person has lingered a while), the browser just clamps/wraps it --
         harmless, still sounds like a loop in progress either way. */
-      el.play().catch(function(){});
+      el.play().catch(function(){ /* still blocked -- a later interaction will retry */ });
       activeEl = el;
     });
   }
@@ -411,8 +413,7 @@
   }
 
   window.AetherMusic = {
-    startSplashIntro: startSplashIntro,
-    continueSplashIntro: continueSplashIntro,
+    ensureSplashIntroPlaying: ensureSplashIntroPlaying,
     playPageLoop: playPageLoop,
     stopPageLoop: stopPageLoop,
     playCelebrationLoop: playCelebrationLoop,
