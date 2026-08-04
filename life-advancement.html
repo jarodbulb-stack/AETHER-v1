@@ -5,6 +5,11 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AETHER — Life Advancement</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#060a14"/>
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png"/>
+<link rel="icon" href="assets/icons/icon-192.png"/>
+<script src="aether-pwa.js"></script>
 <link rel="stylesheet" href="aether-theme.css"/>
 <link rel="stylesheet" href="aether-shell.css"/>
 <style>
@@ -1011,6 +1016,70 @@ if(weatherBadgeEl){
 
   wireMountain('left',  out.left,  'mountainViewportLeft',  'mountainArtLeft',  'campTagLayerLeft',  'peakTitleLeft',  'peakSubtitleLeft',  'peakLabelRailLeft');
   wireMountain('right', out.right, 'mountainViewportRight', 'mountainArtRight', 'campTagLayerRight', 'peakTitleRight', 'peakSubtitleRight', 'peakLabelRailRight');
+
+  /* ---- Route-drawing animation ----
+     The gold trail for a domain is re-rendered at its full current
+     length on every page load -- fine most of the time, but it means
+     a checkpoint you just completed on Blueprints shows up as an
+     instant jump the next time you land here, instead of feeling like
+     something that just happened. This compares today's real progress
+     against what was last actually seen on THIS page, and animates
+     only the newly-earned stretch drawing itself in, rather than
+     redrawing the whole route from scratch every visit.
+
+     Approximation, not pixel-perfect geometry: since the earned path
+     is always a literal prefix of the same walked point sequence, the
+     fraction of the rendered path's real length that corresponds to
+     the old percentage is closely approximated by oldPct/currentPct --
+     accurate enough for a visual flourish, and it avoids needing any
+     changes to great-mountain.js's internal path-building at all.
+
+     Local-only by design (not "aether_"-prefixed) -- this is animation
+     state, not campaign data, and has no reason to sync across devices;
+     a device seeing the reveal animation again on first visit is a
+     fine outcome, not a bug. */
+  function animateRouteReveals(domains){
+    var STORAGE_KEY = 'aetherMountainSeenPct';
+    var seen = {};
+    try{ seen = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }catch(e){}
+
+    domains.forEach(function(d){
+      var domainId = d.id || d.name;
+      var currentPct = Math.max(0, Math.min(d.pct || 0, 100));
+      var hadPrior = Object.prototype.hasOwnProperty.call(seen, domainId);
+      var oldPct = hadPrior ? seen[domainId] : null;
+
+      if(hadPrior && oldPct < currentPct){
+        var selector = '.gm-route-done[data-domain-id="' + String(domainId).replace(/["\\]/g, '\\$&') + '"]';
+        document.querySelectorAll(selector).forEach(function(path){
+          try{
+            var L = path.getTotalLength();
+            if(!L || !isFinite(L) || L <= 0) return;
+            var revealFraction = currentPct > 0 ? Math.max(0, Math.min(oldPct / currentPct, 1)) : 0;
+            var startOffset = L * (1 - revealFraction);
+            var origDasharray = path.getAttribute('stroke-dasharray') || '0.9 1.7';
+
+            path.style.transition = 'none';
+            path.setAttribute('stroke-dasharray', L + ' ' + L);
+            path.setAttribute('stroke-dashoffset', String(startOffset));
+            path.getBoundingClientRect(); // force reflow so the start state registers before transitioning
+            path.style.transition = 'stroke-dashoffset 1.6s cubic-bezier(0.22,0.61,0.36,1)';
+            requestAnimationFrame(function(){ path.setAttribute('stroke-dashoffset', '0'); });
+
+            setTimeout(function(){
+              path.style.transition = '';
+              path.setAttribute('stroke-dasharray', origDasharray);
+              path.removeAttribute('stroke-dashoffset');
+            }, 1700);
+          }catch(e){ /* purely cosmetic -- never let this break the page */ }
+        });
+      }
+      seen[domainId] = currentPct;
+    });
+
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(seen)); }catch(e){}
+  }
+  animateRouteReveals(gmDomains);
 
   /* ===== CLICK-TO-ISOLATE: fullscreen single-mountain view =====
      Clicking anywhere on a mountain's background (not on a route line,
