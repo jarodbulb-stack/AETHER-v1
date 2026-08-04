@@ -429,6 +429,28 @@
    RESPONSIVE
    ============================================================ */
 
+/* Hamburger toggle: hidden by default (desktop), the media query
+   below turns it on under 900px. Order matters here -- this base
+   rule MUST come before that media query in the file, not after,
+   or "last rule wins" cascade behavior makes this display:none
+   permanently beat the media query's display:flex even on mobile,
+   which is exactly the bug that shipped the first time around. */
+.mobile-menu-btn{
+  display:none; align-items:center; justify-content:center;
+  position:fixed; top:14px; left:14px; z-index:110;
+  width:40px; height:40px; border-radius:10px;
+  background:var(--bg-panel); border:1px solid var(--border-strong);
+  color:var(--text-primary); cursor:pointer; box-shadow:var(--shadow-panel);
+}
+.mobile-menu-btn:active{ background:var(--bg-elevated); }
+.mobile-menu-btn svg{ width:20px; height:20px; }
+
+.sidebar-backdrop{
+  display:none; position:fixed; inset:0; z-index:99;
+  background:rgba(4,7,14,0.65); backdrop-filter:blur(2px);
+}
+.sidebar-backdrop.open{ display:block; }
+
 @media (max-width: 1100px) {
   .layout-12 { grid-template-columns: repeat(6, 1fr); }
   .col-span-3, .col-span-4 { grid-column: span 3; }
@@ -458,22 +480,3 @@
      happening. */
   .mobile-menu-btn { display: flex; }
 }
-
-/* Hamburger toggle: fixed position, only ever visible under the
-   900px breakpoint above -- on desktop this rule simply never
-   applies, so nothing changes there. */
-.mobile-menu-btn{
-  display:none; align-items:center; justify-content:center;
-  position:fixed; top:14px; left:14px; z-index:110;
-  width:40px; height:40px; border-radius:10px;
-  background:var(--bg-panel); border:1px solid var(--border-strong);
-  color:var(--text-primary); cursor:pointer; box-shadow:var(--shadow-panel);
-}
-.mobile-menu-btn:active{ background:var(--bg-elevated); }
-.mobile-menu-btn svg{ width:20px; height:20px; }
-
-.sidebar-backdrop{
-  display:none; position:fixed; inset:0; z-index:99;
-  background:rgba(4,7,14,0.65); backdrop-filter:blur(2px);
-}
-.sidebar-backdrop.open{ display:block; }
