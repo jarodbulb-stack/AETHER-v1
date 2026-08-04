@@ -17,10 +17,11 @@
 <style>
 /* ============================================================
    PORTFOLIO — editable resume/portfolio builder.
-   Plain professional language throughout (no app-internal jargon
-   in the printed content), every field is directly editable, and
-   everything persists locally so it becomes a real, hand-owned
-   document rather than a fixed readout of internal data.
+   Three documents, one shared dataset: a Classic resume template,
+   a Modern resume template, and a Cover Letter -- switch between
+   them any time, editing any one keeps the others in sync since
+   they all read from and write to the same underlying data. Plain
+   professional language throughout, everything persists locally.
    ============================================================ */
 html,body{ margin:0; background:var(--bg-void); }
 body{ font-family:var(--font-body); color:var(--text-primary); }
@@ -41,7 +42,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
 .pf-back:hover{ background:var(--bg-elevated); border-color:var(--border-accent); }
 .pf-toolbar-title{ font-family:var(--font-display); font-size:14px; letter-spacing:0.1em; color:var(--text-primary); }
 .pf-toolbar-sub{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-dim); letter-spacing:0.04em; margin-top:2px; }
-.pf-toolbar-right{ display:flex; align-items:center; gap:10px; }
+.pf-toolbar-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .pf-sync-btn{
   display:inline-flex; align-items:center; gap:7px; cursor:pointer;
   font-family:var(--font-mono); font-size:11px; letter-spacing:0.03em;
@@ -63,6 +64,15 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
   padding:8px 20px 0; text-align:center;
 }
 
+/* ---- Document switcher ---- */
+.pf-doc-switcher{ display:flex; gap:4px; background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:9px; padding:3px; }
+.pf-doc-tab{
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.03em; font-weight:600; cursor:pointer;
+  background:none; border:none; color:var(--text-dim); padding:8px 13px; border-radius:7px; transition:background .15s,color .15s;
+}
+.pf-doc-tab:hover{ color:var(--text-secondary); }
+.pf-doc-tab.active{ background:var(--accent); color:#06101c; }
+
 .pf-stage{ padding:14px 20px 80px; display:flex; justify-content:center; }
 .pf-page{
   width:850px; max-width:100%; background:#ffffff; color:#1a2233;
@@ -70,13 +80,16 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
   padding:52px 56px; font-family:'Exo 2', Arial, sans-serif;
 }
 
-/* ---- editable fields: no visual chrome until hovered/focused, so it
-   reads as plain resume text but clearly invites editing on screen ---- */
+.pf-doc{ display:none; }
+.pf-doc.active{ display:block; }
+
+/* ---- editable fields: no visual chrome until hovered/focused ---- */
 [contenteditable="true"]{ outline:none; border-radius:3px; transition:background .12s ease; cursor:text; }
 [contenteditable="true"]:hover{ background:rgba(74,168,255,0.07); }
 [contenteditable="true"]:focus{ background:rgba(74,168,255,0.12); box-shadow:0 0 0 2px rgba(74,168,255,0.25); }
 [contenteditable="true"]:empty:before{ content:attr(data-placeholder); color:#a9b3c8; font-style:italic; }
 
+/* ================= CLASSIC TEMPLATE ================= */
 .pf-name{ font-family:var(--font-display),'Exo 2',sans-serif; font-size:30px; font-weight:700; letter-spacing:0.03em; color:#0e1930; display:inline-block; min-width:220px; }
 .pf-role{ font-size:13px; color:#5a6b8c; margin-top:4px; letter-spacing:0.03em; display:block; min-width:220px; }
 .pf-header-rule{ height:3px; background:linear-gradient(90deg,#0e1930,#4aa8ff 60%,#ffd166); margin:16px 0 22px; border-radius:2px; }
@@ -147,13 +160,58 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
 .pf-footer{ margin-top:34px; padding-top:14px; border-top:1px solid #e4e9f2; display:flex; justify-content:space-between; align-items:center; }
 .pf-footer-text{ font-family:var(--font-mono),monospace; font-size:9px; color:#a3adc2; letter-spacing:0.04em; }
 
+/* ================= MODERN TEMPLATE ================= */
+.pfm-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding-bottom:18px; border-bottom:4px solid #0e1930; margin-bottom:22px; }
+.pfm-name{ font-family:var(--font-display),sans-serif; font-size:32px; font-weight:800; color:#0e1930; letter-spacing:0.01em; min-width:200px; }
+.pfm-role{ display:inline-block; margin-top:8px; font-family:var(--font-mono),monospace; font-size:10.5px; font-weight:700; letter-spacing:0.05em; color:#fff; background:#0e1930; padding:5px 14px; border-radius:99px; min-width:140px; }
+.pfm-stats-mini{ display:flex; gap:16px; flex-shrink:0; }
+.pfm-stat-mini{ text-align:center; }
+.pfm-stat-mini-num{ font-family:var(--font-display),sans-serif; font-size:20px; font-weight:800; color:#4aa8ff; }
+.pfm-stat-mini-label{ font-family:var(--font-mono),monospace; font-size:7.5px; letter-spacing:0.05em; color:#8a97b3; text-transform:uppercase; }
+
+.pfm-skills-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:24px; }
+.pfm-skill-chip{ font-family:var(--font-mono),monospace; font-size:10px; font-weight:700; padding:5px 12px; border-radius:6px; background:#f4f6fb; color:#333f57; border:1px solid #e4e9f2; display:inline-flex; align-items:center; gap:5px; }
+
+.pfm-summary{ font-size:13.5px; line-height:1.65; color:#333f57; margin-bottom:26px; padding:16px 18px; background:#f8fafd; border-left:3px solid #4aa8ff; border-radius:4px; min-height:20px; }
+
+.pfm-section-title{ font-family:var(--font-mono),monospace; font-size:11px; font-weight:800; letter-spacing:0.14em; text-transform:uppercase; color:#0e1930; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
+
+.pfm-timeline{ position:relative; padding-left:22px; margin-bottom:28px; }
+.pfm-timeline::before{ content:''; position:absolute; left:4px; top:6px; bottom:6px; width:2px; background:#e4e9f2; }
+.pfm-entry{ position:relative; margin-bottom:22px; padding-right:22px; }
+.pfm-entry::before{ content:''; position:absolute; left:-22px; top:4px; width:10px; height:10px; border-radius:50%; background:#4aa8ff; border:2px solid #fff; box-shadow:0 0 0 2px #4aa8ff; }
+.pfm-entry-head{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+.pfm-entry-title{ font-size:14px; font-weight:800; color:#0e1930; flex:1; min-width:100px; }
+.pfm-entry-date{ font-family:var(--font-mono),monospace; font-size:10px; color:#8a97b3; white-space:nowrap; }
+.pfm-entry-sub{ font-size:11px; color:#4aa8ff; font-weight:700; margin-top:2px; min-height:14px; }
+.pfm-entry-desc{ font-size:12px; color:#4a5673; margin-top:5px; line-height:1.5; min-height:16px; }
+.pfm-entry-bullets{ margin:7px 0 0; padding-left:16px; }
+.pfm-entry-bullets li{ font-size:11.5px; color:#333f57; margin-bottom:3px; line-height:1.45; }
+
+.pfm-achievements-strip{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:26px; }
+.pfm-achievement-card{ background:#f4f6fb; border-radius:8px; padding:12px 14px; position:relative; }
+.pfm-achievement-title{ font-size:11.5px; font-weight:800; color:#0e1930; }
+.pfm-achievement-sub{ font-size:10.5px; color:#5a6b8c; margin-top:3px; line-height:1.4; min-height:12px; }
+
+/* ================= COVER LETTER ================= */
+.pfcl-header{ margin-bottom:6px; }
+.pfcl-date{ font-family:var(--font-mono),monospace; font-size:11px; color:#8a97b3; margin:20px 0 24px; }
+.pfcl-greeting{ font-size:13.5px; color:#1a2233; margin-bottom:16px; min-height:18px; }
+.pfcl-para{ font-size:13px; line-height:1.75; color:#333f57; margin-bottom:14px; min-height:18px; position:relative; padding-right:22px; }
+.pfcl-closing{ margin-top:22px; font-size:13.5px; color:#1a2233; min-height:18px; }
+.pfcl-signature{ margin-top:6px; font-size:14px; font-weight:700; color:#0e1930; min-height:18px; }
+.pfcl-para-add{
+  font-family:var(--font-mono),monospace; font-size:10px; color:#4aa8ff; background:none; border:none;
+  cursor:pointer; margin:2px 0 14px; padding:0; text-decoration:underline; display:block;
+}
+
 @media print{
   .pf-toolbar, .pf-edit-hint{ display:none !important; }
   body{ background:#fff; }
   .pf-stage{ display:block; padding:0; }
   .pf-page{ box-shadow:none; border-radius:0; width:auto; padding:0; margin:0; }
   @page{ size:letter; margin:16mm 15mm; }
-  .pf-entry{ page-break-inside:avoid; padding-right:0; }
+  .pf-entry, .pfm-entry{ page-break-inside:avoid; padding-right:0; }
   .pf-screen-only{ display:none !important; }
   [contenteditable="true"]:hover, [contenteditable="true"]:focus{ background:none; box-shadow:none; }
   [contenteditable="true"]:empty:before{ content:none !important; }
@@ -161,6 +219,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
 @media (max-width:900px){
   .pf-grid{ grid-template-columns:1fr; }
   .pf-page{ padding:32px 24px; }
+  .pfm-header{ flex-direction:column; }
 }
 </style>
 </head>
@@ -175,6 +234,11 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     </div>
   </div>
   <div class="pf-toolbar-right">
+    <div class="pf-doc-switcher pf-screen-only">
+      <button type="button" class="pf-doc-tab" data-doc="resume1">Resume &middot; Classic</button>
+      <button type="button" class="pf-doc-tab" data-doc="resume2">Resume &middot; Modern</button>
+      <button type="button" class="pf-doc-tab" data-doc="coverletter">Cover Letter</button>
+    </div>
     <button type="button" class="pf-sync-btn" id="pfSyncBtn" title="Add any newly completed projects that aren't in this portfolio yet">+ Import New Completed Projects</button>
     <button type="button" class="pf-print-btn" id="pfPrintBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -182,50 +246,107 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     </button>
   </div>
 </div>
-<div class="pf-edit-hint">Click any text on the page to edit it. Changes save automatically on this device.</div>
+<div class="pf-edit-hint">Click any text on the page to edit it. Changes save automatically on this device, and stay in sync across all three documents.</div>
 
 <div class="pf-stage">
   <div class="pf-page" id="pfPage">
 
-    <div class="pf-name" id="pfName" contenteditable="true" data-placeholder="Your Name"></div>
-    <div class="pf-role" id="pfRole" contenteditable="true" data-placeholder="Your Professional Title"></div>
-    <div class="pf-header-rule"></div>
+    <!-- ============ DOC 1: CLASSIC RESUME ============ -->
+    <div class="pf-doc" id="pfDocResume1">
+      <div class="pf-name" id="pfName" contenteditable="true" data-placeholder="Your Name"></div>
+      <div class="pf-role" id="pfRole" contenteditable="true" data-placeholder="Your Professional Title"></div>
+      <div class="pf-header-rule"></div>
 
-    <div class="pf-grid">
-      <div>
-        <div class="pf-section-title-row"><div class="pf-section-title">Summary</div></div>
-        <div class="pf-summary" id="pfSummary" contenteditable="true" data-placeholder="Write a short professional summary, or use Import to generate one from completed work."></div>
+      <div class="pf-grid">
+        <div>
+          <div class="pf-section-title-row"><div class="pf-section-title">Summary</div></div>
+          <div class="pf-summary" id="pfSummary" contenteditable="true" data-placeholder="Write a short professional summary, or use Import to generate one from completed work."></div>
 
-        <div class="pf-section-title-row">
-          <div class="pf-section-title">Projects &amp; Accomplishments</div>
-          <button type="button" class="pf-add-btn pf-screen-only" id="pfAddEntry">+ Add</button>
+          <div class="pf-section-title-row">
+            <div class="pf-section-title">Projects &amp; Accomplishments</div>
+            <button type="button" class="pf-add-btn pf-screen-only" id="pfAddEntry">+ Add</button>
+          </div>
+          <div id="pfExperience"></div>
         </div>
-        <div id="pfExperience"></div>
+
+        <div>
+          <div class="pf-section-title-row" style="margin-top:0;"><div class="pf-section-title">At a Glance</div></div>
+          <div class="pf-stat-grid">
+            <div class="pf-stat"><div class="pf-stat-num" id="pfMissionCount">0</div><div class="pf-stat-label">Projects Completed</div></div>
+            <div class="pf-stat"><div class="pf-stat-num" id="pfDomainCount">0</div><div class="pf-stat-label">Skill Areas</div></div>
+            <div class="pf-stat"><div class="pf-stat-num" id="pfEvidenceCount">0</div><div class="pf-stat-label">Supporting Records</div></div>
+            <div class="pf-stat"><div class="pf-stat-num" id="pfAchCount">0</div><div class="pf-stat-label">Achievements</div></div>
+          </div>
+
+          <div class="pf-section-title-row">
+            <div class="pf-section-title">Key Achievements</div>
+            <button type="button" class="pf-add-btn pf-screen-only" id="pfAddAch">+ Add</button>
+          </div>
+          <div id="pfAchievements"></div>
+
+          <div class="pf-section-title-row"><div class="pf-section-title">Skills &amp; Expertise</div></div>
+          <div class="pf-tags" id="pfDomainTags"></div>
+        </div>
       </div>
 
-      <div>
-        <div class="pf-section-title-row" style="margin-top:0;"><div class="pf-section-title">At a Glance</div></div>
-        <div class="pf-stat-grid">
-          <div class="pf-stat"><div class="pf-stat-num" id="pfMissionCount">0</div><div class="pf-stat-label">Projects Completed</div></div>
-          <div class="pf-stat"><div class="pf-stat-num" id="pfDomainCount">0</div><div class="pf-stat-label">Skill Areas</div></div>
-          <div class="pf-stat"><div class="pf-stat-num" id="pfEvidenceCount">0</div><div class="pf-stat-label">Supporting Records</div></div>
-          <div class="pf-stat"><div class="pf-stat-num" id="pfAchCount">0</div><div class="pf-stat-label">Achievements</div></div>
-        </div>
-
-        <div class="pf-section-title-row">
-          <div class="pf-section-title">Key Achievements</div>
-          <button type="button" class="pf-add-btn pf-screen-only" id="pfAddAch">+ Add</button>
-        </div>
-        <div id="pfAchievements"></div>
-
-        <div class="pf-section-title-row"><div class="pf-section-title">Skills &amp; Expertise</div></div>
-        <div class="pf-tags" id="pfDomainTags"></div>
+      <div class="pf-footer">
+        <div class="pf-footer-text" id="pfGeneratedDate">Generated &mdash;</div>
+        <div class="pf-footer-text">Prepared with AETHER</div>
       </div>
     </div>
 
-    <div class="pf-footer">
-      <div class="pf-footer-text" id="pfGeneratedDate">Generated &mdash;</div>
-      <div class="pf-footer-text">Prepared with AETHER</div>
+    <!-- ============ DOC 2: MODERN RESUME ============ -->
+    <div class="pf-doc" id="pfDocResume2">
+      <div class="pfm-header">
+        <div>
+          <div class="pfm-name" id="pfName2" contenteditable="true" data-placeholder="Your Name"></div>
+          <div class="pfm-role" id="pfRole2" contenteditable="true" data-placeholder="Your Professional Title"></div>
+        </div>
+        <div class="pfm-stats-mini">
+          <div class="pfm-stat-mini"><div class="pfm-stat-mini-num" id="pfmMissionCount">0</div><div class="pfm-stat-mini-label">Projects</div></div>
+          <div class="pfm-stat-mini"><div class="pfm-stat-mini-num" id="pfmAchCount">0</div><div class="pfm-stat-mini-label">Wins</div></div>
+        </div>
+      </div>
+
+      <div class="pfm-skills-row" id="pfmSkillsRow"></div>
+
+      <div class="pfm-summary" id="pfSummary2" contenteditable="true" data-placeholder="Write a short professional summary, or use Import to generate one from completed work."></div>
+
+      <div class="pfm-section-title">
+        <span>Key Achievements</span>
+        <button type="button" class="pf-add-btn pf-screen-only" id="pfmAddAch">+ Add</button>
+      </div>
+      <div class="pfm-achievements-strip" id="pfmAchievements"></div>
+
+      <div class="pfm-section-title">
+        <span>Experience</span>
+        <button type="button" class="pf-add-btn pf-screen-only" id="pfmAddEntry">+ Add</button>
+      </div>
+      <div class="pfm-timeline" id="pfmExperience"></div>
+
+      <div class="pf-footer">
+        <div class="pf-footer-text" id="pfGeneratedDate2">Generated &mdash;</div>
+        <div class="pf-footer-text">Prepared with AETHER</div>
+      </div>
+    </div>
+
+    <!-- ============ DOC 3: COVER LETTER ============ -->
+    <div class="pf-doc" id="pfDocCoverLetter">
+      <div class="pfcl-header">
+        <div class="pf-name" id="pfName3" contenteditable="true" data-placeholder="Your Name"></div>
+        <div class="pf-role" id="pfRole3" contenteditable="true" data-placeholder="Your Professional Title"></div>
+      </div>
+      <div class="pf-header-rule"></div>
+      <div class="pfcl-date" id="pfclDate"></div>
+      <div class="pfcl-greeting" id="pfclGreeting" contenteditable="true" data-placeholder="Dear Hiring Manager,"></div>
+      <div id="pfclParagraphs"></div>
+      <button type="button" class="pfcl-para-add pf-screen-only" id="pfclAddPara">+ add paragraph</button>
+      <div class="pfcl-closing" id="pfclClosing" contenteditable="true" data-placeholder="Sincerely,"></div>
+      <div class="pfcl-signature" id="pfName4" contenteditable="true" data-placeholder="Your Name"></div>
+
+      <div class="pf-toolbar-right pf-screen-only" style="margin-top:24px; justify-content:flex-start;">
+        <button type="button" class="pf-sync-btn" id="pfclRegenBtn">&#8635; Regenerate Draft from Completed Work</button>
+      </div>
     </div>
 
   </div>
@@ -307,40 +428,92 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
         : '',
       entries: built.newEntries,
       achievements: [],
-      skills: built.skills || []
+      skills: built.skills || [],
+      activeDoc: 'resume1',
+      coverLetter: null /* built lazily on first visit to the Cover Letter tab */
     };
     return d;
   }
 
+  function buildCoverLetterDraft(){
+    var topEntries = data.entries.slice(0, 2).filter(function(e){ return e.title; });
+    var skillsList = data.skills.slice(0, 5).join(', ');
+
+    var p1 = 'I\u2019m writing to express my interest in opportunities where I can put my experience in ' +
+      (skillsList || 'building and delivering real projects') + ' to work. ' +
+      (data.summary || 'My background is in hands-on, end-to-end project execution.');
+
+    var p2 = topEntries.length
+      ? ('Recently, I completed ' + topEntries.map(function(e){ return e.title; }).join(' and ') + '. ' +
+         (topEntries[0].description || 'It\u2019s the kind of work I take through to a real, finished result.'))
+      : 'I focus on seeing projects through from start to finish, with real evidence to back up the work.';
+
+    var p3 = 'I\u2019d welcome the chance to talk about how I can contribute. Thank you for your time and consideration.';
+
+    return { greeting: 'Dear Hiring Manager,', paragraphs: [p1, p2, p3], closing: 'Sincerely,' };
+  }
+
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  /* ---- Rendering ---- */
-  function render(){
-    document.getElementById('pfName').textContent = data.name || '';
-    document.getElementById('pfRole').textContent = data.role || '';
-    document.getElementById('pfSummary').textContent = data.summary || '';
+  function editableEl(className, value, placeholder, onSave, tag){
+    var el = document.createElement(tag || 'div');
+    el.className = className;
+    el.contentEditable = 'true';
+    el.setAttribute('data-placeholder', placeholder);
+    el.textContent = value || '';
+    el.addEventListener('blur', function(){ onSave(el.textContent.trim()); });
+    return el;
+  }
 
-    /* Experience / projects */
+  /* ================= RENDER: shared header fields, all three docs ================= */
+  function renderHeaders(){
+    ['pfName','pfName2','pfName3','pfName4'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.textContent = data.name || '';
+    });
+    ['pfRole','pfRole2','pfRole3'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.textContent = data.role || '';
+    });
+    document.getElementById('pfSummary').textContent = data.summary || '';
+    document.getElementById('pfSummary2').textContent = data.summary || '';
+
+    var genDate = 'Generated ' + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    document.getElementById('pfGeneratedDate').textContent = genDate;
+    document.getElementById('pfGeneratedDate2').textContent = genDate;
+
+    function bindName(id){
+      var el = document.getElementById(id);
+      if(el) el.onblur = function(){ data.name = el.textContent.trim(); save(); renderHeaders(); };
+    }
+    function bindRole(id){
+      var el = document.getElementById(id);
+      if(el) el.onblur = function(){ data.role = el.textContent.trim(); save(); renderHeaders(); };
+    }
+    ['pfName','pfName2','pfName3','pfName4'].forEach(bindName);
+    ['pfRole','pfRole2','pfRole3'].forEach(bindRole);
+    document.getElementById('pfSummary').onblur = function(){ data.summary = document.getElementById('pfSummary').textContent.trim(); save(); renderHeaders(); };
+    document.getElementById('pfSummary2').onblur = function(){ data.summary = document.getElementById('pfSummary2').textContent.trim(); save(); renderHeaders(); };
+  }
+
+  /* ================= RENDER: CLASSIC RESUME ================= */
+  function renderClassic(){
     var expEl = document.getElementById('pfExperience');
     expEl.innerHTML = '';
     if(!data.entries.length){
       expEl.innerHTML = '<div class="pf-empty-note">No entries yet. Use "+ Add" to write one in, or "Import New Completed Projects" to pull in finished work from AETHER.</div>';
     } else {
-      data.entries.forEach(function(entry){
-        expEl.appendChild(renderEntry(entry));
-      });
+      data.entries.forEach(function(entry){ expEl.appendChild(renderEntryClassic(entry)); });
     }
 
-    /* Achievements */
     var achEl = document.getElementById('pfAchievements');
     achEl.innerHTML = '';
     if(!data.achievements.length){
       achEl.innerHTML = '<div class="pf-empty-note">No achievements added yet.</div>';
     } else {
-      data.achievements.forEach(function(a){ achEl.appendChild(renderAchievement(a)); });
+      data.achievements.forEach(function(a){ achEl.appendChild(renderAchievementClassic(a)); });
     }
 
-    /* Skill tags */
     var tagsEl = document.getElementById('pfDomainTags');
     tagsEl.innerHTML = '';
     data.skills.forEach(function(skill, idx){
@@ -352,10 +525,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
       var del = document.createElement('span');
       del.className = 'pf-tag-del pf-screen-only';
       del.textContent = '\u00d7';
-      del.addEventListener('click', function(){
-        data.skills.splice(idx, 1);
-        save(); render();
-      });
+      del.addEventListener('click', function(){ data.skills.splice(idx, 1); save(); renderAll(); });
       tag.appendChild(del);
       tagsEl.appendChild(tag);
     });
@@ -366,25 +536,19 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     tagInput.addEventListener('keydown', function(ev){
       if(ev.key === 'Enter' && tagInput.value.trim()){
         data.skills.push(tagInput.value.trim());
-        save(); render();
+        save(); renderAll();
       }
     });
     tagsEl.appendChild(tagInput);
 
-    /* Stats -- reflect the current, editable content, not raw source data */
     document.getElementById('pfMissionCount').textContent = data.entries.length;
     document.getElementById('pfDomainCount').textContent = data.skills.length;
     var evidenceTotal = data.entries.reduce(function(sum, e){ return sum + (e.bullets ? e.bullets.length : 0); }, 0);
     document.getElementById('pfEvidenceCount').textContent = evidenceTotal;
     document.getElementById('pfAchCount').textContent = data.achievements.length;
-
-    document.getElementById('pfGeneratedDate').textContent =
-      'Generated ' + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
-
-    wireHeaderFields();
   }
 
-  function renderEntry(entry){
+  function renderEntryClassic(entry){
     var wrap = document.createElement('div');
     wrap.className = 'pf-entry';
 
@@ -395,22 +559,18 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     delBtn.title = 'Remove this entry';
     delBtn.addEventListener('click', function(){
       data.entries = data.entries.filter(function(e){ return e.id !== entry.id; });
-      save(); render();
+      save(); renderAll();
     });
     wrap.appendChild(delBtn);
 
     var head = document.createElement('div');
     head.className = 'pf-entry-head';
-    var title = editableEl('pf-entry-title', entry.title, 'Project or accomplishment title', function(v){ entry.title = v; save(); });
-    var date = editableEl('pf-entry-date', entry.date, 'Date', function(v){ entry.date = v; save(); });
-    head.appendChild(title); head.appendChild(date);
+    head.appendChild(editableEl('pf-entry-title', entry.title, 'Project or accomplishment title', function(v){ entry.title = v; save(); renderAll(); }));
+    head.appendChild(editableEl('pf-entry-date', entry.date, 'Date', function(v){ entry.date = v; save(); }));
     wrap.appendChild(head);
 
-    var sub = editableEl('pf-entry-sub', entry.category, 'Category or area', function(v){ entry.category = v; save(); });
-    wrap.appendChild(sub);
-
-    var desc = editableEl('pf-entry-desc', entry.description, 'Short description of the work', function(v){ entry.description = v; save(); });
-    wrap.appendChild(desc);
+    wrap.appendChild(editableEl('pf-entry-sub', entry.category, 'Category or area', function(v){ entry.category = v; save(); }));
+    wrap.appendChild(editableEl('pf-entry-desc', entry.description, 'Short description of the work', function(v){ entry.description = v; save(); }));
 
     var ul = document.createElement('ul');
     ul.className = 'pf-entry-bullets';
@@ -426,10 +586,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
       bDel.type = 'button';
       bDel.className = 'pf-mini-del pf-screen-only';
       bDel.textContent = '\u00d7';
-      bDel.addEventListener('click', function(){
-        entry.bullets.splice(bIdx, 1);
-        save(); render();
-      });
+      bDel.addEventListener('click', function(){ entry.bullets.splice(bIdx, 1); save(); renderAll(); });
       li.appendChild(bDel);
       ul.appendChild(li);
     });
@@ -442,14 +599,14 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     addBullet.addEventListener('click', function(){
       entry.bullets = entry.bullets || [];
       entry.bullets.push('');
-      save(); render();
+      save(); renderAll();
     });
     wrap.appendChild(addBullet);
 
     return wrap;
   }
 
-  function renderAchievement(a){
+  function renderAchievementClassic(a){
     var wrap = document.createElement('div');
     wrap.className = 'pf-achievement';
     var delBtn = document.createElement('button');
@@ -458,7 +615,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     delBtn.textContent = '\u00d7';
     delBtn.addEventListener('click', function(){
       data.achievements = data.achievements.filter(function(x){ return x.id !== a.id; });
-      save(); render();
+      save(); renderAll();
     });
     wrap.appendChild(delBtn);
     wrap.appendChild(editableEl('pf-achievement-title', a.title, 'Achievement title', function(v){ a.title = v; save(); }));
@@ -466,34 +623,167 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     return wrap;
   }
 
-  function editableEl(className, value, placeholder, onSave){
-    var el = document.createElement('div');
-    el.className = className;
-    el.contentEditable = 'true';
-    el.setAttribute('data-placeholder', placeholder);
-    el.textContent = value || '';
-    el.addEventListener('blur', function(){ onSave(el.textContent.trim()); });
-    return el;
+  /* ================= RENDER: MODERN RESUME ================= */
+  function renderModern(){
+    var skillsEl = document.getElementById('pfmSkillsRow');
+    skillsEl.innerHTML = '';
+    data.skills.forEach(function(skill, idx){
+      var chip = document.createElement('span');
+      chip.className = 'pfm-skill-chip';
+      var label = document.createElement('span');
+      label.textContent = skill;
+      chip.appendChild(label);
+      var del = document.createElement('span');
+      del.className = 'pf-tag-del pf-screen-only';
+      del.textContent = '\u00d7';
+      del.addEventListener('click', function(){ data.skills.splice(idx, 1); save(); renderAll(); });
+      chip.appendChild(del);
+      skillsEl.appendChild(chip);
+    });
+
+    var achEl = document.getElementById('pfmAchievements');
+    achEl.innerHTML = '';
+    if(!data.achievements.length){
+      achEl.innerHTML = '<div class="pf-empty-note">No achievements added yet.</div>';
+    } else {
+      data.achievements.forEach(function(a){
+        var card = document.createElement('div');
+        card.className = 'pfm-achievement-card';
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'pf-mini-del pf-screen-only';
+        delBtn.style.position = 'absolute'; delBtn.style.top = '6px'; delBtn.style.right = '6px';
+        delBtn.textContent = '\u00d7';
+        delBtn.addEventListener('click', function(){
+          data.achievements = data.achievements.filter(function(x){ return x.id !== a.id; });
+          save(); renderAll();
+        });
+        card.style.position = 'relative';
+        card.appendChild(delBtn);
+        card.appendChild(editableEl('pfm-achievement-title', a.title, 'Achievement title', function(v){ a.title = v; save(); }));
+        card.appendChild(editableEl('pfm-achievement-sub', a.sub, 'Short detail', function(v){ a.sub = v; save(); }));
+        achEl.appendChild(card);
+      });
+    }
+
+    var expEl = document.getElementById('pfmExperience');
+    expEl.innerHTML = '';
+    if(!data.entries.length){
+      expEl.innerHTML = '<div class="pf-empty-note">No entries yet.</div>';
+    } else {
+      data.entries.forEach(function(entry){ expEl.appendChild(renderEntryModern(entry)); });
+    }
+
+    document.getElementById('pfmMissionCount').textContent = data.entries.length;
+    document.getElementById('pfmAchCount').textContent = data.achievements.length;
   }
 
-  function wireHeaderFields(){
-    var nameEl = document.getElementById('pfName');
-    var roleEl = document.getElementById('pfRole');
-    var summaryEl = document.getElementById('pfSummary');
-    nameEl.onblur = function(){ data.name = nameEl.textContent.trim(); save(); };
-    roleEl.onblur = function(){ data.role = roleEl.textContent.trim(); save(); };
-    summaryEl.onblur = function(){ data.summary = summaryEl.textContent.trim(); save(); };
+  function renderEntryModern(entry){
+    var wrap = document.createElement('div');
+    wrap.className = 'pfm-entry';
+
+    var delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'pf-mini-del pf-screen-only';
+    delBtn.style.position = 'absolute'; delBtn.style.top = '0'; delBtn.style.right = '0';
+    delBtn.textContent = '\u00d7';
+    delBtn.addEventListener('click', function(){
+      data.entries = data.entries.filter(function(e){ return e.id !== entry.id; });
+      save(); renderAll();
+    });
+    wrap.appendChild(delBtn);
+
+    var head = document.createElement('div');
+    head.className = 'pfm-entry-head';
+    head.appendChild(editableEl('pfm-entry-title', entry.title, 'Project or accomplishment title', function(v){ entry.title = v; save(); renderAll(); }));
+    head.appendChild(editableEl('pfm-entry-date', entry.date, 'Date', function(v){ entry.date = v; save(); }));
+    wrap.appendChild(head);
+
+    wrap.appendChild(editableEl('pfm-entry-sub', entry.category, 'Category or area', function(v){ entry.category = v; save(); }));
+    wrap.appendChild(editableEl('pfm-entry-desc', entry.description, 'Short description of the work', function(v){ entry.description = v; save(); }));
+
+    var ul = document.createElement('ul');
+    ul.className = 'pfm-entry-bullets';
+    (entry.bullets || []).forEach(function(bulletText, bIdx){
+      var li = document.createElement('li');
+      var span = document.createElement('span');
+      span.contentEditable = 'true';
+      span.textContent = bulletText;
+      span.addEventListener('blur', function(){ entry.bullets[bIdx] = span.textContent.trim(); save(); });
+      li.appendChild(span);
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+
+    return wrap;
+  }
+
+  /* ================= RENDER: COVER LETTER ================= */
+  function renderCoverLetter(){
+    if(!data.coverLetter){ data.coverLetter = buildCoverLetterDraft(); save(); }
+    var cl = data.coverLetter;
+
+    document.getElementById('pfclDate').textContent = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+    document.getElementById('pfclGreeting').textContent = cl.greeting || '';
+    document.getElementById('pfclGreeting').onblur = function(){ cl.greeting = document.getElementById('pfclGreeting').textContent.trim(); save(); };
+    document.getElementById('pfclClosing').textContent = cl.closing || '';
+    document.getElementById('pfclClosing').onblur = function(){ cl.closing = document.getElementById('pfclClosing').textContent.trim(); save(); };
+
+    var wrap = document.getElementById('pfclParagraphs');
+    wrap.innerHTML = '';
+    (cl.paragraphs || []).forEach(function(text, idx){
+      var p = document.createElement('div');
+      p.className = 'pfcl-para';
+      var span = document.createElement('span');
+      span.contentEditable = 'true';
+      span.setAttribute('data-placeholder', 'Write this paragraph...');
+      span.textContent = text;
+      span.addEventListener('blur', function(){ cl.paragraphs[idx] = span.textContent.trim(); save(); });
+      p.appendChild(span);
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'pf-mini-del pf-screen-only';
+      del.style.position = 'absolute'; del.style.top = '0'; del.style.right = '0';
+      del.textContent = '\u00d7';
+      del.addEventListener('click', function(){ cl.paragraphs.splice(idx, 1); save(); renderAll(); });
+      p.appendChild(del);
+      wrap.appendChild(p);
+    });
+  }
+
+  /* ================= DOCUMENT SWITCHER ================= */
+  function setActiveDoc(docKey){
+    data.activeDoc = docKey;
+    save();
+    ['resume1','resume2','coverletter'].forEach(function(key){
+      var mapId = { resume1:'pfDocResume1', resume2:'pfDocResume2', coverletter:'pfDocCoverLetter' }[key];
+      document.getElementById(mapId).classList.toggle('active', key === docKey);
+    });
+    document.querySelectorAll('.pf-doc-tab').forEach(function(tab){
+      tab.classList.toggle('active', tab.getAttribute('data-doc') === docKey);
+    });
+    if(docKey === 'coverletter') renderCoverLetter();
+  }
+
+  /* ================= MASTER RENDER ================= */
+  function renderAll(){
+    renderHeaders();
+    renderClassic();
+    renderModern();
+    if(data.activeDoc === 'coverletter') renderCoverLetter();
+    setActiveDoc(data.activeDoc || 'resume1');
   }
 
   function run(){
     var saved = loadSaved();
     if(saved){
       data = saved;
+      if(!data.activeDoc) data.activeDoc = 'resume1';
     } else {
       data = buildInitialData();
       save();
     }
-    render();
+    renderAll();
 
     if(window.AetherVoice && data.entries.length){
       window.AetherVoice.confirmAction('portfolioReady');
@@ -505,13 +795,38 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
 
   document.getElementById('pfPrintBtn').addEventListener('click', function(){ window.print(); });
 
+  document.querySelectorAll('.pf-doc-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){ setActiveDoc(tab.getAttribute('data-doc')); });
+  });
+
   document.getElementById('pfAddEntry').addEventListener('click', function(){
     data.entries.unshift({ id: genId(), title:'', category:'', date:'', description:'', bullets:[], sourceKey:null });
-    save(); render();
+    save(); renderAll();
+  });
+  document.getElementById('pfmAddEntry').addEventListener('click', function(){
+    data.entries.unshift({ id: genId(), title:'', category:'', date:'', description:'', bullets:[], sourceKey:null });
+    save(); renderAll();
   });
   document.getElementById('pfAddAch').addEventListener('click', function(){
     data.achievements.unshift({ id: genId(), title:'', sub:'' });
-    save(); render();
+    save(); renderAll();
+  });
+  document.getElementById('pfmAddAch').addEventListener('click', function(){
+    data.achievements.unshift({ id: genId(), title:'', sub:'' });
+    save(); renderAll();
+  });
+  document.getElementById('pfclAddPara').addEventListener('click', function(){
+    if(!data.coverLetter) data.coverLetter = buildCoverLetterDraft();
+    data.coverLetter.paragraphs.push('');
+    save(); renderCoverLetter();
+  });
+  document.getElementById('pfclRegenBtn').addEventListener('click', function(){
+    if(data.coverLetter && data.coverLetter.paragraphs.some(function(p){ return p.trim(); })){
+      if(!confirm('Replace the current cover letter draft with a fresh one generated from your completed work? This overwrites what\u2019s written now.')) return;
+    }
+    data.coverLetter = buildCoverLetterDraft();
+    save(); renderCoverLetter();
+    if(window.AetherVoice) window.AetherVoice.speak('Draft regenerated.');
   });
   document.getElementById('pfSyncBtn').addEventListener('click', function(){
     var built = buildFromAetherData(data.entries);
@@ -520,7 +835,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
       return;
     }
     data.entries = data.entries.concat(built.newEntries);
-    save(); render();
+    save(); renderAll();
   });
 })();
 </script>
