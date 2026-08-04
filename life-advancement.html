@@ -639,6 +639,16 @@
         <div class="domain-grid" id="domainGrid" style="margin-top:14px;"><!-- JS --></div>
       </div>
 
+      <!-- ═══ SECTION 3B — UPCOMING DEADLINES ═══ -->
+      <div class="panel" id="deadlinesPanel" style="display:none;">
+        <div class="section-head-left" style="margin-bottom:14px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+          <span class="ttl">Upcoming Deadlines</span>
+          <span class="sub">Missions racing the clock, across every domain</span>
+        </div>
+        <div id="deadlinesList" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </div>
+
       <!-- ═══ SECTION 4 + 5 — FORECAST / ELEVATION FEED ═══ -->
       <div class="bottom-2col">
 
@@ -1328,5 +1338,63 @@ if(_isLiveMode){
 <script src="aether-music.js"></script>
 <script src="aether-voice.js"></script>
 <script src="aether-nav.js"></script>
+
+<script>
+/* ---- Upcoming Deadlines: this page is domain-level (mountains, not
+   individual missions), so there's nowhere else here a real deadline
+   would surface. Same computation and color logic as Command Deck's
+   momentum panel and the Missions page, just filtered to this page's
+   own layout. Hidden entirely when nothing has a deadline set. ---- */
+(function(){
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function deadlineInfo(m){
+    if(!m.deadline) return null;
+    var target = new Date(m.deadline + 'T00:00:00');
+    if(isNaN(target.getTime())) return null;
+    var today = new Date(); today.setHours(0,0,0,0);
+    var days = Math.round((target - today) / 86400000);
+    var dateLabel = target.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    if(days < 0)  return { text: Math.abs(days) + ' day' + (Math.abs(days)!==1?'s':'') + ' overdue', color:'var(--danger)', days:days };
+    if(days === 0) return { text: 'Due today', color:'var(--warning)', days:days };
+    if(days <= 7) return { text: 'Due in ' + days + ' day' + (days!==1?'s':''), color:'var(--warning)', days:days };
+    return { text: 'Due ' + dateLabel, color:'var(--text-faint)', days:days };
+  }
+
+  function renderDeadlinesPanel(){
+    var panel = document.getElementById('deadlinesPanel');
+    var list = document.getElementById('deadlinesList');
+    if(!panel || !list || typeof AetherStore === 'undefined' || !AetherStore.getAllMissions) return;
+
+    var rows = AetherStore.getAllMissions()
+      .filter(function(m){ return (m.pct || 0) < 100 && m.deadline; })
+      .map(function(m){ return { mission:m, info: deadlineInfo(m) }; })
+      .filter(function(r){ return r.info; })
+      .sort(function(a,b){ return a.info.days - b.info.days; })
+      .slice(0, 5);
+
+    if(!rows.length){ panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    list.innerHTML = '';
+
+    rows.forEach(function(r){
+      var m = r.mission, di = r.info;
+      var pct = Math.round(m.pct || 0);
+      var row = document.createElement('a');
+      row.href = 'missions.html';
+      row.style.cssText = 'display:flex; align-items:center; gap:14px; text-decoration:none; background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:10px; padding:12px 16px;';
+      row.innerHTML =
+        '<div style="flex:1; min-width:0;">' +
+          '<div style="font-family:var(--font-body); font-size:13px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + esc(m.name || '') + '</div>' +
+          '<div style="font-family:var(--font-mono); font-size:10px; color:' + di.color + '; margin-top:3px;">' + di.text + ' &middot; ' + pct + '% complete</div>' +
+        '</div>';
+      list.appendChild(row);
+    });
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderDeadlinesPanel);
+  else renderDeadlinesPanel();
+})();
+</script>
 </body>
 </html>

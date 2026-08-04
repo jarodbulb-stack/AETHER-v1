@@ -599,11 +599,26 @@ function renderBlueprintBlock(bp, forceExpand){
   </div>`;
 }
 
+function deadlineInfo(m){
+  if(!m.deadline) return null;
+  var target = new Date(m.deadline + 'T00:00:00');
+  if(isNaN(target.getTime())) return null;
+  var today = new Date(); today.setHours(0,0,0,0);
+  var days = Math.round((target - today) / 86400000);
+  var dateLabel = target.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  if(m.pct >= 100) return null;
+  if(days < 0)  return { text: Math.abs(days) + ' day' + (Math.abs(days)!==1?'s':'') + ' overdue', color: 'var(--danger)' };
+  if(days === 0) return { text: 'Due today', color: 'var(--warning)' };
+  if(days <= 7) return { text: 'Due in ' + days + ' day' + (days!==1?'s':''), color: 'var(--warning)' };
+  return { text: 'Due ' + dateLabel, color: 'var(--text-faint)' };
+}
+
 function renderMissionGroup(mission, missionBlueprints, expandFirst){
   const color = missionStatusColor[mission.status] || 'var(--accent)';
   const bpHtml = missionBlueprints.length
     ? missionBlueprints.map(function(bp, i){ return renderBlueprintBlock(bp, expandFirst && i===0); }).join('')
     : '<div class="mg-no-bp">No execution plan yet — this mission has no blueprint mapping the route to summit.</div>';
+  const dl = deadlineInfo(mission);
   return `
   <div class="mission-group" data-mission="${mission.key}" style="--mg-color:${color};">
     <div class="mg-head">
@@ -615,6 +630,7 @@ function renderMissionGroup(mission, missionBlueprints, expandFirst){
       <div class="mg-meta">
         <span class="mg-pct" style="color:${color};">${mission.pct}%</span>
         <span class="mg-camp">${mission.camp || 'Base Camp'}</span>
+        ${dl ? `<span class="mg-camp" style="color:${dl.color};">${dl.text}</span>` : ''}
       </div>
     </div>
     <div class="mg-body">

@@ -396,6 +396,25 @@
       if(sevRank[a.severity]!==sevRank[c.severity]) return sevRank[a.severity]-sevRank[c.severity];
       return (c.daysOpen||0)-(a.daysOpen||0);
     });
+
+    /* Blockers reference their mission by name, not key -- build a
+       quick lookup so each card can show that mission's real deadline,
+       the same reason this blocker is worth prioritizing or not. */
+    var missionsByName = {};
+    (AetherStore.getAllMissions ? AetherStore.getAllMissions() : []).forEach(function(m){ missionsByName[m.name] = m; });
+    function deadlineField(mission){
+      if(!mission || !mission.deadline || (mission.pct||0) >= 100) return '';
+      var target = new Date(mission.deadline + 'T00:00:00');
+      if(isNaN(target.getTime())) return '';
+      var today = new Date(); today.setHours(0,0,0,0);
+      var days = Math.round((target - today) / 86400000);
+      var text, cls;
+      if(days < 0){ text = Math.abs(days) + ' day' + (Math.abs(days)!==1?'s':'') + ' overdue'; cls = 'danger'; }
+      else if(days <= 7){ text = days===0 ? 'Due today' : ('Due in ' + days + ' day' + (days!==1?'s':'')); cls = 'danger'; }
+      else { text = 'Due ' + target.toLocaleDateString('en-US',{month:'short',day:'numeric'}); cls = ''; }
+      return fieldClass('Mission Deadline', text, cls);
+    }
+
     var list = document.getElementById('bkList');
     if(b.length===0){
       list.innerHTML = '<div class="bk-card"><div class="bk-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div class="bk-empty-title">No Blockers Here</div><div class="bk-empty-sub">The trail is clear for this filter. Nothing is obstructing advancement.</div></div></div>';
@@ -423,6 +442,7 @@
           field('Discovered', x.dateDiscovered||'—')+
           fieldClass('Days Open', (x.daysOpen||0)+' day'+((x.daysOpen||0)!==1?'s':''), (x.daysOpen||0)>=3?'danger':'')+
           field('Status', x.status)+
+          deadlineField(missionsByName[x.affectedMission])+
         '</div>'+
         (x.recoveryPlan ? '<div class="bk-recovery"><div class="bk-recovery-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Recovery Plan</div><div class="bk-recovery-text">'+esc(x.recoveryPlan)+'</div></div>' : '')+
         (resolveBtn || deleteBtn ? '<div class="bk-card-actions">'+resolveBtn+deleteBtn+'</div>' : '')+
