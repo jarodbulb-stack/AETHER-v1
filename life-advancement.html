@@ -1181,7 +1181,8 @@ if(weatherBadgeEl){
 (function(){
   var slider = document.getElementById('mountainSizeSlider');
   if(!slider) return;
-  var STORAGE_KEY = 'aether_mountain_height';
+  var STORAGE_KEY = 'aetherMountainHeight'; /* not "aether_..." -- a local display
+    preference (slider position), not campaign data worth syncing across devices */
 
   function apply(px){
     document.documentElement.style.setProperty('--mountain-max-height', px + 'px');

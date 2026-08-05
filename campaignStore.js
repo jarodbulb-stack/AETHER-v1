@@ -1167,6 +1167,29 @@
     if(updated) lsSet(LIVE_BLOCKERS_KEY, blockers);
   }
 
+  /* This was built with "call once per day" as its whole design, but
+     nothing in the app ever actually called it -- daysOpen has been
+     frozen at its initial value since creation regardless of how long
+     a blocker actually sat open. Fixed here: campaignStore.js loads on
+     every page, so this runs once, right here, gated by a real
+     calendar-day check. The marker is "aether_"-prefixed on purpose
+     (unlike the local-only UI preference keys elsewhere in this app)
+     so it syncs via Firestore -- without that, using AETHER on two
+     computers on the same day could each independently decide "I
+     haven't aged blockers today" and both increment, double-counting
+     that day. */
+  (function autoAgeBlockersOncePerDay(){
+    var AGE_DATE_KEY = 'aether_blocker_age_date';
+    try{
+      var last = localStorage.getItem(AGE_DATE_KEY);
+      var today = todayLabel();
+      if(last !== today){
+        ageLiveBlockers();
+        localStorage.setItem(AGE_DATE_KEY, today);
+      }
+    }catch(e){ /* best-effort -- a missed aging tick isn't worth breaking page load over */ }
+  })();
+
   /* ============================================================
      APPLICATIONS BUILT
      A registry of the actual software/apps the operator has built --

@@ -1207,12 +1207,12 @@ window.__toggleIntel = function(){
   var wrap = document.getElementById('intelCollapseWrap');
   var open = wrap.classList.toggle('open');
   btn.classList.toggle('open', open);
-  try{ localStorage.setItem('aether_intel_open', open ? '1' : '0'); }catch(e){}
+  try{ localStorage.setItem('aetherIntelOpen', open ? '1' : '0'); }catch(e){}
 };
 // Restore state
 (function(){
   try{
-    var s = localStorage.getItem('aether_intel_open');
+    var s = localStorage.getItem('aetherIntelOpen');
     if(s === '1'){
       var wrap = document.getElementById('intelCollapseWrap');
       var btn = document.getElementById('intelToggleBtn');
@@ -1230,8 +1230,7 @@ window.__toggleIntel = function(){
     var missions = AetherStore.getMissions ? AetherStore.getMissions() : [];
     var evidence = AetherStore.getEvidence ? AetherStore.getEvidence() : [];
     var cps = AetherStore.getCheckpoints ? AetherStore.getCheckpoints() : [];
-    var debriefs = AetherStore.getDebriefs ? AetherStore.getDebriefs() : [];
-    
+
     var completed = missions.filter(function(m){ return m.status === 'verified' || m.pct >= 100; }).length;
     var verified = evidence.filter(function(e){ return e.defaultStatus === 'verified'; }).length;
     /* defaultDone never updates after a live checkpoint is created --
@@ -1247,9 +1246,25 @@ window.__toggleIntel = function(){
       }
       return !!c.defaultDone;
     }).length;
-    
-    // Days since first expedition (use oldest mission date or fallback)
-    var daysSince = 14; // fallback sample
+
+    /* Days since the first expedition -- genuinely computed, not a
+       fixed placeholder. createdAt is stored as a no-year "Mon Day"
+       label (same convention as every other date in AETHER before
+       deadlines introduced real ISO dates), so this assumes the most
+       recent past occurrence of that month/day rather than pretending
+       to know the exact year -- an honest best-effort, not a guess
+       dressed up as precise. */
+    function parseNoYearDate(label){
+      if(!label) return null;
+      var d = new Date(label + ', ' + new Date().getFullYear());
+      if(isNaN(d.getTime())) return null;
+      if(d > new Date()) d.setFullYear(d.getFullYear() - 1);
+      return d;
+    }
+    var missionDates = missions.map(function(m){ return parseNoYearDate(m.createdAt); }).filter(Boolean);
+    var daysSince = missionDates.length
+      ? Math.max(0, Math.round((new Date() - new Date(Math.min.apply(null, missionDates))) / 86400000))
+      : 0;
     
     var panel = document.getElementById('lifetimeStatsPanel');
     if(!panel) return;
