@@ -247,6 +247,21 @@
     document.body.appendChild(btn);
   }
 
+  /* Persistent Help button: a small "?" fixed bottom-right on every
+     page that loads aether-nav.js, linking to the new guide.html.
+     Skipped on the guide page itself, since a help button pointing to
+     the page you're already on is just clutter. */
+  function buildHelpButton(){
+    if(currentFile() === 'guide.html' || document.querySelector('.help-btn')) return;
+    var btn = document.createElement('a');
+    btn.href = 'guide.html';
+    btn.className = 'help-btn';
+    btn.setAttribute('aria-label', 'How to use AETHER');
+    btn.title = 'How to use AETHER';
+    btn.textContent = '?';
+    document.body.appendChild(btn);
+  }
+
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', build);
     document.addEventListener('DOMContentLoaded', syncSummitsCount);
@@ -254,6 +269,7 @@
     document.addEventListener('DOMContentLoaded', announcePageVoice);
     document.addEventListener('DOMContentLoaded', announcePageMusic);
     document.addEventListener('DOMContentLoaded', buildMobileMenu);
+    document.addEventListener('DOMContentLoaded', buildHelpButton);
   } else {
     build();
     syncSummitsCount();
@@ -261,5 +277,6 @@
     announcePageVoice();
     announcePageMusic();
     buildMobileMenu();
+    buildHelpButton();
   }
 })();

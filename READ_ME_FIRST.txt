@@ -1,56 +1,115 @@
-AETHER V2.0 — VOICE SYSTEM, COMPLETE & FINAL (all fixes merged)
-================================================================
-4 files, this is the ONLY voice zip you need now — supersedes the
-three separate deliveries that came before it (Jarvis rebuild, audio-
-timing fix, male-voice fix). All three are merged into these 4 files.
+AETHER — MISSION COMMAND SYSTEM
+================================
+A personal life-execution app. Your life, tracked and run the way a
+real campaign gets run — as mountains you climb, on purpose, with
+proof you actually did it.
 
-FILES + CHECKSUMS (so you can confirm you have exactly these, via
-Notepad or any checksum tool, if anything seems off again):
-  aether-voice.js     953c644c3d688d3c5f5590523a4671e8
-  loading.html        c1d7bcde69af9dc6ab07558126876e8c
-  dashboard.html      d0e5b986277d05efa2331f8a93209559
-  command-center.html 51914cb1f10a3f85d5d79b3a48777396
+WHAT AETHER ACTUALLY IS
+------------------------
+Every meaningful area of your life — Health, Finance, Relationships,
+Learning, Business, Skills & Mastery, Character & Discipline,
+Spiritual Life, Purpose & Mission, Environment & Lifestyle — is a
+mountain. Real progress in that area raises your elevation on it.
+Nothing moves unless you actually do something and can back it up.
 
-EVERYTHING THIS INCLUDES
-- Splash -> login: "Welcome back, Dan. Systems online, initializing."
-- Login -> dashboard: "Connecting to AETHER." then "Connection
-  established. Standing by for your command." (sequenced, matching
-  on-screen text)
-- Command Deck, first visit this session: reads the real daily quote
-  aloud, once
-- Command Deck, return visits: "What are you going to do now, sir?"
-  or a reminder naming today's still-pending command
-- Sign out: progress bar replaced entirely with "DATA SECURED / Until
-  next time, sir." on screen, speaks "Data secured. Until next time,
-  sir. Signing out.", then returns to the splash page
-- Mission complete: "Mission complete. Another hard peak conquered.
-  Well done, sir. Would you like to conquer another?" plus 3 more
-  Jarvis-toned variants in rotation
-- Domain complete: "Domain conquered, sir. That mountain is yours
-  now." plus 2 more variants, each naming the real domain
-- Jarvis tone throughout -- "Dan" once on arrival, "sir" everywhere
-  after
-- MALE voice selection, fixed -- the earlier bug (a female voice
-  mistakenly in the "safe fallback" list) is corrected; picks a real
-  male voice on Windows/macOS/Chrome whenever one is installed
-- Audio reliability fixes -- short warm-up delay so lines don't get
-  silently dropped on a fresh page load (a known Chrome quirk), plus
-  a keep-alive nudge so longer lines like the quote don't cut off
-  mid-sentence
+The core loop, every time:
+  MISSION  → a real goal, with a real objective and (optionally) a
+             real deadline
+  BLUEPRINT → the actual plan for that mission — phases, hazards,
+             recovery steps, and a checklist
+  CHECKPOINTS → the literal steps inside a blueprint. Checking one
+             off is what moves the needle
+  EVIDENCE → proof attached to a checkpoint. This is what separates
+             AETHER from a to-do list — nothing is "done" on your
+             word alone if you choose to require evidence
+  SUMMIT   → the mission hits 100%. AETHER throws a real celebration,
+             the mountain's route lights up, and it lands permanently
+             in your Summit Archive
 
-INSTALL
-Copy all 4 files into AETHER_MASTER_v2.0, overwrite. Hard-refresh
-(Ctrl+Shift+R) or use Incognito to guarantee no cached old copies are
-still being served.
+HOW TO GET STARTED
+-------------------
+1. Open the app. Load Sample Data from Command Center to explore
+   every page with a working demo campaign before touching your own
+   life with it — this is the guided tour, and it never touches your
+   real data.
+2. When ready, either "Clear Demo" and build your first mission
+   yourself, or use "Set Up AETHER v1.0" in Command Center to create
+   one real, honest first mission automatically (the app itself,
+   with genuinely completed steps already marked verified).
+3. A full in-app walkthrough is one click away everywhere — look for
+   the "?" button on any page, or open guide.html directly.
 
-STILL OPEN: THE LOGIN-SKIP QUESTION
-I checked login.html and firebase-config.js thoroughly -- there is no
-code in either that auto-skips the login form. The most likely
-explanation is that your browser is still holding an authenticated
-Firebase session from our testing earlier (it persists across
-browser restarts by default on the same browser), which can make it
-look like login got skipped. Testing the ENTER button in an
-Incognito/Private window would confirm this definitively -- that
-mode never carries an existing session, so if login still gets
-skipped there too, that tells us it's a real code issue rather than
-a leftover session, and I'll dig further.
+THE PAGES
+----------
+Command Deck        Home base. Elevation, Confidence, the daily
+                     command, and "Strike While the Iron's Hot" —
+                     missions worth finishing right now.
+Life Advancement     Twin Peaks: two real photographic mountains
+                     (Internal Life / External Life), each domain's
+                     route drawn live across them, with animated
+                     reveals as you actually make progress.
+Missions             Every objective you're running, deadlines and
+                     all, each with its own procedurally-shaped
+                     mini-mountain.
+Blueprints           The real plan behind each mission — phases,
+                     hazards, recovery steps, and the checklist that
+                     actually drives progress.
+Problems / Blockers  What's in the way, and which mission's deadline
+                     that blocker is actually costing you.
+Evidence Vault       Every piece of proof you've logged, organized
+                     and searchable.
+Timeline             The whole history, in order.
+Debrief              Reflection — what worked, what didn't, what
+                     changed.
+Knowledge Library    Reference material worth keeping.
+Summit Archive       Every mission you've actually finished, for
+                     good.
+Applications Built   A running record of the real software/apps/
+                     systems you've built (AETHER itself included),
+                     shown next to your mountains-climbed record.
+Portfolio            A printable, fully editable resume — Classic or
+                     Modern template, plus an auto-drafted cover
+                     letter — built straight from your completed
+                     work. Never shown to anyone unless you print it.
+Command Center       Every setting that touches the whole app: voice,
+                     music (including per-page background tracks you
+                     upload yourself), data backup/export, and the
+                     Install AETHER panel.
+
+FEATURES WORTH KNOWING ABOUT
+------------------------------
+VOICE       A genuine spoken presence throughout the app — page
+            arrivals, a guaranteed once-daily quote, reliable named
+            reminders for anything overdue, and confirmations when
+            real actions happen (backups, saves, evidence logged).
+            Toggle in Command Center.
+MUSIC       Splash/login intro that loops until you actually sign in,
+            and a quiet ambient background loop on every single page
+            — assignable per page, on/off per page, uploaded from
+            your own device through Command Center's Soundtrack
+            Library and Page Backgrounds panels. Nothing is bundled;
+            it's entirely your own music.
+DEADLINES   Real target dates on missions, not guesses — surfaced on
+            Command Deck, Life Advancement, Missions, Blueprints, and
+            Problems/Blockers, with AETHER genuinely re-reminding you
+            every single visit while something stays overdue, not
+            just once.
+INSTALL     AETHER installs like a real app — its own icon, its own
+            window, works offline — on desktop, Android, and iOS
+            (via Add to Home Screen on iOS specifically, since Apple
+            doesn't allow a website to trigger that itself).
+DATA        Missions, evidence, blueprints, blockers, timeline,
+            debriefs, and applications all sync automatically across
+            every device you sign into, through Firebase. Voice/
+            music preferences and uploaded tracks stay local to each
+            device on purpose.
+
+WHERE THIS LIVES
+------------------
+Live: https://jarodbulb-stack.github.io/AETHER-v1/
+Repo: https://github.com/jarodbulb-stack/AETHER-v1
+
+Everything in this folder is plain HTML/CSS/JavaScript — no build
+step, no framework, no server beyond Firebase (Auth + Firestore) for
+real accounts and real data sync. Open index.html locally through
+START_AETHER.bat, or just use the live URL above on any device.

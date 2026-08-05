@@ -37,6 +37,7 @@ var CORE_ASSETS = [
   './command-center.html',
   './portfolio.html',
   './applications.html',
+  './guide.html',
   './daily-command.html',
   './aether-theme.css',
   './aether-shell.css',
