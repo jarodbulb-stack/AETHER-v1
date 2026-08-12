@@ -295,6 +295,12 @@
 
       <div class="ev-strip" id="evStrip"></div>
 
+      <div id="evInProgressSection" style="display:none; margin-bottom:8px;">
+        <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M3 3h18l-2 9a7 7 0 0 1-14 0L3 3z"/></svg> Mountains In Progress</div>
+        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim); margin:6px 0 14px;">Click a mountain to see every step completed on it, with its evidence.</div>
+        <div id="evInProgressGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px;"></div>
+      </div>
+
       <div class="ev-confidence-bar">
         <div class="ev-conf-head">
           <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 4 6v6c0 5 8 8 8 8s8-3 8-8V6Z"/></svg> Commander Confidence Engine</div>
@@ -330,6 +336,26 @@
   </div>
 </div>
 
+<!-- Mission Detail Overlay: shows every completed step + its evidence
+     for one mountain, opened by clicking a card in "Mountains In
+     Progress" above -->
+<div class="modal-overlay" id="evDetailOverlay">
+  <div class="modal-box" id="evDetailBox" style="width:min(720px, 94vw); max-height:88vh;">
+    <div class="modal-header" style="display:flex; align-items:flex-start; justify-content:space-between; gap:14px;">
+      <div>
+        <div class="modal-title" id="evDetailTitle" style="margin-bottom:2px;">Mission</div>
+        <div style="font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim);" id="evDetailSub">Domain &middot; Progress</div>
+      </div>
+      <button type="button" class="modal-close" onclick="closeMissionDetail()" aria-label="Close">&times;</button>
+    </div>
+    <div style="padding:18px 22px 4px; overflow-y:auto;" id="evDetailBody"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 22px 20px; border-top:1px solid var(--border-subtle); margin-top:auto;">
+      <button type="button" class="btn btn-ghost" onclick="closeMissionDetail()">&larr; Back to Missions</button>
+      <a href="blueprints.html" class="btn btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">Continue &middot; Blueprints &rarr;</a>
+    </div>
+  </div>
+</div>
+
 <!-- Add Evidence Modal -->
 <div class="modal-overlay" id="evidenceModal">
   <div class="modal-box" role="dialog" aria-modal="true">
@@ -351,7 +377,7 @@
         </button>
         <div id="bulkEvBox" style="display:none; flex-direction:column; gap:8px; margin-top:10px;">
           <span style="font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); line-height:1.6;">
-            Pick Mission and Blueprint below first — every pasted item uses that pairing. Separate each evidence item with a blank line.
+            Pick Mission and Blueprint below first — every pasted item uses that pairing. Separate each evidence item with a blank line. <strong style="color:var(--warning);">"Step:" is required on every item</strong> and must name a real checkpoint in that blueprint — anything that doesn't match gets skipped, not saved unassigned.
           </span>
           <textarea id="bulkEvInput" class="form-input" rows="12" style="font-family:var(--font-mono); font-size:11.5px; resize:vertical;"
 placeholder="Name: Dashboard deployment confirmed working
@@ -417,11 +443,15 @@ Confidence: 5
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Step it proves (optional)</label>
-        <select id="evCheckpoint" class="form-select">
-          <option value="">— Not tied to a specific step —</option>
+      <div class="form-group" id="evfg-checkpoint">
+        <label class="form-label">Step it proves <span style="color:var(--danger);">*</span></label>
+        <select id="evCheckpoint" class="form-select" onchange="document.getElementById('evfg-checkpoint').classList.remove('has-error'); document.getElementById('evCheckpointError').style.display='none';">
+          <option value="">— Select the step this proves —</option>
         </select>
+        <div style="font-family:var(--font-mono); font-size:10px; color:var(--text-dim); margin-top:6px;">
+          Required — evidence must belong to a real, specific step being completed. Nothing gets saved unassigned or orphaned in a general pile.
+        </div>
+        <span class="form-error" id="evCheckpointError" style="display:none; color:var(--danger); font-family:var(--font-mono); font-size:10.5px; margin-top:4px;">Pick the step this evidence actually proves before saving.</span>
       </div>
 
       <div class="form-group">
@@ -571,7 +601,7 @@ Confidence: 5
     else setState(id,'pending');
     refresh();
   };
-  function refresh(){ renderStrip(); renderConfidence(); renderList(); renderSummits(); }
+  function refresh(){ renderStrip(); renderConfidence(); renderList(); renderSummits(); renderInProgress(); }
 
   function renderSummits(){
     var section = document.getElementById('evSummitSection');
@@ -605,6 +635,101 @@ Confidence: 5
     }).join('');
     section.style.display = 'block';
   }
+
+  /* ---- Mountains In Progress: every mission not yet at 100%, each
+     clickable to see exactly what's been done on it so far. Mirrors
+     renderSummits() above (same mini-mountain rendering), just the
+     complementary filter and a click handler instead of a static card. ---- */
+  function renderInProgress(){
+    var section = document.getElementById('evInProgressSection');
+    var grid = document.getElementById('evInProgressGrid');
+    if(!section || !grid) return;
+
+    var missions = AetherStore.getMissions ? AetherStore.getMissions() : [];
+    var active = missions.filter(function(m){ return (m.pct || 0) < 100; });
+
+    if(!active.length || typeof MissionMountain === 'undefined'){
+      section.style.display = 'none';
+      return;
+    }
+
+    grid.innerHTML = active.map(function(m){
+      var opts = MissionMountain.fromMission(m);
+      opts.variant = 'detail';
+      var r = MissionMountain.render(opts);
+      var pct = Math.round(m.pct || 0);
+      return '<div class="ev-inprogress-card" data-mission-key="' + m.key + '" ' +
+          'style="border:1px solid var(--border-subtle); border-radius:14px; overflow:hidden; background:var(--bg-panel); cursor:pointer; transition:border-color .15s;">' +
+          '<div style="position:relative; width:100%; aspect-ratio:16/10;">' +
+            r.svg +
+            '<div style="position:absolute; inset:0;">' + r.labelsHtml + '</div>' +
+          '</div>' +
+          '<div style="padding:14px 16px;">' +
+            '<div style="font-family:var(--font-display); font-size:12.5px; letter-spacing:0.04em; color:var(--text-primary);">' + m.name + '</div>' +
+            '<div style="font-size:10.5px; color:var(--text-faint); margin-top:2px;">' + pct + '% climbed &middot; ' + (m.camp || 'Base Camp') + '</div>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+
+    Array.prototype.forEach.call(grid.querySelectorAll('.ev-inprogress-card'), function(card){
+      card.addEventListener('mouseenter', function(){ card.style.borderColor = 'var(--accent)'; });
+      card.addEventListener('mouseleave', function(){ card.style.borderColor = 'var(--border-subtle)'; });
+      card.addEventListener('click', function(){ openMissionDetail(card.getAttribute('data-mission-key')); });
+    });
+
+    section.style.display = 'block';
+  }
+
+  window.openMissionDetail = function(missionKey){
+    var missions = AetherStore.getMissions ? AetherStore.getMissions() : [];
+    var mission = missions.find(function(m){ return m.key === missionKey; });
+    if(!mission) return;
+
+    var allEvidence = AetherStore.getEvidence ? AetherStore.getEvidence() : [];
+    var evForMission = allEvidence.filter(function(e){ return e.missionKey === missionKey; });
+
+    document.getElementById('evDetailTitle').textContent = mission.name;
+    document.getElementById('evDetailSub').textContent = (mission.domains || []).join(' \u00b7 ') + ' \u2014 ' + Math.round(mission.pct || 0) + '% climbed';
+
+    var body = document.getElementById('evDetailBody');
+    if(!evForMission.length){
+      body.innerHTML = '<div style="font-size:12.5px; color:var(--text-dim); font-style:italic; padding:20px 0;">No evidence logged against this mission yet. Steps completed without evidence attached won\u2019t show up here.</div>';
+    } else {
+      /* Group by checkpoint so this reads as "here's what was actually
+         done," step by step, not just a flat pile of evidence. */
+      var groups = {};
+      var order = [];
+      evForMission.forEach(function(e){
+        var key = e.checkpointName || 'General';
+        if(!groups[key]){ groups[key] = []; order.push(key); }
+        groups[key].push(e);
+      });
+
+      body.innerHTML = order.map(function(cpName){
+        var items = groups[cpName];
+        var itemsHtml = items.map(function(e){
+          var verified = e.defaultStatus === 'verified';
+          return '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--border-subtle);">' +
+              '<div>' +
+                '<div style="font-size:12.5px; color:var(--text-primary); font-weight:600;">' + esc(e.name) + '</div>' +
+                (e.notes ? '<div style="font-size:11px; color:var(--text-dim); margin-top:2px;">' + esc(e.notes) + '</div>' : '') +
+              '</div>' +
+              '<span class="pill" style="flex-shrink:0; font-size:9px; ' + (verified ? 'color:var(--success); border-color:var(--success);' : 'color:var(--warning); border-color:var(--warning);') + '">' + (verified ? 'Verified' : 'Pending') + '</span>' +
+            '</div>';
+        }).join('');
+        return '<div style="margin-bottom:18px;">' +
+            '<div style="font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--accent); margin-bottom:6px;">' + esc(cpName) + '</div>' +
+            itemsHtml +
+          '</div>';
+      }).join('');
+    }
+
+    document.getElementById('evDetailOverlay').classList.add('open');
+  };
+
+  window.closeMissionDetail = function(){
+    document.getElementById('evDetailOverlay').classList.remove('open');
+  };
 
   modeIndicator(); refresh();
 
@@ -648,11 +773,11 @@ Confidence: 5
   function populateEvCheckpointDropdown(blueprintKey, preselectCpId){
     var sel = document.getElementById('evCheckpoint');
     if(!blueprintKey){
-      sel.innerHTML = '<option value="">— Not tied to a specific step —</option>';
+      sel.innerHTML = '<option value="">— Pick a blueprint first —</option>';
       return;
     }
     var cps = AetherStore.getCheckpointsForBlueprint ? AetherStore.getCheckpointsForBlueprint(blueprintKey) : [];
-    sel.innerHTML = '<option value="">— Not tied to a specific step —</option>' +
+    sel.innerHTML = '<option value="">— Select the step this proves —</option>' +
       cps.map(function(c){ return '<option value="'+c.id+'">'+esc(c.name)+'</option>'; }).join('');
     if(preselectCpId){ sel.value = preselectCpId; }
   }
@@ -668,6 +793,8 @@ Confidence: 5
     document.getElementById('evNotes').value = '';
     document.getElementById('evMarkVerified').checked = false;
     document.getElementById('evfg-name').classList.remove('has-error');
+    document.getElementById('evfg-checkpoint').classList.remove('has-error');
+    document.getElementById('evCheckpointError').style.display = 'none';
     document.getElementById('evidenceModal').classList.add('open');
   };
   window.closeEvidenceModal = function(){
@@ -685,6 +812,14 @@ Confidence: 5
     var bpSel = document.getElementById('evBlueprint');
     var cpSel = document.getElementById('evCheckpoint');
 
+    if(!cpSel.value){
+      document.getElementById('evfg-checkpoint').classList.add('has-error');
+      document.getElementById('evCheckpointError').style.display = 'block';
+      cpSel.focus();
+      if(window.AetherVoice) window.AetherVoice.speak('Pick the step this proves first, sir.');
+      return;
+    }
+
     AetherStore.saveEvidence({
       name: name,
       type: document.getElementById('evType').value,
@@ -694,7 +829,7 @@ Confidence: 5
       blueprintKey: bpSel.value,
       blueprintName: bpSel.value ? bpSel.options[bpSel.selectedIndex].textContent : '',
       checkpointId: cpSel.value,
-      checkpointName: cpSel.value ? cpSel.options[cpSel.selectedIndex].textContent : '',
+      checkpointName: cpSel.options[cpSel.selectedIndex].textContent,
       attachment: document.getElementById('evAttachment').value,
       notes: document.getElementById('evNotes').value,
       status: document.getElementById('evMarkVerified').checked ? 'verified' : 'pending'
@@ -762,6 +897,7 @@ Confidence: 5
     var blueprintName = bpSel.options[bpSel.selectedIndex].textContent;
 
     var created = 0;
+    var skipped = 0;
     blocks.forEach(function(block){
       var f = parseEvidenceBlock(block);
       if(!f.name) return;
@@ -773,6 +909,12 @@ Confidence: 5
                     checkpoints.find(function(c){ return c.name.toLowerCase().indexOf(stepLower) !== -1 || stepLower.indexOf(c.name.toLowerCase()) !== -1; });
       }
 
+      /* Every piece of evidence has to belong to a real step -- an
+         item that doesn't name a step, or names one that doesn't match
+         anything in this blueprint, gets skipped rather than saved
+         unassigned into a general pile it can never be found in again. */
+      if(!matchedCp){ skipped++; return; }
+
       AetherStore.saveEvidence({
         name: f.name,
         type: f.type || 'Document',
@@ -781,8 +923,8 @@ Confidence: 5
         missionName: missionName,
         blueprintKey: bpSel.value,
         blueprintName: blueprintName,
-        checkpointId: matchedCp ? matchedCp.id : '',
-        checkpointName: matchedCp ? matchedCp.name : '',
+        checkpointId: matchedCp.id,
+        checkpointName: matchedCp.name,
         attachment: f.attachment || '',
         notes: f.notes || '',
         status: (f.status || '').toLowerCase() === 'verified' ? 'verified' : 'pending'
@@ -790,12 +932,17 @@ Confidence: 5
       created++;
     });
 
-    note.style.color = 'var(--success)';
-    note.textContent = created + ' evidence item(s) created.';
+    if(!created){
+      note.style.color = 'var(--danger)';
+      note.textContent = 'Nothing saved — none of these named a step that matches this blueprint\u2019s checklist. Add "Step: <checkpoint name>" to each item.';
+      return;
+    }
+    note.style.color = skipped ? 'var(--warning)' : 'var(--success)';
+    note.textContent = created + ' evidence item(s) created.' + (skipped ? ' ' + skipped + ' skipped — no matching step named.' : '');
     document.getElementById('bulkEvInput').value = '';
     refresh();
     if(window.AetherVoice) window.AetherVoice.confirmAction('evidenceBulkAdded', created + ' item' + (created !== 1 ? 's' : '') + '.');
-    setTimeout(function(){ closeEvidenceModal(); }, 900);
+    setTimeout(function(){ closeEvidenceModal(); }, skipped ? 1800 : 900);
   };
 
   /* ---- Lightweight single-item confirm modal ---- */
