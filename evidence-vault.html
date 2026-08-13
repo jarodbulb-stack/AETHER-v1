@@ -351,6 +351,7 @@
       </div>
       <button type="button" class="modal-close" onclick="closeMissionDetail()" aria-label="Close" title="Close">&times;</button>
     </div>
+    <div id="evDetailMountain" style="position:relative; width:100%; aspect-ratio:16/9; max-height:280px; border-bottom:1px solid var(--border-subtle); background:#050a14; flex-shrink:0;"></div>
     <div style="padding:18px 22px 4px; overflow-y:auto;" id="evDetailBody"></div>
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 22px 20px; border-top:1px solid var(--border-subtle); margin-top:auto;">
       <button type="button" class="btn btn-ghost" onclick="closeMissionDetail()">&larr; Back to Missions</button>
@@ -633,7 +634,8 @@ Confidence: 5
       var opts = MissionMountain.fromMission(m);
       opts.variant = 'detail';
       var r = MissionMountain.render(opts);
-      return '<div style="border:1px solid rgba(255,209,102,0.3); border-radius:14px; overflow:hidden; background:rgba(255,209,102,0.03);">' +
+      return '<div class="ev-summit-card" data-mission-key="' + m.key + '" ' +
+          'style="border:1px solid rgba(255,209,102,0.3); border-radius:14px; overflow:hidden; background:rgba(255,209,102,0.03); cursor:pointer; transition:border-color .15s;">' +
           '<div style="position:relative; width:100%; aspect-ratio:16/10;">' +
             r.svg +
             '<div style="position:absolute; inset:0;">' + r.labelsHtml + '</div>' +
@@ -646,6 +648,13 @@ Confidence: 5
           '</div>' +
         '</div>';
     }).join('');
+
+    Array.prototype.forEach.call(grid.querySelectorAll('.ev-summit-card'), function(card){
+      card.addEventListener('mouseenter', function(){ card.style.borderColor = '#ffd166'; });
+      card.addEventListener('mouseleave', function(){ card.style.borderColor = 'rgba(255,209,102,0.3)'; });
+      card.addEventListener('click', function(){ openMissionDetail(card.getAttribute('data-mission-key')); });
+    });
+
     section.style.display = 'block';
   }
 
@@ -703,6 +712,14 @@ Confidence: 5
 
     document.getElementById('evDetailTitle').textContent = mission.name;
     document.getElementById('evDetailSub').textContent = (mission.domains || []).join(' \u00b7 ') + ' \u2014 ' + Math.round(mission.pct || 0) + '% climbed';
+
+    var mountainEl = document.getElementById('evDetailMountain');
+    if(mountainEl && typeof MissionMountain !== 'undefined'){
+      var opts = MissionMountain.fromMission(mission);
+      opts.variant = 'detail';
+      var r = MissionMountain.render(opts);
+      mountainEl.innerHTML = r.svg + '<div style="position:absolute; inset:0;">' + r.labelsHtml + '</div>';
+    }
 
     var body = document.getElementById('evDetailBody');
     if(!evForMission.length){
