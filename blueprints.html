@@ -643,10 +643,43 @@ function renderMissionGroup(mission, missionBlueprints, expandFirst){
   </div>`;
 }
 
-document.getElementById('missionBoard').innerHTML = allMissionsForBoard.map(function(mission, mIdx){
+var inProgressForBoard = allMissionsForBoard.filter(function(m){ return (m.pct || 0) < 100; });
+var completedForBoard  = allMissionsForBoard.filter(function(m){ return (m.pct || 0) >= 100; });
+
+var inProgressBoardHtml = inProgressForBoard.map(function(mission, mIdx){
   var missionBps = blueprints.filter(function(b){ return b.missionName === mission.name; });
   return renderMissionGroup(mission, missionBps, mIdx === 0);
 }).join('');
+
+var completedBoardHtml = completedForBoard.map(function(mission){
+  var missionBps = blueprints.filter(function(b){ return b.missionName === mission.name; });
+  return renderMissionGroup(mission, missionBps, false);
+}).join('');
+
+var completedToggleHtml = completedForBoard.length
+  ? '<button type="button" id="mbCompletedToggle" onclick="window.__mbToggleCompleted()" ' +
+    'style="display:flex; align-items:center; gap:8px; margin:' + (inProgressForBoard.length ? '18px 0 0' : '0') + '; background:var(--bg-panel-alt); border:1px solid var(--border-subtle); border-radius:10px; padding:10px 16px; cursor:pointer; font-family:var(--font-mono); font-size:11px; color:var(--text-secondary); width:100%;">' +
+    '<svg id="mbCompletedChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:11px; height:11px; transition:transform .15s;"><path d="M9 6l6 6-6 6"/></svg>' +
+    'Show ' + completedForBoard.length + ' Completed Mission' + (completedForBoard.length !== 1 ? 's' : '') +
+    '</button><div id="mbCompletedSection" style="display:none; margin-top:14px;">' + completedBoardHtml + '</div>'
+  : '';
+
+var noActiveNote = (!inProgressForBoard.length && completedForBoard.length)
+  ? '<div style="font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim); padding:14px 0;">Nothing in progress right now — every mission with a blueprint is already summited.</div>'
+  : '';
+
+document.getElementById('missionBoard').innerHTML = inProgressBoardHtml + noActiveNote + completedToggleHtml;
+
+window.__mbToggleCompleted = function(){
+  var section = document.getElementById('mbCompletedSection');
+  var btn = document.getElementById('mbCompletedToggle');
+  var chevron = document.getElementById('mbCompletedChevron');
+  var open = section.style.display !== 'none';
+  section.style.display = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(90deg)';
+  var label = btn.childNodes[btn.childNodes.length - 1];
+  label.textContent = (open ? 'Show ' : 'Hide ') + completedForBoard.length + ' Completed Mission' + (completedForBoard.length !== 1 ? 's' : '');
+};
 
 /* Expand/collapse a blueprint's step list */
 window.__mbToggleBlock = function(bpKey){

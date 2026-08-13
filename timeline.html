@@ -214,8 +214,11 @@
 
       <div class="tl-grid">
         <div class="panel">
-          <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Mission Activity Feed</div>
-          <div id="tlFeed"></div>
+          <button type="button" onclick="toggleTlFeed()" style="display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer; padding:0; width:100%;">
+            <svg id="tlFeedChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:11px; height:11px; color:var(--text-dim); transition:transform .15s; flex-shrink:0;"><path d="M9 6l6 6-6 6"/></svg>
+            <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Mission Activity Feed <span id="tlFeedCountLabel" style="color:var(--text-faint); font-weight:400; text-transform:none; letter-spacing:0;"></span></div>
+          </button>
+          <div id="tlFeed" style="display:none; margin-top:14px;"></div>
         </div>
 
         <div style="display:flex; flex-direction:column; gap:20px;">
@@ -245,6 +248,20 @@
     el.style.color=live?'var(--success)':'var(--warning)';
   }
   function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  /* The button in the HTML above has called this since it was built,
+     but the function itself was never actually written -- clicking it
+     did nothing (a silent console error), and the feed just stayed at
+     whatever its inline display:none default was. Actually defining
+     it here. */
+  window.toggleTlFeed = function(){
+    var feed = document.getElementById('tlFeed');
+    var chevron = document.getElementById('tlFeedChevron');
+    var open = feed.style.display !== 'none';
+    feed.style.display = open ? 'none' : '';
+    chevron.style.transform = open ? '' : 'rotate(90deg)';
+  };
+
 
   var events = AetherStore.getTimelineEvents();
   var milestones = AetherStore.getMilestones();
@@ -290,6 +307,7 @@
     });
   });
   document.getElementById('tlFeed').innerHTML=feedHtml || '<div style="color:var(--text-dim); font-size:13px; padding:20px 0; text-align:center;">No timeline events yet. Activity appears here as you work.</div>';
+  document.getElementById('tlFeedCountLabel').textContent = events.length ? ('(' + events.length + ')') : '';
 
   // MILESTONES
   document.getElementById('tlMilestones').innerHTML = milestones.length>0 ? milestones.map(function(m){
