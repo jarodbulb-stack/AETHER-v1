@@ -218,11 +218,28 @@
   function fromMission(mission){
     if(!mission)return {name:'Mission'};
     var cps=null;
-    if(mission.milestones&&mission.milestones.length){
-      var n=mission.milestones.length;
-      var doneN=Math.round((mission.pct||0)/100*n);
-      cps=mission.milestones.map(function(ms,i){return {label:ms.name||('Step '+(i+1)),done:i<doneN};});
+
+    /* Missions don't carry their own step list -- the real checkpoints
+       live under the mission's blueprint(s). This used to check
+       mission.milestones, a field that never actually exists on real
+       mission data, so it silently fell through to a 1-step mountain
+       every time regardless of how much real work was actually done.
+       Pull the real thing instead. */
+    if(typeof global!=='undefined' && global.AetherStore && global.AetherStore.getAllBlueprints){
+      var AS=global.AetherStore;
+      var missionBps=AS.getAllBlueprints().filter(function(b){return b.missionName===mission.name;});
+      if(missionBps.length){
+        var allCps=[];
+        missionBps.forEach(function(bp){
+          var bpCps=(AS.getCheckpointsForBlueprint?AS.getCheckpointsForBlueprint(bp.key):[])
+            .slice().sort(function(a,b){return (a.sortOrder||0)-(b.sortOrder||0);});
+          var states=AS.getCheckpointStates?AS.getCheckpointStates(bp.key):{};
+          bpCps.forEach(function(c){ allCps.push({label:c.name,done:!!states[c.id]}); });
+        });
+        if(allCps.length) cps=allCps;
+      }
     }
+
     return {name:mission.name,domain:(mission.domains&&mission.domains[0])||'',checkpoints:cps,steps:cps?cps.length:undefined,pct:mission.pct||0,style:mission.mountainStyle||'alpine'};
   }
 

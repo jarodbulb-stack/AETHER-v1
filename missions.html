@@ -479,7 +479,15 @@ if(domainFilter){
 const statusColor = {advancing:'var(--success)', stable:'var(--accent)', warning:'var(--warning)', critical:'var(--danger)'};
 const statusLabel = {advancing:'Advancing', stable:'Stable', warning:'Warning', critical:'Critical'};
 
-const selectedMissionKey = (missions.find(m=> m.key === 'aether') ? 'aether' : (missions[0] ? missions[0].key : 'aether'));
+/* Mission cards link to ?mission=<key> so clicking any card on the
+   board -- not just the one already selected -- actually navigates to
+   and displays that mission's own Intelligence, Route Progress, and
+   Blockers. Previously every card rendered with the right data but
+   had nothing wired to make clicking it do anything. */
+const _missionParam = new URLSearchParams(window.location.search).get('mission');
+const selectedMissionKey = (_missionParam && missions.find(m=> m.key === _missionParam))
+  ? _missionParam
+  : (missions.find(m=> m.key === 'aether') ? 'aether' : (missions[0] ? missions[0].key : 'aether'));
 const selectedMission = missions.find(m=> m.key === selectedMissionKey) || {};
 
 const closestSummit = [...missions].sort((a,b)=> b.pct - a.pct)[0];
@@ -566,7 +574,7 @@ document.getElementById('missionGrid').innerHTML = missions.map(m=>{
   const color = statusColor[m.status];
   const offset = CIRC - (m.pct/100) * CIRC;
   return `
-  <a class="mcard ${m.key===selectedMissionKey ? 'selected' : ''}" href="#" style="--mc-color:${color};" data-mission="${m.key}">
+  <a class="mcard ${m.key===selectedMissionKey ? 'selected' : ''}" href="${m.key===selectedMissionKey ? '#' : 'missions.html?mission='+encodeURIComponent(m.key)}" style="--mc-color:${color};" data-mission="${m.key}" ${m.key===selectedMissionKey ? 'onclick="return false;"' : ''}>
     ${!m.isLive ? '<span class="data-tag sample-tag" title="Demo data — not yours">SAMPLE</span>' : ''}
     ${m.isLive ? `<button class="card-delete-btn" title="Delete this mission" onclick="event.preventDefault();event.stopPropagation();confirmDeleteMission('${m.key}','${(m.name||'').replace(/'/g,"\\'")}');"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg></button>` : ''}
     <div class="mcard-head">
