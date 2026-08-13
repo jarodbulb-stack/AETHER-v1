@@ -525,6 +525,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
       var del = document.createElement('span');
       del.className = 'pf-tag-del pf-screen-only';
       del.textContent = '\u00d7';
+      del.title = 'Remove skill';
       del.addEventListener('click', function(){ data.skills.splice(idx, 1); save(); renderAll(); });
       tag.appendChild(del);
       tagsEl.appendChild(tag);
@@ -586,6 +587,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
       bDel.type = 'button';
       bDel.className = 'pf-mini-del pf-screen-only';
       bDel.textContent = '\u00d7';
+      bDel.title = 'Remove this line';
       bDel.addEventListener('click', function(){ entry.bullets.splice(bIdx, 1); save(); renderAll(); });
       li.appendChild(bDel);
       ul.appendChild(li);
@@ -613,6 +615,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     delBtn.type = 'button';
     delBtn.className = 'pf-mini-del pf-screen-only';
     delBtn.textContent = '\u00d7';
+    delBtn.title = 'Remove achievement';
     delBtn.addEventListener('click', function(){
       data.achievements = data.achievements.filter(function(x){ return x.id !== a.id; });
       save(); renderAll();
@@ -636,6 +639,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
       var del = document.createElement('span');
       del.className = 'pf-tag-del pf-screen-only';
       del.textContent = '\u00d7';
+      del.title = 'Remove skill';
       del.addEventListener('click', function(){ data.skills.splice(idx, 1); save(); renderAll(); });
       chip.appendChild(del);
       skillsEl.appendChild(chip);
@@ -654,6 +658,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
         delBtn.className = 'pf-mini-del pf-screen-only';
         delBtn.style.position = 'absolute'; delBtn.style.top = '6px'; delBtn.style.right = '6px';
         delBtn.textContent = '\u00d7';
+        delBtn.title = 'Remove achievement';
         delBtn.addEventListener('click', function(){
           data.achievements = data.achievements.filter(function(x){ return x.id !== a.id; });
           save(); renderAll();
@@ -687,6 +692,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
     delBtn.className = 'pf-mini-del pf-screen-only';
     delBtn.style.position = 'absolute'; delBtn.style.top = '0'; delBtn.style.right = '0';
     delBtn.textContent = '\u00d7';
+    delBtn.title = 'Remove this entry';
     delBtn.addEventListener('click', function(){
       data.entries = data.entries.filter(function(e){ return e.id !== entry.id; });
       save(); renderAll();
@@ -745,6 +751,7 @@ body{ font-family:var(--font-body); color:var(--text-primary); }
       del.className = 'pf-mini-del pf-screen-only';
       del.style.position = 'absolute'; del.style.top = '0'; del.style.right = '0';
       del.textContent = '\u00d7';
+      del.title = 'Remove this paragraph';
       del.addEventListener('click', function(){ cl.paragraphs.splice(idx, 1); save(); renderAll(); });
       p.appendChild(del);
       wrap.appendChild(p);

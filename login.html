@@ -299,7 +299,7 @@ body{ background-image:none; background:#04070f; }
         </div>
         <div class="field password-field">
           <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password" required>
-          <button type="button" class="eye-toggle" id="pwToggle" aria-label="Show password">
+          <button type="button" class="eye-toggle" id="pwToggle" aria-label="Show password" title="Show password">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="eyeIcon">
               <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/>
               <circle cx="12" cy="12" r="3"/>
@@ -339,6 +339,8 @@ pwToggle.addEventListener('click', ()=>{
   const showing = pwInput.type === 'text';
   pwInput.type = showing ? 'password' : 'text';
   eyeIcon.innerHTML = showing ? eyeOpen : eyeClosed;
+  pwToggle.title = showing ? 'Show password' : 'Hide password';
+  pwToggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
 });
 
 // Real Firebase Auth — replaces the old placeholder redirect.

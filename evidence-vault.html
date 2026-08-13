@@ -207,7 +207,7 @@
         <span class="sidebar-logo-wordmark">ETHER</span>
         <span class="sidebar-logo-tagline">Mission Command System</span>
       </div>
-      <button class="sidebar-collapse-btn" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+      <button class="sidebar-collapse-btn" title="Collapse sidebar" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
     </div>
@@ -349,7 +349,7 @@
         <div class="modal-title" id="evDetailTitle" style="margin-bottom:2px;">Mission</div>
         <div style="font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim);" id="evDetailSub">Domain &middot; Progress</div>
       </div>
-      <button type="button" class="modal-close" onclick="closeMissionDetail()" aria-label="Close">&times;</button>
+      <button type="button" class="modal-close" onclick="closeMissionDetail()" aria-label="Close" title="Close">&times;</button>
     </div>
     <div style="padding:18px 22px 4px; overflow-y:auto;" id="evDetailBody"></div>
     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px 22px 20px; border-top:1px solid var(--border-subtle); margin-top:auto;">
@@ -367,7 +367,7 @@
         <span class="modal-title">Add Evidence</span>
         <span class="modal-sub">Proof of work — attach it to a mission, blueprint, or step</span>
       </div>
-      <button class="modal-close" onclick="closeEvidenceModal()">
+      <button class="modal-close" onclick="closeEvidenceModal()" title="Close" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
       </button>
     </div>

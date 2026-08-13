@@ -294,6 +294,7 @@
     muteBtn.onclick = function(){
       muted = !muted;
       muteBtn.innerHTML = muted ? '&#128263;' : '&#128266;';
+      muteBtn.title = muted ? 'Unmute fanfare' : 'Mute fanfare';
     };
     overlay.appendChild(muteBtn);
 

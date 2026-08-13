@@ -213,6 +213,7 @@
     btn.type = 'button';
     btn.className = 'mobile-menu-btn';
     btn.setAttribute('aria-label', 'Open menu');
+    btn.title = 'Menu';
     btn.innerHTML = HAMBURGER_ICON;
 
     var backdrop = document.createElement('div');
@@ -223,12 +224,14 @@
       backdrop.classList.remove('open');
       btn.innerHTML = HAMBURGER_ICON;
       btn.setAttribute('aria-label', 'Open menu');
+      btn.title = 'Menu';
     }
     function openMenu(){
       sidebar.classList.add('mobile-open');
       backdrop.classList.add('open');
       btn.innerHTML = CLOSE_ICON;
       btn.setAttribute('aria-label', 'Close menu');
+      btn.title = 'Close menu';
     }
     btn.addEventListener('click', function(){
       if(sidebar.classList.contains('mobile-open')) closeMenu(); else openMenu();
