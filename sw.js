@@ -52,6 +52,7 @@ var CORE_ASSETS = [
   './daily-command.js',
   './great-mountain.js',
   './mission-mountain.js',
+  './aether-hero-bg.js',
   './route-data.js',
   './earth-flicker.js',
   './auth-guard.js',

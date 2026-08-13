@@ -575,6 +575,25 @@
       <div class="panel">
         <div class="section-head">
           <div class="section-head-left">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+            <span class="ttl">Command Deck Background Library</span>
+            <span class="sub">Your own epic mountain photos — rotates to a new one automatically each day</span>
+          </div>
+        </div>
+        <div style="margin-top:12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <input type="file" id="heroBgFileInput" accept="image/*" multiple style="display:none;"/>
+          <button type="button" class="btn btn-primary" id="heroBgUploadBtn" style="display:inline-flex; align-items:center; gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add Photo
+          </button>
+          <span style="font-family:var(--font-mono); font-size:10px; color:var(--text-faint);" id="heroBgCountLabel"></span>
+        </div>
+        <div id="heroBgGrid" style="margin-top:14px; display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-head">
+          <div class="section-head-left">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
             <span class="ttl">Install AETHER</span>
             <span class="sub">Run it like a real app — its own icon, its own window, works offline</span>
@@ -1108,6 +1127,7 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
 </script>
 <script src="aether-quotes.js"></script>
 <script src="aether-music.js"></script>
+<script src="aether-hero-bg.js"></script>
 <script src="aether-voice.js"></script>
 <script src="aether-nav.js"></script>
 <script>
@@ -1381,6 +1401,73 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
     });
   }
 
+  /* ---- Command Deck Background Library: the operator's own photos,
+     stored locally and rotated into Today's Command automatically.
+     No per-image toggle -- everything uploaded is in the rotation;
+     removing one is how you take it out. ---- */
+  function formatBytesHero(n){ if(n == null) return ''; if(n < 1024) return n + ' B'; if(n < 1048576) return (n/1024).toFixed(1) + ' KB'; return (n/1048576).toFixed(1) + ' MB'; }
+
+  function renderHeroBgLibrary(){
+    var grid = document.getElementById('heroBgGrid');
+    var countLabel = document.getElementById('heroBgCountLabel');
+    if(!grid || typeof AetherHeroBg === 'undefined') return;
+
+    AetherHeroBg.listImages().then(function(images){
+      countLabel.textContent = images.length
+        ? (images.length + ' photo' + (images.length !== 1 ? 's' : '') + ' in rotation')
+        : 'No photos yet — the mountain graphic shows until you add some';
+      grid.innerHTML = '';
+
+      if(!images.length) return;
+
+      images.forEach(function(img){
+        var card = document.createElement('div');
+        card.style.cssText = 'position:relative; border-radius:10px; overflow:hidden; border:1px solid var(--border-subtle); aspect-ratio:16/10; background:#050a14;';
+
+        AetherHeroBg.previewURL(img.id).then(function(url){
+          if(url) card.style.backgroundImage = 'url(' + url + ')';
+          card.style.backgroundSize = 'cover';
+          card.style.backgroundPosition = 'center';
+        });
+
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:absolute; inset:0; background:linear-gradient(180deg,transparent 50%,rgba(0,0,0,0.75) 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:8px;';
+
+        var name = document.createElement('div');
+        name.style.cssText = 'font-family:var(--font-mono); font-size:9px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px;';
+        name.textContent = img.name + ' · ' + formatBytesHero(img.size);
+        overlay.appendChild(name);
+
+        var removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.title = 'Remove this photo';
+        removeBtn.style.cssText = 'align-self:flex-start; font-family:var(--font-mono); font-size:9.5px; color:#fff; background:rgba(220,60,60,0.85); border:none; border-radius:6px; padding:3px 9px; cursor:pointer;';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', function(){
+          AetherHeroBg.removeImage(img.id).then(renderHeroBgLibrary);
+        });
+        overlay.appendChild(removeBtn);
+
+        card.appendChild(overlay);
+        grid.appendChild(card);
+      });
+    });
+  }
+
+  document.getElementById('heroBgUploadBtn').addEventListener('click', function(){
+    document.getElementById('heroBgFileInput').click();
+  });
+  document.getElementById('heroBgFileInput').addEventListener('change', function(){
+    var files = Array.prototype.slice.call(this.files || []);
+    if(!files.length || typeof AetherHeroBg === 'undefined') return;
+    Promise.all(files.map(function(f){ return AetherHeroBg.addImage(f); }))
+      .then(function(){
+        renderHeroBgLibrary();
+        if(window.AetherVoice) window.AetherVoice.speak(files.length > 1 ? 'Photos added.' : 'Photo added.');
+      });
+    this.value = '';
+  });
+
   /* ---- Install AETHER: shows the right thing depending on real
      platform/browser state -- a working Install button where the
      browser supports it, plain instructions on iOS (which never
@@ -1432,12 +1519,14 @@ if(document.getElementById('lastBackupStatus')) renderBackupStatus();
     document.addEventListener('DOMContentLoaded', syncCcMusicToggle);
     document.addEventListener('DOMContentLoaded', renderSoundtrackLibrary);
     document.addEventListener('DOMContentLoaded', renderPageBackgroundLibrary);
+    document.addEventListener('DOMContentLoaded', renderHeroBgLibrary);
     document.addEventListener('DOMContentLoaded', renderPwaInstallPanel);
   } else {
     syncCcVoiceToggle();
     syncCcMusicToggle();
     renderSoundtrackLibrary();
     renderPageBackgroundLibrary();
+    renderHeroBgLibrary();
     renderPwaInstallPanel();
   }
 })();

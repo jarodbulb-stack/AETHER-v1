@@ -18,6 +18,7 @@
 <script src="intelligenceEngine.js"></script>
 <script src="daily-command.js"></script>
 <script src="mission-mountain.js"></script>
+<script src="aether-hero-bg.js"></script>
 <style>
 
 /* ============================================================
@@ -346,6 +347,15 @@
 .command-hero-mountain #commandMountainWrap{
   position:absolute;inset:0;opacity:0.72;
 }
+.command-hero-photo{
+  position:absolute;inset:0;background-size:cover;background-position:center;
+  opacity:0;transition:opacity 600ms ease;
+}
+.command-hero-photo.loaded{ opacity:1; }
+.command-hero-photo::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg, rgba(4,8,16,0.35) 0%, rgba(4,8,16,0.15) 40%, rgba(4,8,16,0.55) 100%);
+}
 .command-hero-mountain .scan-lines{
   position:absolute;inset:0;
   background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,200,255,0.015) 3px,rgba(0,200,255,0.015) 4px);
@@ -587,6 +597,7 @@
           <!-- Mountain background -->
           <div class="command-hero-mountain">
             <div id="commandMountainWrap"></div>
+            <div id="commandHeroPhoto" class="command-hero-photo"></div>
             <div class="scan-lines"></div>
             <div class="command-hero-overlay">
               <div class="command-hero-tag">
@@ -1511,13 +1522,33 @@ window.__toggleIntel = function(){
     wrap.innerHTML = result.svg;
   }
 
+  /* Real cinematic photo, if the operator has uploaded any -- fades in
+     on top of the procedural SVG mountain above. Deliberately
+     independent of mission selection: the photo rotates on its own
+     daily schedule and has nothing to do with which mission is
+     active, so it can never get stuck showing an old mission the way
+     the SVG mountain's "highest progress" pick used to. If nothing's
+     been uploaded yet, this simply never fires and the SVG mountain
+     above remains fully visible, unchanged from before. */
+  function loadHeroPhoto(){
+    var photoEl = document.getElementById('commandHeroPhoto');
+    if(!photoEl || typeof AetherHeroBg === 'undefined') return;
+    AetherHeroBg.getTodaysImageURL().then(function(url){
+      if(!url) return;
+      photoEl.style.backgroundImage = 'url(' + url + ')';
+      photoEl.classList.add('loaded');
+    });
+  }
+
   // Run after intelligence engine populates the card
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', function(){
       setTimeout(renderCommandMountain, 120);
+      loadHeroPhoto();
     });
   } else {
     setTimeout(renderCommandMountain, 120);
+    loadHeroPhoto();
   }
 
   // Re-render if mission name changes (JS sets it dynamically)
