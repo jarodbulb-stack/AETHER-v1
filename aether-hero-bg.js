@@ -33,6 +33,28 @@
 (function(){
   'use strict';
 
+  /* The permanent baseline set -- ships with the app itself (real
+     files in assets/hero-backgrounds/), not stored per-device. This
+     is what makes "the same rotation everywhere" actually true:
+     IndexedDB uploads are local to whichever browser/device they were
+     added on, which would mean re-uploading separately on every
+     computer and phone to keep them in sync. These don't have that
+     problem -- they're just part of the deployed app, identical
+     everywhere the moment it's live. Anything uploaded through
+     Command Center is added on top of this set, not instead of it. */
+  var BUNDLED_IMAGES = [
+    'assets/hero-backgrounds/mountain-01.jpg',
+    'assets/hero-backgrounds/mountain-02.jpg',
+    'assets/hero-backgrounds/mountain-03.jpg',
+    'assets/hero-backgrounds/mountain-04.jpg',
+    'assets/hero-backgrounds/mountain-05.jpg',
+    'assets/hero-backgrounds/mountain-06.jpg',
+    'assets/hero-backgrounds/mountain-07.jpg',
+    'assets/hero-backgrounds/mountain-08.jpg',
+    'assets/hero-backgrounds/mountain-09.jpg',
+    'assets/hero-backgrounds/mountain-10.jpg'
+  ];
+
   var DB_NAME = 'aetherHeroBgLibrary';
   var STORE_NAME = 'images';
   var dbPromise = null;
@@ -122,18 +144,23 @@
   }
 
   /* The same photo all day, a real rotation through the whole set day
-     to day, order fixed by upload order so it's predictable rather
-     than shuffled. */
+     to day, order fixed (bundled images first, then uploads in the
+     order they were added) so it's predictable rather than shuffled. */
   function getTodaysImageURL(){
-    return listImages().then(function(images){
-      if(!images.length) return null;
-      var idx = dayOfYear() % images.length;
-      var chosen = images[idx];
+    return listImages().then(function(uploaded){
+      var pool = BUNDLED_IMAGES.slice(); // plain paths, no async resolution needed
+      var idx = dayOfYear() % (pool.length + uploaded.length);
+
+      if(idx < pool.length) return pool[idx];
+
+      var chosen = uploaded[idx - pool.length];
       return getRecord(chosen.id).then(function(record){
-        if(!record || !record.blob) return null;
+        if(!record || !record.blob) return pool.length ? pool[0] : null;
         return urlFor(record.id, record.blob);
       });
-    }).catch(function(){ return null; });
+    }).catch(function(){
+      return BUNDLED_IMAGES.length ? BUNDLED_IMAGES[dayOfYear() % BUNDLED_IMAGES.length] : null;
+    });
   }
 
   function previewURL(id){
@@ -148,6 +175,7 @@
     removeImage: removeImage,
     listImages: listImages,
     getTodaysImageURL: getTodaysImageURL,
-    previewURL: previewURL
+    previewURL: previewURL,
+    BUNDLED_IMAGES: BUNDLED_IMAGES
   };
 })();

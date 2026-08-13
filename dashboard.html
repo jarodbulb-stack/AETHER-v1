@@ -1522,14 +1522,16 @@ window.__toggleIntel = function(){
     wrap.innerHTML = result.svg;
   }
 
-  /* Real cinematic photo, if the operator has uploaded any -- fades in
-     on top of the procedural SVG mountain above. Deliberately
-     independent of mission selection: the photo rotates on its own
-     daily schedule and has nothing to do with which mission is
-     active, so it can never get stuck showing an old mission the way
-     the SVG mountain's "highest progress" pick used to. If nothing's
-     been uploaded yet, this simply never fires and the SVG mountain
-     above remains fully visible, unchanged from before. */
+  /* Real cinematic photo -- fades in on top of the procedural SVG
+     mountain above. Deliberately independent of mission selection:
+     the photo rotates on its own daily schedule and has nothing to
+     do with which mission is active, so it can never get stuck
+     showing an old mission the way the SVG mountain's "highest
+     progress" pick used to. 10 photos ship built into the app itself,
+     so this always has something to show; the SVG mountain only ever
+     remains visible if aether-hero-bg.js fails to load for some
+     reason (offline edge case, etc.), same graceful fallback as
+     before. */
   function loadHeroPhoto(){
     var photoEl = document.getElementById('commandHeroPhoto');
     if(!photoEl || typeof AetherHeroBg === 'undefined') return;
