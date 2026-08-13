@@ -311,10 +311,7 @@
       </div>
 
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:6px;">
-        <button type="button" onclick="toggleEvList()" style="display:flex; align-items:center; gap:8px; background:none; border:none; cursor:pointer; padding:0;">
-          <svg id="evListChevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="width:12px; height:12px; color:var(--text-dim); transition:transform .15s;"><path d="M9 6l6 6-6 6"/></svg>
-          <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg> Evidence Records <span id="evListCountLabel" style="color:var(--text-faint); font-weight:400; text-transform:none; letter-spacing:0;"></span></div>
-        </button>
+        <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/></svg> Evidence Records</div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <div class="ev-filters">
             <button class="ev-filter active" data-filter="all" onclick="evFilter(this)">All</button>
@@ -328,7 +325,7 @@
         </div>
       </div>
 
-      <div class="ev-list" id="evList" style="display:none;"></div>
+      <div class="ev-list" id="evList"></div>
 
       <div id="evSummitSection" style="display:none; margin-top:8px;">
         <div class="sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M17 3H7l5 8 5-8Z"/></svg> Mission Summits — Ultimate Proof</div>
@@ -565,8 +562,6 @@ Confidence: 5
   function renderList(){
     var ev=getEvidence();
     if(currentFilter!=='all') ev=ev.filter(function(e){return e.status===currentFilter;});
-    var countLabel = document.getElementById('evListCountLabel');
-    if(countLabel) countLabel.textContent = '(' + ev.length + ')';
     document.getElementById('evList').innerHTML = ev.map(function(e){
       var icon=TYPE_ICON[e.type]||'<rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M3 7l3-4h12l3 4"/>';
       var statusPill = e.status==='verified'?'<span class="pill on-track">Verified</span>':e.status==='pending'?'<span class="pill at-risk">Pending</span>':'<span class="pill behind">Rejected</span>';
@@ -606,14 +601,6 @@ Confidence: 5
     else setState(id,'pending');
     refresh();
   };
-  window.toggleEvList = function(){
-    var list = document.getElementById('evList');
-    var chevron = document.getElementById('evListChevron');
-    var open = list.style.display !== 'none';
-    list.style.display = open ? 'none' : '';
-    chevron.style.transform = open ? '' : 'rotate(90deg)';
-  };
-
   function refresh(){ renderStrip(); renderConfidence(); renderList(); renderSummits(); renderInProgress(); }
 
   function renderSummits(){
