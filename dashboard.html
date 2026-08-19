@@ -676,6 +676,15 @@
           <div id="momentumList" style="display:flex; flex-direction:column; gap:10px;"></div>
         </div>
 
+        <!-- Confidence Trend -->
+        <div class="panel" id="confidenceTrendPanel" style="display:none;">
+          <div class="panel-label" style="margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+            <span>CONFIDENCE TREND · LAST 7 DAYS</span>
+            <span id="confidenceTrendDelta" style="font-family:var(--font-mono); font-size:11px;"></span>
+          </div>
+          <div id="confidenceTrendChart" style="height:90px;"></div>
+        </div>
+
         <!-- Lifetime Statistics Strip -->
         <div class="panel" style="background:rgba(74,168,255,0.04);border:1px solid rgba(74,168,255,0.1);">
           <div class="panel-label" style="margin-bottom:12px;">LIFETIME EXPEDITION RECORD</div>
@@ -1493,6 +1502,85 @@ window.__toggleIntel = function(){
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', renderMomentumPanel);
   else renderMomentumPanel();
+})();
+</script>
+
+<script>
+/* ---- Confidence Trend, Threats, Opportunities, Victories: real
+   computed panels, only ever shown when there's genuinely something
+   to show -- each one hides itself entirely rather than displaying
+   an empty box when there's nothing to report. ---- */
+(function(){
+  function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function renderConfidenceTrend(){
+    var panel = document.getElementById('confidenceTrendPanel');
+    var chartEl = document.getElementById('confidenceTrendChart');
+    var deltaEl = document.getElementById('confidenceTrendDelta');
+    if(!panel || !chartEl || typeof AetherStore === 'undefined' || !AetherStore.getConfidenceHistory) return;
+
+    var history = AetherStore.getConfidenceHistory();
+    if(!history.length){ panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+
+    if(history.length >= 2){
+      var change = history[history.length - 1].val - history[0].val;
+      deltaEl.textContent = (change > 0 ? '+' : '') + change + ' this week';
+      deltaEl.style.color = change > 0 ? 'var(--success)' : (change < 0 ? 'var(--danger)' : 'var(--text-dim)');
+    } else {
+      deltaEl.textContent = 'Building history\u2026';
+      deltaEl.style.color = 'var(--text-dim)';
+    }
+
+    var chartW = 640, chartH = 90, pad = 8;
+    var vals = history.map(function(entry){ return entry.val; });
+    var maxV = Math.max.apply(null, vals.concat([100]));
+    var minV = Math.min.apply(null, vals.concat([0]));
+    var range = Math.max(1, maxV - minV);
+    var stepX = history.length > 1 ? (chartW - pad*2) / (history.length - 1) : 0;
+
+    var points = history.map(function(entry, i){
+      var x = pad + i * stepX;
+      var y = pad + (1 - (entry.val - minV) / range) * (chartH - pad*2);
+      return { x: x, y: y };
+    });
+
+    var pathD = points.map(function(p, i){ return (i===0?'M':'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
+    function labelY(y){ return Math.min(chartH - 2, y + 18); }
+    var dots = points.map(function(p, i){
+      return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3" fill="var(--accent)"/>' +
+        '<text x="' + p.x.toFixed(1) + '" y="' + labelY(p.y) + '" font-size="9" fill="var(--text-faint)" text-anchor="middle" font-family="monospace">' + esc(history[i].day) + '</text>';
+    }).join('');
+
+    chartEl.innerHTML =
+      '<svg viewBox="0 0 ' + w + ' ' + h + '" style="width:100%; height:100%;" preserveAspectRatio="none">' +
+        '<path d="' + pathD + '" fill="none" stroke="var(--accent)" stroke-width="2"/>' +
+        dots +
+      '</svg>';
+  }
+
+  function renderIntelligencePanels(){
+    if(typeof AetherStore === 'undefined') return;
+    renderConfidenceTrend();
+  }
+
+  /* Snapshot today's real confidence score once -- safe to call every
+     visit, since recordConfidenceSnapshot only actually writes if
+     today hasn't been recorded yet. */
+  function snapshotConfidence(){
+    if(typeof AetherIntelligence === 'undefined' || typeof AetherStore === 'undefined' || !AetherStore.recordConfidenceSnapshot) return;
+    try{
+      var c = AetherIntelligence.computeCommanderConfidence();
+      if(c && typeof c.pct === 'number') AetherStore.recordConfidenceSnapshot(c.pct);
+    }catch(e){ /* purely additive -- never let this break page load */ }
+  }
+
+  function run(){
+    snapshotConfidence();
+    renderIntelligencePanels();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
 })();
 </script>
 

@@ -653,7 +653,7 @@
     return sampleTerrains;
   }
   function getConfidenceHistory(){
-    if(isLive()){ return []; }
+    if(isLive()){ return getLiveConfidenceHistory(); }
     return sampleConfidenceHistory;
   }
 
@@ -1336,6 +1336,42 @@
 
   function getDeferLog(){ return lsGet(DEFER_LOG_KEY); }
 
+  /* ============================================================
+     COMMAND DECK INTELLIGENCE PANELS -- real, computed LIVE-mode
+     versions of Threats / Opportunities / Victories / Confidence
+     History. These used to exist only as demo-mode sample content
+     with nothing behind them in LIVE mode at all -- SAMPLE mode
+     showed a believable board, a real operator's Command Deck showed
+     nothing. ============================================================ */
+
+  /* ---- Confidence History: snapshotted once per real calendar day,
+     same auto-run date-gated pattern already used for blocker aging.
+     Nothing here reconstructs the past -- there's no way to know what
+     the real score was on a day before this existed -- so history
+     only ever grows forward from whenever it's first recorded. */
+  var CONFIDENCE_HISTORY_KEY = 'aether_confidence_history';
+  function getLiveConfidenceHistoryRaw(){ return lsGet(CONFIDENCE_HISTORY_KEY); }
+
+  function recordConfidenceSnapshot(pct){
+    if(typeof pct !== 'number' || isNaN(pct)) return;
+    var history = getLiveConfidenceHistoryRaw();
+    var today = todayLabel();
+    if(history.length && history[history.length - 1].date === today) return; // already recorded today
+    history.push({ date: today, pct: pct });
+    if(history.length > 60) history = history.slice(-60); // reasonable cap, not unbounded forever
+    lsSet(CONFIDENCE_HISTORY_KEY, history);
+  }
+
+  function getLiveConfidenceHistory(){
+    var history = getLiveConfidenceHistoryRaw();
+    var thisYear = new Date().getFullYear();
+    return history.slice(-7).map(function(h){
+      var d = new Date(h.date + ', ' + thisYear);
+      var dayLabel = !isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { weekday: 'short' }) : h.date;
+      return { day: dayLabel, val: h.pct };
+    });
+  }
+
   function logDefer(commandTitle, missionName, dateKey){
     var log = getDeferLog();
     log.push({
@@ -1585,6 +1621,7 @@
     deleteDebrief:      deleteDebrief,
     /* Phase 4B — Defer Tracking */
     getDeferLog:           getDeferLog,
+    recordConfidenceSnapshot: recordConfidenceSnapshot,
     logDefer:              logDefer,
     getRecurringDeferrals: getRecurringDeferrals,
     clearAllLiveData:      clearAllLiveData,

@@ -334,6 +334,37 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="editBlockerModal" style="position:fixed; inset:0; z-index:200; background:rgba(2,8,20,0.88); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center;">
+  <div style="background:var(--bg-panel); border:1px solid var(--border-accent); border-radius:var(--radius-lg); width:min(560px,94vw); max-height:90vh; overflow-y:auto; box-shadow:0 0 60px rgba(74,168,255,0.15);">
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px 16px; border-bottom:1px solid var(--border-subtle);">
+      <span style="font-family:var(--font-display); font-size:15px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase;">Edit Blocker</span>
+      <button onclick="closeEditBlockerModal()" title="Close" aria-label="Close" style="width:32px; height:32px; border-radius:50%; background:transparent; border:1px solid var(--border-strong); color:var(--text-secondary); cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:24px; display:flex; flex-direction:column; gap:16px;">
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Blocker Name *</label>
+        <input id="ebkName" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px;"/>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Severity</label>
+        <select id="ebkSeverity" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px;">
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <label style="font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-dim);">Recovery Plan</label>
+        <textarea id="ebkRecovery" style="background:var(--bg-panel-alt); border:1px solid var(--border-strong); border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-body); font-size:13px; padding:10px 14px; min-height:70px; resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div style="padding:16px 24px 20px; border-top:1px solid var(--border-subtle); display:flex; justify-content:flex-end; gap:10px;">
+      <button class="btn btn-ghost" onclick="closeEditBlockerModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitEditBlocker()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   var currentFilter = 'all';
@@ -428,6 +459,9 @@
       var resolveBtn = x.status!=='resolved' && x.isLive
         ? '<button class="btn btn-success" style="font-size:11px; padding:7px 14px;" onclick="resolveBlk(\''+x.key+'\')">Mark Resolved</button>'
         : '';
+      var editBtn = x.isLive
+        ? '<button class="btn btn-ghost" style="font-size:11px; padding:7px 14px;" onclick="openEditBlockerModal(\''+x.key+'\')">Edit</button>'
+        : '';
       var deleteBtn = x.isLive
         ? '<button class="btn btn-ghost" style="font-size:11px; padding:7px 14px; color:var(--danger); border-color:rgba(255,92,108,0.3);" onclick="confirmDeleteBlocker(\''+x.key+'\',\''+esc(x.name).replace(/\'/g,"\\\\'")+'\')">Delete</button>'
         : '';
@@ -445,7 +479,7 @@
           deadlineField(missionsByName[x.affectedMission])+
         '</div>'+
         (x.recoveryPlan ? '<div class="bk-recovery"><div class="bk-recovery-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Recovery Plan</div><div class="bk-recovery-text">'+esc(x.recoveryPlan)+'</div></div>' : '')+
-        (resolveBtn || deleteBtn ? '<div class="bk-card-actions">'+resolveBtn+deleteBtn+'</div>' : '')+
+        (resolveBtn || editBtn || deleteBtn ? '<div class="bk-card-actions">'+resolveBtn+editBtn+deleteBtn+'</div>' : '')+
       '</div>';
     }).join('');
   }
@@ -480,6 +514,44 @@
   };
   document.getElementById('resolveModal').addEventListener('click', function(e){
     if(e.target === this) closeResolveModal();
+  });
+
+  /* Edit Blocker -- AetherStore.updateBlocker already existed (it's
+     what resolveBlocker uses internally to mark one resolved), but
+     nothing let the operator edit a blocker's own details after
+     creating it. This is that missing "Edit" button. */
+  var editingBlockerKey = null;
+  window.openEditBlockerModal = function(key){
+    var blocker = (AetherStore.getAllBlockers ? AetherStore.getAllBlockers() : AetherStore.getBlockers())
+      .find(function(b){ return b.key === key; });
+    if(!blocker) return;
+    editingBlockerKey = key;
+    document.getElementById('ebkName').value = blocker.name || '';
+    document.getElementById('ebkSeverity').value = blocker.severity || 'Medium';
+    document.getElementById('ebkRecovery').value = blocker.recoveryPlan || '';
+    document.getElementById('editBlockerModal').style.display = 'flex';
+  };
+  window.closeEditBlockerModal = function(){
+    document.getElementById('editBlockerModal').style.display = 'none';
+    editingBlockerKey = null;
+  };
+  window.submitEditBlocker = function(){
+    var name = document.getElementById('ebkName').value.trim();
+    if(!name || !editingBlockerKey || !AetherStore.updateBlocker) return;
+    AetherStore.updateBlocker(editingBlockerKey, {
+      name: name,
+      severity: document.getElementById('ebkSeverity').value,
+      recoveryPlan: document.getElementById('ebkRecovery').value.trim()
+    });
+    if(window.AetherVoice) window.AetherVoice.speak('Blocker updated.');
+    closeEditBlockerModal();
+    renderStrip(); renderList();
+  };
+  document.getElementById('editBlockerModal').addEventListener('click', function(e){
+    if(e.target === this) window.closeEditBlockerModal();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && document.getElementById('editBlockerModal').style.display === 'flex') window.closeEditBlockerModal();
   });
 
   window.confirmDeleteBlocker = function(key, name){
